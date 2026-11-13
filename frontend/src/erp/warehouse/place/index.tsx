@@ -10,7 +10,7 @@ import { MainButton } from "@/erp/kit/ui";
 import { api, downloadPdf, post } from "@/erp/warehouse/api";
 import { useWh, type Size } from "@/erp/warehouse/context";
 import type { CatItem, Dims, PlaceRec, Placed, ScanRes, Unplaced, WhTree } from "@/erp/warehouse/lib";
-import { ScanBar, useScanner } from "@/erp/warehouse/scan-bar";
+import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 import { useLoad } from "@/erp/kit/ui";
 
 import { ItemSearch } from "./item-search";
@@ -59,13 +59,14 @@ export function Place() {
     refresh();
   };
 
+  const m = useScanMsg();
   const sc = useScanner(async (code) => {
     const r = await api<ScanRes>(`/app/api/erp/scan?code=${encodeURIComponent(code)}`);
     if (r.type === "cell") {
       beep(true);
       setLoc({ id: r.id, code: r.code, parent_id: r.parent_id });
       setLast(null);
-      return sc.say(true, `Javon ${r.code}`, item ? "Endi miqdorni kiriting" : "Endi tovarni skanerlang");
+      return m.say(true, `Javon ${r.code}`, item ? "Endi miqdorni kiriting" : "Endi tovarni skanerlang");
     }
     if (r.type === "item" || r.type === "choice") {
       let id = r.type === "item" ? r.item_id : null;
@@ -73,18 +74,18 @@ export function Place() {
       if (!id) return;
       await setItemId(id);
       beep(true);
-      return sc.clear();
+      return m.clear();
     }
     if (r.type === "unit") {
       beep(true);
-      if (!loc) return sc.say(true, r.name, `${r.code} · hozir ${r.loc ?? "joysiz"} — avval javonni skanerlang, keyin shu birlikni ko'chirish mumkin`);
-      if (r.loc_id === loc.id) return sc.say(true, r.name, `${r.code} allaqachon ${loc.code} da`);
+      if (!loc) return m.say(true, r.name, `${r.code} · hozir ${r.loc ?? "joysiz"} — avval javonni skanerlang, keyin shu birlikni ko'chirish mumkin`);
+      if (r.loc_id === loc.id) return m.say(true, r.name, `${r.code} allaqachon ${loc.code} da`);
       return moveTo(r.id, r.code, r.name, r.loc ?? "joysiz", loc);
     }
     if (r.type === "unknown" && code.length >= 2) return setSearch(code);
     beep(false);
-    sc.say(false, "Kod topilmadi", code);
-  });
+    m.say(false, "Kod topilmadi", code);
+  }, m);
 
   const pickLoc = async (): Promise<void> => {
     if (!store) return toast("Ombor yo'q", "bad");
@@ -136,7 +137,7 @@ export function Place() {
       refresh();
     } catch (e) {
       beep(false);
-      sc.say(false, (e as Error).message);
+      m.say(false, (e as Error).message);
     }
   };
 

@@ -10,7 +10,7 @@ import { MainButton } from "@/erp/kit/ui";
 import { api, post } from "@/erp/warehouse/api";
 import { useWh } from "@/erp/warehouse/context";
 import { size, type Doc, type ScanRes } from "@/erp/warehouse/lib";
-import { ScanBar, useScanner } from "@/erp/warehouse/scan-bar";
+import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 
 import { BagView, type BagLine } from "./ui";
 
@@ -30,6 +30,7 @@ export function Bag({ mode }: { mode: "move" | "off" }) {
   };
   const whs = me.warehouses.filter((x) => x.kind !== "transit");
 
+  const m = useScanMsg();
   const sc = useScanner(async (code) => {
     const r = await api<ScanRes>(`/app/api/erp/scan?code=${encodeURIComponent(code)}`);
     const cur = ref.current;
@@ -37,29 +38,29 @@ export function Bag({ mode }: { mode: "move" | "off" }) {
       const st = r.stock.filter((s) => s.warehouse_id === from);
       if (!st.length) {
         beep(false);
-        return sc.say(false, "Birlik bu omborda emas", `${r.code} · ${whName(from)}`);
+        return m.say(false, "Birlik bu omborda emas", `${r.code} · ${whName(from)}`);
       }
       if (cur.some((l) => l.batch_id === r.id)) {
         beep(false);
-        return sc.say(false, "Allaqachon ro'yxatda", r.code);
+        return m.say(false, "Allaqachon ro'yxatda", r.code);
       }
       setLines([...cur, ...st.map((s) => ({ item_id: r.item_id, char_id: r.char_id, batch_id: r.id, qty: Number(s.qty), firm: s.firm, name: r.name, code: r.code, size: size(r), unit: r.unit }))]);
       beep(true);
-      return sc.say(true, r.name, r.code);
+      return m.say(true, r.name, r.code);
     }
     if (r.type === "item") {
       if (r.dims) {
         beep(false);
-        return sc.say(false, "O'lchamli tovar — birlik QR'ini skanerlang", r.name);
+        return m.say(false, "O'lchamli tovar — birlik QR'ini skanerlang", r.name);
       }
       const l = cur.find((x) => !x.batch_id && x.item_id === r.item_id && (x.char_id || null) === (r.char_id || null) && x.firm === firm);
       setLines(l ? cur.map((x) => (x === l ? { ...x, qty: x.qty + 1 } : x)) : [...cur, { item_id: r.item_id, char_id: r.char_id, batch_id: null, qty: 1, firm, name: r.name, size: r.char ?? "", unit: r.unit }]);
       beep(true);
-      return sc.say(true, r.name, `+1`);
+      return m.say(true, r.name, `+1`);
     }
     beep(false);
-    sc.say(false, "Kod topilmadi", code);
-  });
+    m.say(false, "Kod topilmadi", code);
+  }, m);
 
   // bir firma — bir hujjat
   const docsByFirm = async (kind: string, header: Record<string, unknown>, data: Record<string, unknown> = {}) => {
@@ -93,10 +94,10 @@ export function Bag({ mode }: { mode: "move" | "off" }) {
       }
       beep(true);
       setLines([]);
-      sc.say(true, r);
+      m.say(true, r);
     } catch (e) {
       beep(false);
-      sc.say(false, (e as Error).message);
+      m.say(false, (e as Error).message);
     }
   };
 

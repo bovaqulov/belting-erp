@@ -7,7 +7,7 @@ import { beep, confirm, toast } from "@/erp/kit/env";
 import { api, labelsPdf, post } from "@/erp/warehouse/api";
 import { useWh } from "@/erp/warehouse/context";
 import { parseNeeds, type CutPlan as Plan, type CutRes, type Dims, type Doc, type ItemHit, type ScanRes } from "@/erp/warehouse/lib";
-import { ScanBar, useScanner } from "@/erp/warehouse/scan-bar";
+import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 
 import { CutPlanView, type PlanItem } from "./ui";
 
@@ -19,13 +19,14 @@ export function CutPlan() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [done, setDone] = useState<Record<number, { number: string; ids: number[] }>>({});
 
+  const m = useScanMsg();
   const sc = useScanner(async (code) => {
     let r: ScanRes | (ItemHit & { type: "item" }) = await api<ScanRes>(`/app/api/erp/scan?code=${encodeURIComponent(code)}`);
     if (r.type === "unknown" && code.length >= 2 && !/^\d+$/.test(code)) {
       const rs = await api<ItemHit[]>(`/app/api/erp/items?q=${encodeURIComponent(code)}`);
       if (!rs.length) {
         beep(false);
-        return sc.say(false, "Topilmadi", code);
+        return m.say(false, "Topilmadi", code);
       }
       const i = rs.length === 1 ? 0 : await choose("Tovar", rs.map((x, k) => ({ value: k, label: x.name, sub: x.sku ?? undefined })));
       if (i === null) return;
@@ -39,19 +40,19 @@ export function CutPlan() {
     }
     if (r.type !== "item" && r.type !== "unit") {
       beep(false);
-      return sc.say(false, "Tovar yoki rulon kodini skanerlang", code);
+      return m.say(false, "Tovar yoki rulon kodini skanerlang", code);
     }
     if (!r.dims) {
       beep(false);
-      return sc.say(false, "Bu tovar o'lchamli emas — kesish rejasi rulon, bo'lak va rukav uchun", r.name);
+      return m.say(false, "Bu tovar o'lchamli emas — kesish rejasi rulon, bo'lak va rukav uchun", r.name);
     }
     setIt({ item_id: r.item_id, name: r.name, unit: r.unit, dims: r.dims as Exclude<Dims, null> });
     setPlan(null);
     setDone({});
     beep(true);
-    sc.say(true, r.name);
+    m.say(true, r.name);
     setTimeout(() => document.getElementById("cp-needs")?.focus(), 50);
-  });
+  }, m);
 
   const calc = async () => {
     if (!it) return;
@@ -64,7 +65,7 @@ export function CutPlan() {
       setDone({});
     } catch (e) {
       beep(false);
-      sc.say(false, (e as Error).message);
+      m.say(false, (e as Error).message);
     }
   };
 

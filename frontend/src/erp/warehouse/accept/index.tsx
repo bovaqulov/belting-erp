@@ -10,7 +10,7 @@ import { Loaded, MainButton, useLoad } from "@/erp/kit/ui";
 import { api, post } from "@/erp/warehouse/api";
 import { useWh } from "@/erp/warehouse/context";
 import type { AccDiff, Doc, Incoming, Posted, ScanRes } from "@/erp/warehouse/lib";
-import { ScanBar, useScanner } from "@/erp/warehouse/scan-bar";
+import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 
 import { AccCountView, AccDoneView, AccListView, type AccResult } from "./ui";
 
@@ -62,19 +62,20 @@ function List({ onOpen }: { onOpen: (r: Incoming) => void }) {
 function Count({ rec: r, onBack, onDone }: { rec: Incoming; onBack: () => void; onDone: (x: AccResult) => void }) {
   const { wide, stores, whName, choose, ask } = useWh();
   const [, render] = useReducer((x: number) => x + 1, 0);
+  const m = useScanMsg();
   const sc = useScanner(async (code) => {
     const s = await api<ScanRes>(`/app/api/erp/scan?code=${encodeURIComponent(code)}`);
     const it = (s.type === "unit" || s.type === "item") && r.items.find((x) => x.item_id === s.item_id && (x.char_id || null) === (s.char_id || null));
     if (!it || (s.type !== "unit" && s.type !== "item")) {
       beep(false);
-      return sc.say(false, "Bu tovar shu kirimda yo'q", "name" in s ? s.name : code);
+      return m.say(false, "Bu tovar shu kirimda yo'q", "name" in s ? s.name : code);
     }
     const inc = s.type === "unit" ? Number(s.stock[0]?.qty || 1) : 1;
     ACC.counted.set(key(it), (ACC.counted.get(key(it)) ?? 0) + inc);
     beep(true);
     render();
-    sc.say(true, it.name, `keldi ${num(ACC.counted.get(key(it)), 3)} / ${num(it.qty, 3)}`);
-  });
+    m.say(true, it.name, `keldi ${num(ACC.counted.get(key(it)), 3)} / ${num(it.qty, 3)}`);
+  }, m);
   const finish = async () => {
     const short = r.items.some((x) => (ACC.counted.get(key(x)) ?? 0) < Number(x.qty));
     if (short && !ACC.partial && !(await confirm("Kamomad bor — farq dalolatnomasi va ta'minotchiga da'vo yoziladi. Davom etaymi?"))) return;
@@ -93,7 +94,7 @@ function Count({ rec: r, onBack, onDone }: { rec: Incoming; onBack: () => void; 
       onDone({ number: p.number ?? "", diff: diff.map((x) => ({ ...x, name: r.items.find((i) => i.item_id === x.item_id)?.name ?? `#${x.item_id}` })) });
     } catch (e) {
       beep(false);
-      sc.say(false, (e as Error).message);
+      m.say(false, (e as Error).message);
     }
   };
   return (
