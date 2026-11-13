@@ -1,0 +1,139 @@
+/* ERP UI to'plami — kompyuter boshqaruvlari va markaziy oyna (erp_crm.html <style> dan umumlashtirilgan).
+   Umumiy tokenlar va Telegram uslubidagi sinflar — /app/erp/ui.css. */
+
+/* ---- tugma, input, select (kompyuter: 34px; telefonda ≥44px) ---- */
+.b { height: 34px; border: 1px solid var(--sep); border-radius: var(--r-s); background: var(--page); color: var(--text); padding: 0 12px; cursor: pointer;
+     display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; font: inherit; font-size: 14px; text-decoration: none; }
+.b svg.i { width: 16px; height: 16px; }
+.b:hover { border-color: var(--link); }
+.b:disabled { opacity: .5; cursor: default; }
+.b.on { background: var(--link); border-color: var(--link); color: #fff; }
+.b.pri { background: var(--btn); border-color: var(--btn); color: var(--btn-text); font-weight: 600; }
+.b.danger { color: var(--danger); } .b.ok { color: var(--ok); }
+.b.ic { padding: 0; width: 34px; }
+.grp { display: inline-flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.grp::-webkit-scrollbar { display: none; }
+.grp .b { border-radius: 0; } .grp .b:first-child { border-radius: var(--r-s) 0 0 var(--r-s); } .grp .b:last-child { border-radius: 0 var(--r-s) var(--r-s) 0; }
+.grp .b + .b { margin-left: -1px; }
+.inp, .sel { height: 34px; border: 1px solid var(--sep); border-radius: var(--r-s); background: var(--page); color: var(--text); padding: 0 10px; font: inherit;
+             outline: none; min-width: 0; max-width: 100%; }
+.inp:focus, .sel:focus { border-color: var(--link); }
+textarea.inp { height: auto; min-height: 70px; padding: 8px 10px; resize: vertical; }
+@media (min-width: 768px) and (pointer: fine) { .inp, .sel, textarea.inp { font-size: 14px !important; } }
+@media (pointer: coarse) {
+  .b, .inp, .sel { min-height: 44px; }
+  .b.ic { min-width: 44px; }
+}
+
+/* ---- markaziy oyna (telefonda pastdan) ---- */
+.mdl { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(0,0,0,.4); padding: 16px; }
+.mdl .w { background: var(--page); border-radius: var(--r-m); width: min(520px, 100%); max-height: min(88vh, 88dvh); display: flex; flex-direction: column;
+          box-shadow: var(--sh-2); }
+.mdl .w.wide { width: min(720px, 100%); }
+.mdl .mh { padding: 10px 10px 10px 18px; font-weight: 700; font-size: 16px; border-bottom: 1px solid var(--sep); display: flex; justify-content: space-between;
+           align-items: center; gap: 8px; }
+.mdl .mb { padding: 14px 18px; overflow-y: auto; overscroll-behavior: contain; }
+.mdl .mf { padding: 12px 18px calc(12px + var(--safe-b)); border-top: 1px solid var(--sep); display: flex; justify-content: flex-end; gap: 8px; }
+.mdl label.l { display: block; color: var(--hint); font-size: 12.5px; margin: 10px 0 4px; }
+.mdl label.l:first-child { margin-top: 0; }
+.mdl .mb > .inp, .mdl .mb > .sel, .mdl .mb > textarea.inp { width: 100%; }
+.mdl .x { border: 0; background: none; color: var(--hint); cursor: pointer; padding: 6px; border-radius: var(--r-s); display: grid; place-items: center;
+          min-width: 36px; min-height: 36px; }
+.mdl .x:hover { background: var(--fill); }
+.opt { width: 100%; border: 0; background: none; color: var(--text); font: inherit; text-align: left; padding: 9px 12px; border-radius: var(--r-s); cursor: pointer;
+       display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.opt:hover, .opt.on { background: var(--fill); }
+.opt .s { color: var(--hint); font-size: 12px; }
+.opt .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.dd { border: 1px solid var(--sep); border-radius: var(--r-s); margin-top: 4px; max-height: 220px; overflow-y: auto; background: var(--page); }
+@media (max-width: 599px) {
+  .mdl { place-items: end stretch; padding: 0; }
+  .mdl .w, .mdl .w.wide { width: 100%; border-radius: 14px 14px 0 0; max-height: 92dvh; }
+  .mdl .mf .b { flex: 1; }
+}
+@media (pointer: coarse) { .mdl .x { min-width: 44px; min-height: 44px; } .opt { min-height: 48px; } }
+
+/* ---- modul karkasi (layout.tsx): kompyuterda chap menyu, telefonda tepa + tablar ---- */
+.mod { min-height: 100vh; min-height: 100dvh; }
+.mod-main { padding-bottom: calc(40px + var(--safe-b, 0px)); min-width: 0; }
+.mod-top { display: flex; align-items: flex-start; gap: 4px; padding: 10px 8px 0; }
+.mod-top .large { padding-left: 4px; padding-top: 2px; min-width: 0; }
+.mod-up { border: 0; background: none; cursor: pointer; padding: 0; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; color: var(--link); flex: none; }
+.mod-up svg.i { width: 22px; height: 22px; }
+.mod-up:hover { background: var(--fill); }
+.mod .seg, body:not(.in-tg) .mod .seg { top: 0; overflow-x: auto; scrollbar-width: none; }
+.mod-tabs { display: flex; gap: 2px; margin: 4px 16px 0; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--sep); }
+.mod-tabs::-webkit-scrollbar { display: none; }
+.mod-tabs button { border: 0; background: none; color: var(--hint); font: inherit; font-size: 14.5px; font-weight: 500; padding: 10px 10px 9px; min-height: 44px;
+                   border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap; }
+.mod-tabs button.on { color: var(--text); font-weight: 600; border-bottom-color: var(--link); }
+.mod .chips { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; padding-bottom: 2px; }
+.mod .chips::-webkit-scrollbar { display: none; }
+.mod .chip { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mod-link { border: 0; background: none; padding: 0; font: inherit; color: var(--link); cursor: pointer; text-transform: none; }
+.mod-link:disabled { opacity: .5; cursor: default; }
+@media (pointer: coarse) { .mod-link { min-height: 44px; } }
+
+.mod-demo { display: flex; align-items: center; gap: 8px; padding: 4px 16px; min-height: 36px; font-size: 13px;
+            background: color-mix(in srgb, var(--st-work) 12%, var(--page)); border-bottom: 1px solid var(--sep); }
+.mod-demo .dtag { font-weight: 700; color: var(--st-work); white-space: nowrap; }
+.mod-demo .dtx { flex: 1; min-width: 0; color: var(--sub); line-height: 1.25; }
+.mod-demo .b { height: 28px; padding: 0 10px; font-size: 13px; flex: none; }
+@media (pointer: coarse) { .mod-demo .b { min-height: 44px; } }
+
+.mod-side { display: none; }
+.mod.wide { padding-left: 232px; }
+.mod.wide .mod-side { display: flex; flex-direction: column; gap: 2px; position: fixed; left: 0; top: 0; bottom: 0; width: 232px; box-sizing: border-box;
+                      background: var(--sec); padding: 16px 8px 24px; overflow-y: auto; z-index: 20; border-right: 1px solid var(--sep); }
+.mod-side .brand { font-size: 20px; font-weight: 700; padding: 2px 10px 0; }
+.mod-side .up, .mod-side button.up { align-self: flex-start; min-height: 0; border-radius: 6px; font-size: 13px; color: var(--hint); }
+.mod-side .up { display: inline-flex; align-items: center; gap: 4px; color: var(--hint); font-size: 13px; padding: 2px 8px 10px 6px; }
+.mod-side .up svg.i { width: 15px; height: 15px; }
+.mod-side .up:hover, .mod-side button.up:hover { color: var(--link); background: none; }
+.mod-side button.up svg.i { color: inherit; }
+.mod-side .gh { margin: 12px 10px 2px; font-size: 12.5px; font-weight: 600; color: var(--hint); }
+.mod-side .grp { display: flex; flex-direction: column; gap: 2px; }
+.mod-side button { display: flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--text); font: inherit; font-size: 14.5px;
+                   padding: 8px 10px; border-radius: 9px; cursor: pointer; text-align: left; min-height: 36px; }
+.mod-side button svg.i { width: 18px; height: 18px; color: var(--hint); flex: none; }
+.mod-side button:hover { background: var(--fill); }
+.mod-side button.on { background: var(--btn); color: var(--btn-text); }
+.mod-side button.on svg.i { color: var(--btn-text); }
+.mod.wide .mod-main { max-width: 1400px; padding: 0 12px 40px; }
+.mod.wide .mod-demo { margin: 0 -12px; padding: 4px 28px; }
+.mod-h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; margin: 18px 16px 4px; }
+.mod.wide .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.mod.wide .btns { max-width: 420px; }
+
+/* ---- kalitcha (.switch) maydon qatorida: ui.css'dagi `.field input { flex: 1 }` uni cho'zmasin ---- */
+.field input.switch, .field .switch { flex: none; width: 51px; min-width: 51px; margin-left: auto; }
+
+/* ---- kompyuterda (AppLayout, body.mod-desk) oynalar markazda, ixcham ---- */
+body.mod-desk .sheet { left: 50%; right: auto; top: 50%; bottom: auto; width: min(560px, 92vw); max-height: 86vh; border-radius: 16px;
+                       padding: 8px 0 18px; transform: translate(-50%, -46%); opacity: 0; transition: transform .2s, opacity .2s; }
+body.mod-desk .sheet.on { transform: translate(-50%, -50%); opacity: 1; }
+body.mod-desk .sheet .grab { display: none; }
+
+/* ---- jadval (table.tsx, faqat kompyuterda) ---- */
+.tblw { margin: 0 16px; background: var(--sec); border-radius: 12px; overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th { position: sticky; top: 0; background: var(--sec); text-align: left; font-weight: 600; color: var(--hint); font-size: 12px; padding: 9px 10px;
+          border-bottom: 1px solid var(--sep); white-space: nowrap; z-index: 1; }
+.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--sep); vertical-align: top; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tr.tap { cursor: pointer; }
+.tbl tr.tap:hover td { background: var(--fill); }
+.tbl tr.picked td { background: color-mix(in srgb, var(--link) 14%, transparent); }
+.tbl tr.tap:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+.tbl td.n, .tbl th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl .t2 { color: var(--hint); font-size: 12px; margin-top: 2px; }
+.tbl .badge { margin-top: 4px; }
+/* menyudagi son: ".cnt" (masalan "yangi | yig'ilmoqda"), ".hot" — e'tibor talab qiladi */
+.mod-side .cnt { margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; opacity: .85; }
+.mod-side .cnt .hot { color: var(--danger); }
+.mod-side button.on .cnt .hot { color: inherit; }
+.mod-side .cnt .sl { opacity: .5; }
+.mod-tabs .cnt, .mod .chip .cnt { margin-left: 4px; color: var(--danger); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* tanlov doirachasi (.ck) maydon qatorida: `.field input` (flex 1, border 0, fon yo'q) uni yashirmasin */
+.field input.ck { flex: none; width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--hint); border-radius: 50%; }
+.field input.ck:checked { background: var(--btn); border-color: var(--btn); }

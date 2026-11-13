@@ -1,0 +1,37 @@
+/* Marketplace — erp_mp.html <style> dan, faqat o'ziga xos qismlar. Umumiy sinflar (.list .item .tile .chip .seg .st .code):
+   /app/erp/ui.css; karkas (.mod*), jadval (.tbl), tugma/oyna (.b .mdl): @/erp/kit/kit.css. */
+/* ---- kanallar plitalari: tugma sifatida ---- */
+.mk .mk-tiles { margin-top: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mk .mk-tiles .tile .l { overflow-wrap: anywhere; }
+@media (max-width: 420px) { .mk .mk-tiles .tile { padding: 10px; } .mk .mk-tiles .tile .v { font-size: 19px; } }
+.mk .mk-tiles .tile { border: 0; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.mk .mk-tiles .tile .v small { margin-left: 2px; }
+
+/* ---- ro'yxat ichidagi kichik narsalar ---- */
+.mk .item .s .ln { white-space: normal; color: var(--text); }
+.mk .item .val .code { font-size: 15px; }
+.mk .mk-acts { display: inline-flex; gap: 6px; flex: none; }
+.mk .badge.ok, .mk .badge.warn, .mk .badge.bad { font-variant-numeric: tabular-nums; }
+.mk .item .s .badge { font-size: 11.5px; padding: 1px 6px; }
+
+/* ---- skaner ---- */
+.sheet .scanin { font-size: 18px; letter-spacing: .5px; font-family: var(--font-code); }
+.sheet .scanin.bad { color: var(--danger); }
+.sheet .mk-bad { margin: 8px 16px 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--danger);
+                 background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.sheet .item .t.danger { color: var(--danger); }
+
+/* ---- postavka: sarlavha va bosqichlar ---- */
+.mk .mk-sup { font-size: 24px; margin-top: 4px; }
+.mk .mk-sup small { line-height: 1.5; }
+.mk-steps { list-style: none; display: flex; gap: 6px; margin: 10px 16px 0; padding: 0; flex-wrap: wrap; }
+.mk-steps li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--sec);
+               color: var(--hint); font-size: 13.5px; font-weight: 500; }
+.mk-steps .n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--fill); font-size: 12px;
+               font-weight: 700; font-variant-numeric: tabular-nums; }
+.mk-steps li.on { color: var(--text); } .mk-steps li.on .n { background: var(--st-new); color: #fff; }
+.mk-steps li.done { color: var(--text); } .mk-steps li.done .n { background: var(--st-done); color: #fff; }
+
+/* ---- kompyuter ---- */
+.mk.wide .tiles { grid-template-columns: repeat(3, 1fr); }
+.mk .tbl .ln + .ln { margin-top: 2px; }

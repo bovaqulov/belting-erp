@@ -1,0 +1,1 @@
+"""Tizim modellari — keyingi bosqichda."""

@@ -1,0 +1,1 @@
+"""Xarid modellari — keyingi bosqichda."""

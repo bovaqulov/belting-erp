@@ -1,0 +1,48 @@
+/* Agent tahrirlash oynasi: ikonka va rang tanlash, vosita qatori, xatolar. Tokenlar — panel (--sec, --sep, --hint …). */
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; padding: 12px 16px; }
+.pick {
+  display: grid; place-items: center; width: 100%; aspect-ratio: 1; min-height: 44px;
+  border: 0; border-radius: 10px; background: rgba(127, 127, 127, 0.12); color: var(--text); cursor: pointer; padding: 0;
+}
+.pick svg { width: 20px; height: 20px; }
+.pick[aria-pressed="true"] { background: var(--c, var(--btn)); color: #fff; }
+.swatch {
+  width: 100%; aspect-ratio: 1; min-height: 44px; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
+  background: var(--c); display: grid; place-items: center; color: #fff;
+}
+.swatch svg { width: 18px; height: 18px; }
+.swatch[aria-pressed="false"] svg { display: none; }
+.pick:focus-visible, .swatch:focus-visible { outline: 2px solid color-mix(in srgb, var(--link) 75%, transparent); outline-offset: 2px; }
+
+.tool { align-items: flex-start; }
+.tool .desc { font-size: 13px; color: var(--sub); white-space: normal; line-height: 1.35; margin-top: 2px; }
+.risky { color: var(--danger); }
+
+.code { font-family: ui-monospace, Menlo, monospace; }
+.persona { min-height: 140px; line-height: 1.45; padding: 12px 16px !important; display: block; }
+
+.errs { margin: 14px 16px 0; padding: 10px 14px; border-radius: 10px; background: rgba(236, 57, 66, 0.12); color: var(--danger);
+  font-size: 14px; line-height: 1.4; }
+.errs p { margin: 0; } .errs p + p { margin-top: 4px; }
+
+/* huquqlar: soha yorlig'i (nom + izoh), "kim foydalanadi" bo'lim tugmalari */
+.scLabel { display: flex; flex-direction: column; min-width: 128px !important; line-height: 1.25; }
+.scLabel small { font-size: 12px; color: var(--hint); opacity: .85; }
+.chipsIn { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; }
+.toggle { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 18px;
+  background: none; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+.toggle svg { width: 14px; height: 14px; }
+.toggle[aria-pressed="true"] { background: var(--btn); border-color: var(--btn); color: var(--btn-text); }
+.toggle:focus-visible { outline: 2px solid color-mix(in srgb, var(--link) 75%, transparent); outline-offset: 2px; }
+
+/* agent oynasi: jadval/topshiriq qatorlari, holat belgisi */
+.st { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; flex: none; }
+.st::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.st.new { color: #3e88f7; background: rgba(62, 136, 247, .14); }
+.st.work { color: #e8961f; background: rgba(232, 150, 31, .14); }
+.st.done { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.st.bad { color: var(--danger); background: rgba(236, 57, 66, .14); }
+.st.off { color: var(--hint); background: rgba(127, 127, 127, .14); }
+.days { display: flex; gap: 6px; padding: 10px 16px; }
+.days .toggle { flex: 1; justify-content: center; padding: 6px 0; min-width: 0; }
+.kindTag { font-size: 11px; color: var(--hint); }

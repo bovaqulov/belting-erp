@@ -1,0 +1,178 @@
+"""Belting ERP backend sozlamalari (Django + SQLite (demo) / PostgreSQL (prod) + Celery/Redis). Qiymatlar .env.local dan (namuna: .env.example).
+
+Applar: config/apps/<app>; label — qisqa nom (core, staff, jarvis, erp_<modul> …), migratsiyalar shunga bog'langan."""
+
+import hashlib
+import os
+from pathlib import Path
+from urllib.parse import parse_qsl, unquote, urlsplit
+
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env.local")
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, "1" if default else "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name: str, default: str = "") -> list[str]:
+    return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
+
+
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or "dev-insecure-key"
+DEBUG = env_bool("DJANGO_DEBUG")
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+# Domen applari — frontend src/ bilan bir xil bo'linish (frontend/ARCHITECTURE.md). Har biri o'z papkasida.
+DOMAIN_APPS = [
+    "config.apps.core",  # umumiy: auth (Telegram initData, sessiya), JSON API yordamchilari, /me, login
+    "config.apps.staff",  # xodimlar (foydalanuvchi modeli), rollar
+    "config.apps.jarvis",  # Jarvis — firma agentlari: daraxt, huquqlar, jadval, topshiriq, chat
+    "config.apps.bots",  # Telegram botlari (xodim boti, mijoz boti) — keyingi bosqich
+    "config.apps.memory",  # agentlar xotirasi
+    "config.apps.knowledge",  # bilimlar bazasi (KB), graf
+    "config.apps.reports",  # kunlik hisobot shablonlari va hisobotlar
+    "config.apps.audit",  # agent so'rovlari va vositalar jurnali
+    "config.apps.system",  # tizim holati, loglar
+    "config.apps.erp.catalog",
+    "config.apps.erp.warehouse",
+    "config.apps.erp.workshop",
+    "config.apps.erp.picking",
+    "config.apps.erp.purchasing",
+    "config.apps.erp.sales",
+    "config.apps.erp.finance",
+    "config.apps.erp.crm",
+    "config.apps.erp.logistics",
+    "config.apps.erp.marketplace",
+    "config.apps.conveyor",  # konveyer lenta chizmasi (LentaCUD)
+    "config.apps.geomap",  # mijozlar xaritasi
+    "config.apps.analytics",
+]
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    *DOMAIN_APPS,
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+ASGI_APPLICATION = "config.asgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ]
+        },
+    }
+]
+
+
+def _database() -> dict:
+    """Ma'lumotlar bazasi: DATABASE_URL (postgres://…) berilsa — PostgreSQL (prod), aks holda SQLite (demo/dev)."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    if not url:
+        return {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.getenv("DJANGO_DB_PATH") or BASE_DIR / "data" / "db.sqlite3",
+            # parallel o'qish (veb + Celery worker): WAL va kutish
+            "OPTIONS": {
+                "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+                "transaction_mode": "IMMEDIATE",
+                "timeout": 20,
+            },
+        }
+    u = urlsplit(url)
+    if u.scheme not in {"postgres", "postgresql"}:
+        raise ValueError(f"DATABASE_URL: faqat postgres:// qo'llanadi, berildi: {u.scheme}://")
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(u.path.lstrip("/")),
+        "USER": unquote(u.username or ""),
+        "PASSWORD": unquote(u.password or ""),
+        "HOST": u.hostname or "",
+        "PORT": str(u.port or ""),
+        "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+        "CONN_HEALTH_CHECKS": True,
+        "OPTIONS": dict(parse_qsl(u.query)),  # masalan ?sslmode=require
+    }
+
+
+DATABASES = {"default": _database()}
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+AUTH_USER_MODEL = "staff.User"
+
+LANGUAGE_CODE = "uz"
+TIME_ZONE = "Asia/Tashkent"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Sessiya: frontend /app ostida (Next statik eksport, bitta domen). Telegram WebView ichida cookie emas, X-Init-Data.
+SESSION_COOKIE_NAME = "belting_session"
+SESSION_COOKIE_AGE = 7 * 24 * 3600
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+# ---------------------------------------------------------------- Celery + Redis
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_EAGER")
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_BEAT_SCHEDULE = {
+    # agent jadvallari: har daqiqa vaqti kelganlarini navbatga qo'yadi
+    "jarvis-schedules-tick": {"task": "config.apps.jarvis.tasks.tick", "schedule": 60.0},
+}
+
+# ---------------------------------------------------------------- Telegram, Jarvis
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
+# webhook: Telegram har so'rovda X-Telegram-Bot-Api-Secret-Token yuboradi; standart — SECRET_KEY dan hosil
+TELEGRAM_WEBHOOK_SECRET = (
+    os.getenv("TELEGRAM_WEBHOOK_SECRET") or hashlib.sha256(f"tg:{SECRET_KEY}".encode()).hexdigest()[:48]
+)
+# tashqi HTTPS manzil (tunnel/domen) — webhook shu yerga: {JARVIS_PUBLIC_URL}/app/api/bots/telegram/
+JARVIS_PUBLIC_URL = os.getenv("JARVIS_PUBLIC_URL", "").rstrip("/")
+JARVIS_LLM = os.getenv("JARVIS_LLM", "claude")  # claude | echo
+JARVIS_COMPANY = os.getenv("JARVIS_COMPANY", "Belting rezina")
+JARVIS_MAGIC_LOGIN = env_bool("JARVIS_MAGIC_LOGIN", DEBUG)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
+}

@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env.local
+data/*.sqlite3*
+.testmondata*
+.ruff_cache/
+.pytest_cache/
+staticfiles/

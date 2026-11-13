@@ -1,0 +1,1 @@
+"""Sex modellari — keyingi bosqichda."""

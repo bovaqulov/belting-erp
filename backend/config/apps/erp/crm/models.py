@@ -1,0 +1,1 @@
+"""CRM modellari — keyingi bosqichda."""

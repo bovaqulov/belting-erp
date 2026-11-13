@@ -1,0 +1,1 @@
+"""Savdo modellari — keyingi bosqichda."""

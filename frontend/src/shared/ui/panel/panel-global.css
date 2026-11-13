@@ -1,0 +1,41 @@
+/* admin.html (1–233) — element darajasidagi (global) qoidalar. CSS Modules "pure" rejimida html/body/:root/element
+   selektorlarini yozib bo'lmaydi — shu fayl faqat /app (Shell) da import qilinadi (sahifalar orasida <a href> — to'liq yuklanish,
+   boshqa sahifalarga oqmaydi). Klassli qoidalar — admin.module.css. */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Telegram mavzusi: Telegram ichida --tg-theme-* qiymatlari, brauzerda Telegram "Night"/"Day" ranglari */
+:root {
+  color-scheme: dark;
+  --page: var(--tg-theme-secondary-bg-color, #0e1621);
+  --sec: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #17212b));
+  --text: var(--tg-theme-text-color, #f5f5f5);
+  --hint: var(--tg-theme-hint-color, #708499);
+  --sub: var(--tg-theme-subtitle-text-color, var(--tg-theme-hint-color, #708499));
+  --link: var(--tg-theme-link-color, #6ab3f3);
+  --accent: var(--tg-theme-accent-text-color, var(--tg-theme-link-color, #6ab3f3));
+  --btn: var(--tg-theme-button-color, #5288c1);
+  --btn-text: var(--tg-theme-button-text-color, #ffffff);
+  --head: var(--tg-theme-section-header-text-color, var(--tg-theme-accent-text-color, #6ab3f3));
+  --sep: var(--tg-theme-section-separator-color, rgba(255,255,255,.07));
+  --danger: var(--tg-theme-destructive-text-color, #ec3942);
+  --gold: #f5a623; --ok: #31b545; --warn: #f5a623;
+  --line: rgba(127,127,127,.32);
+}
+@media (prefers-color-scheme: light) {
+  :root:not(.tg) { color-scheme: light; --page: #efeff4; --sec: #ffffff; --text: #000000; --hint: #8e8e93; --sub: #8e8e93; --link: #2481cc; --accent: #2481cc;
+    --btn: #2481cc; --head: #6d6d72; --sep: rgba(60,60,67,.12); --line: rgba(60,60,67,.25); }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--page); color: var(--text); overscroll-behavior: none; overflow-x: clip; max-width: 100%; }
+/* iOS: 16px dan kichik maydonga bosilganda sahifa zoom bo'lib qoladi */
+input, select, textarea { font-size: 16px !important; }
+body { font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
+@media (max-width: 640px) {
+  main { padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important; }
+}
+main { padding: 0 0 40px; }
+input, select, textarea { width: 100%; font: inherit; color: var(--text); background: transparent; border: 0; outline: none; padding: 0; }
+select { appearance: none; } textarea { min-height: 120px; resize: vertical; }
+/* ochiladigan ro'yxat: brauzer oq fon bermasin — mavzu ranglari */
+select option, select optgroup { background: var(--sec); color: var(--text); }
+select:disabled { color: var(--hint); }
+pre { white-space: pre-wrap; word-break: break-word; font: 13px/1.45 ui-monospace, Menlo, monospace; color: var(--sub); margin: 0; }

@@ -1,0 +1,85 @@
+/* Ombor moduli — umumiy tokenlar va sinflar: /app/erp/ui.css, karkas va boshqaruvlar: erp/kit/kit.css.
+   Bu yerda faqat omborga xos: skaner xabari (uzoqdan ko'rinadigan katta yashil/qizil), ikki ustun, filtr, teglar. */
+
+/* ---- skaner natijasi: katta xabar, ovoz bilan birga ---- */
+.wh-msg { margin: 10px 16px 0; border-radius: 12px; padding: 12px 14px; font-size: 17px; font-weight: 600; line-height: 1.3;
+          display: flex; gap: 10px; align-items: center; background: var(--sec); overflow-wrap: anywhere; }
+.wh-msg svg.i { width: 26px; height: 26px; flex: none; }
+.wh-msg .tx { min-width: 0; flex: 1; }
+.wh-msg small { display: block; font-size: 13px; font-weight: 500; color: var(--sub); margin-top: 2px; }
+.wh-msg.ok { background: color-mix(in srgb, var(--st-done) 16%, var(--page)); color: var(--st-done); }
+.wh-msg.bad { background: color-mix(in srgb, var(--st-bad) 16%, var(--page)); color: var(--st-bad); font-size: 19px; }
+.wh-msg .sp { display: flex; gap: 6px; flex: none; }
+.wh-scan.busy input { opacity: .55; }
+
+/* ---- kontekst chiplari (sanash: ombor, firma, joy, rejim) ---- */
+.wh-ctx { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 16px 0; }
+.wh-ctx .chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.wh-ctx .chip svg.i { width: 16px; height: 16px; color: var(--hint); flex: none; }
+
+/* ---- progress (yig'ish qatori) ---- */
+.wh-prog { display: block; height: 4px; border-radius: 2px; background: var(--fill); overflow: hidden; margin-top: 6px; }
+.wh-prog i { display: block; height: 100%; background: var(--st-done); }
+
+/* ---- plitkalar, sarlavha osti ---- */
+.wh-tiles { margin-top: 0; }
+.wh-tile-btn { border: 0; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.wh-tile-btn:hover { box-shadow: inset 0 0 0 1px var(--link); }
+.wh-sub { margin: 2px 16px 12px; color: var(--hint); font-size: 14px; font-variant-numeric: tabular-nums; }
+.wh-u { color: var(--hint); font-size: .86em; margin-left: 3px; }
+.wh-hint { margin: 10px 0 0; font-size: 13px; color: var(--hint); }
+.wh-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wh-two .inp { width: 100%; }
+.wh-full { width: 100%; }
+.wh-res { margin-top: 10px; }
+.wh-res .list.flush { margin: 0; }
+.wh-res .skel { margin: 0 0 1px; }
+
+/* ---- teglar (joy, firma, ombor) ---- */
+.wh-tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 6px; background: var(--fill); color: var(--sub); margin: 1px 3px 1px 0;
+          white-space: nowrap; }
+.wh-tag.cls-A { background: color-mix(in srgb, var(--st-bad) 16%, transparent); color: var(--st-bad); font-weight: 600; }
+.wh-tag.cls-B { background: color-mix(in srgb, var(--st-work) 16%, transparent); color: var(--st-work); font-weight: 600; }
+.wh-tag.cls-C { font-weight: 600; }
+
+/* ---- natija bloki ---- */
+.wh-done.ok .ei { color: var(--st-done); background: color-mix(in srgb, var(--st-done) 14%, transparent); }
+.wh-done.warn .ei { color: var(--st-work); background: color-mix(in srgb, var(--st-work) 14%, transparent); }
+.wh-done b.code { font-size: 20px; }
+
+/* ---- qoldiq filtri ---- */
+.wh-filt { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 16px 10px; }
+.wh-filt .search { flex: 1 1 260px; margin: 0; }
+.wh-filt .sel { flex: 1 1 150px; }
+.wh-chk { gap: 8px; }
+.wh-chk input { margin: 0; width: 18px; height: 18px; accent-color: var(--link); }
+@media (min-width: 600px) { .wh-filt .sel { flex: none; } }
+
+/* ---- qator ichidagi kalitcha (qisman qabul) ---- */
+label.item.wh-sw { cursor: pointer; }
+.item.wh-on { background: color-mix(in srgb, var(--link) 12%, transparent); }
+
+/* ---- kompyuter: ikki ustun ---- */
+.wh-cols { display: grid; gap: 24px; align-items: start; margin-top: 4px; }
+.wh-cols > * { min-width: 0; }
+.wh-cols.l { grid-template-columns: minmax(340px, 5fr) minmax(0, 7fr); }
+.wh-cols.r { grid-template-columns: minmax(0, 8fr) minmax(340px, 4fr); }
+.wh-cols.e { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.wh-sticky { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: thin; padding-bottom: 12px; }
+.wh-cols > div > .sh:first-child { padding-top: 6px; }
+.wh-cols .tblw { margin: 0 16px; }
+.wh-pane { background: var(--sec); border-radius: 14px; margin: 0 16px; }
+.wh-pane .empty { padding: 56px 32px; }
+.mod.wh.wide .tiles { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.mod.wh.wide .tile { padding: 14px 16px; min-height: 88px; }
+.mod.wh.wide .tile .v { font-size: 25px; }
+.mod.wh.wide .item.tap:hover { background: var(--fill); }
+/* kompyuterda pastki tugma o'ng pastda, chap menyu ustiga chiqmaydi */
+body.mod-desk .mainbtn { left: 232px; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none;
+                         display: flex; justify-content: flex-end; padding: 18px 36px; }
+body.mod-desk .mainbtn .btn { pointer-events: auto; width: auto; max-width: none; margin: 0; padding: 14px 30px; box-shadow: var(--sh-2); }
+
+@media (pointer: coarse) {
+  .wh-ctx .chip { min-height: 44px; }
+  .wh-msg .mini { min-height: 44px; }
+}

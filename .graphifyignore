@@ -1,0 +1,18 @@
+# graphify: loyiha kodi + loyihaning o'z hujjatlari. Tashqi skill'lar va generatsiya qilinganlar chiqarilgan.
+.claude/
+.playwright-mcp/
+graphify-out/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/releases/
+frontend/current
+frontend/public/
+backend/.venv/
+backend/data/
+backend/staticfiles/
+**/migrations/
+**/__pycache__/
+*.lock
+package-lock.json
+skills-lock.json

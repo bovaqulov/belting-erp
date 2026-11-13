@@ -1,0 +1,1 @@
+"""Logistika modellari — keyingi bosqichda."""
