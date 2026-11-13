@@ -118,6 +118,10 @@ Ko'chish tartibi: ombor → savdo → yig'ish → katalog → bosh sahifa → CR
 (.mini/.chip/.icon-btn/.back/sheet), zoom faqat Telegram ichida o'chiq (erp_ui.js, lib/telegram `lockZoom`), `Seg` →
 `aria-pressed`, `Loaded` — "Qayta urinish", sex taxtasida "Yangilanmadi · HH:MM", `apiBlob/openBlob` (lib/api).
 
+2026-11-14 — Ombor Next.js'ga ko'chdi (`frontend/src/erp/warehouse/`, `/app/erp/ombor`): 11 bo'lim, backend'siz demo rejim
+(`docs/api/warehouse.md`). Skaner xabari — `.wh-msg` (yashil/qizil, `--st-done`/`--st-bad`), joy/birlik/o'lcham — `.code`,
+kompyuterda ikki ustun (`Split`), telefonda 6 tab + "Amallar". Kit: `Tbl` ga `sel` (tanlangan qator `.picked`).
+
 Keyingi (ustuvorlik bo'yicha): savdo (erp_savdo.html — mijoz/buyurtma kartochkasi, narx, kenglik tanlash) →
 yig'ish (erp_yigish.html — omborchi telefoni) → ombor qolgan tablar (sanash, qabul, skaner natijasi) →
 bosh sahifa (erp_home.html — rolga qarab "bugun nima qilish kerak") → CRM, moliya, marketplace (kompyuter jadvallari) →

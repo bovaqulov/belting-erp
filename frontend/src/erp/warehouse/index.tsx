@@ -21,7 +21,7 @@ import { deskView, parseView, viewQs, viewTitle, type Cell, type Me, type PickBr
 import { LookupScan } from "@/erp/warehouse/lookup-scan";
 import { More } from "@/erp/warehouse/more";
 import { Panel } from "@/erp/warehouse/panel";
-import { Pick } from "@/erp/warehouse/pick";
+import { Pick, preparePick } from "@/erp/warehouse/pick";
 import { Place } from "@/erp/warehouse/place";
 import { useSizeAsk } from "@/erp/warehouse/size-ask";
 import { Stock } from "@/erp/warehouse/stock";
@@ -53,7 +53,6 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
   const dialogs = useDialogs();
   const size = useSizeAsk();
   const [view, setView] = useState<View>(() => parseView(location.search));
-  const [pickOpen, setPickOpen] = useState<number | null>(null);
   const [picks, setPicks] = useState<number | null>(null);
   const helpers = useMemo(() => makeHelpers(me), [me]);
   const shown: View = wide ? deskView(view) : view;
@@ -101,8 +100,8 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
       case "panel":
         return (
           <Panel
-            onPick={(id) => {
-              setPickOpen(id);
+            onPick={async (id) => {
+              if (id !== null) await preparePick(id).catch((e: Error) => toast(e.message, "bad"));
               go("pick");
             }}
           />
@@ -116,7 +115,7 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
       case "inv":
         return <Count />;
       case "pick":
-        return <Pick open={pickOpen} onOpened={() => setPickOpen(null)} />;
+        return <Pick />;
       case "acc":
         return <Accept />;
       case "move":
@@ -139,7 +138,7 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
         wide={wide}
         picks={picks}
         demo={demo}
-        demoText={`namunaviy ma'lumot, faqat shu brauzerda. Sinov kodlari: ${DEMO_CODES}`}
+        demoText={wide ? `namunaviy ma'lumot, faqat shu brauzerda. Sinov kodlari: ${DEMO_CODES}` : "namunaviy ma'lumot"}
         onGo={go}
         onDemoReset={async () => {
           if (!(await confirm("Demo ma'lumotlari boshlang'ich holatga qaytarilsinmi? Siz kiritgan o'zgarishlar o'chadi."))) return;

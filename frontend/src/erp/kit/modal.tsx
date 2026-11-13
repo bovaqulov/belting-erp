@@ -7,8 +7,6 @@ import { createPortal } from "react-dom";
 import { toast } from "./env";
 import { Icon } from "./ui";
 
-import "./kit.css";
-
 export function Modal({
   title,
   ok = "Saqlash",
@@ -41,7 +39,7 @@ export function Modal({
       }
     };
     document.addEventListener("keydown", key, true);
-    const t = setTimeout(() => box.current?.querySelector<HTMLElement>(".mb input:not([type=checkbox]),.mb textarea,.mb select,.mb .opt")?.focus(), 30);
+    const t = setTimeout(() => box.current?.querySelector<HTMLElement>("[data-mb] input:not([type=checkbox]),[data-mb] textarea,[data-mb] select,[data-mb] .opt")?.focus(), 30);
     return () => {
       document.removeEventListener("keydown", key, true);
       clearTimeout(t);
@@ -59,16 +57,32 @@ export function Modal({
     }
   };
   return createPortal(
-    <div className="mdl" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`w ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={hid} ref={box}>
-        <div className="mh">
+    <div
+      className="fixed inset-0 z-70 grid place-items-center bg-black/40 p-4 max-[599px]:[place-items:end_stretch] max-[599px]:p-0"
+      data-modal=""
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className={`flex max-h-[min(88vh,88dvh)] w-full flex-col rounded-2xl bg-page shadow-2 max-[599px]:max-h-[92dvh] max-[599px]:rounded-t-[14px] max-[599px]:rounded-b-none ${wide ? "min-[600px]:w-[min(720px,100%)]" : "min-[600px]:w-[min(520px,100%)]"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={hid}
+        ref={box}
+      >
+        <div className="flex items-center justify-between gap-2 border-b border-sep py-2.5 pr-2.5 pl-[18px] text-base font-bold">
           <span id={hid}>{title}</span>
-          <button type="button" className="x" onClick={onClose} aria-label="Yopish">
+          <button
+            type="button"
+            className="grid min-h-9 min-w-9 cursor-pointer place-items-center rounded-lg border-0 bg-transparent p-1.5 text-hint hover:bg-fill coarse:min-h-11 coarse:min-w-11"
+            onClick={onClose}
+            aria-label="Yopish"
+          >
             <Icon n="x" />
           </button>
         </div>
         <div
-          className="mb"
+          data-mb=""
+          className="overflow-y-auto overscroll-contain px-[18px] py-3.5 [&_label.l]:mt-2.5 [&_label.l]:mb-1 [&_label.l]:block [&_label.l]:text-[12.5px] [&_label.l]:text-hint [&_label.l:first-child]:mt-0 [&>.inp]:w-full [&>.sel]:w-full"
           onKeyDown={(e) => {
             if (e.key === "Enter" && onOk && (e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).type !== "checkbox") {
               e.preventDefault();
@@ -79,7 +93,7 @@ export function Modal({
           {children}
         </div>
         {onOk ? (
-          <div className="mf">
+          <div className="flex justify-end gap-2 border-t border-sep px-[18px] pt-3 pb-[calc(12px+var(--safe-b))] max-[599px]:[&_.b]:flex-1">
             <button type="button" className="b" onClick={onClose}>
               Bekor
             </button>

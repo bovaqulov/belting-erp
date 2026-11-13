@@ -101,7 +101,7 @@ export function UnitView({
 export const CutDoneView = ({ c, unit, onPdf }: { c: Cut; unit: string; onPdf: () => void }) => (
   <>
     <Done ok title={`Kesildi: ${c.number}`}>
-      Bo&apos;laklar: {c.ids.length}
+      Yangi stikerlar: {c.ids.length}
       {c.scrap ? ` · chiqindi ${num(c.scrap, 3)} ${un(unit)}` : ""}
       <br />
       Stikerlar chop etish navbatida

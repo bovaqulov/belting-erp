@@ -9,7 +9,7 @@ import type { Cycle, Dashboard, PickBrief } from "@/erp/warehouse/lib";
 
 import { PanelView } from "./ui";
 
-export function Panel({ onPick }: { onPick: (id: number | null) => void }) {
+export function Panel({ onPick }: { onPick: (id: number | null) => Promise<void> | void }) {
   const { wide, stores, can, me, go, whName } = useWh();
   const wh = stores[0]?.id;
   const st = useLoad(async () => {
@@ -33,8 +33,8 @@ export function Panel({ onPick }: { onPick: (id: number | null) => void }) {
           whName={wh ? whName(wh) : ""}
           kinds={kinds}
           stamp={dt(new Date().toISOString())}
-          onPicks={() => onPick(null)}
-          onPick={(id) => onPick(id)}
+          onPicks={() => void onPick(null)}
+          onPick={(id) => void onPick(id)}
           onCount={() => go("inv")}
         />
       )}

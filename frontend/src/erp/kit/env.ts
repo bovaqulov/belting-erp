@@ -1,6 +1,6 @@
 // ERP muhiti — erp_ui.js ning React'dan tashqari qismlari: Telegram (faqat initData bo'lsa), haptic, toast, signal
 // (ovoz + ekran chaqnashi), QR skaner, tasdiq oynasi, fayl yuklab olish, API (401 → kirish oynasi hodisasi).
-// toast/flash — React daraxtidan tashqarida (DOM), eski sahifalardagi bilan bir xil sinflar (erp_ui.css).
+// toast/flash — React daraxtidan tashqarida (DOM), Tailwind utility sinflari bilan (holat — data-on / data-k).
 import { ApiError, api as baseApi } from "@/shared/api/client";
 import { ICONS } from "@/shared/icons/lucide";
 import { confirmDo, initData, lockZoom, tg as rawTg, type TgWebApp } from "@/shared/telegram/telegram";
@@ -48,12 +48,20 @@ export const hap = {
 
 export const iconSvg = (n: string): string => svgMarkup(ICONS[n] ?? ICONS.file, "i");
 
+// pastda markazda; pastki asosiy tugma bo'lsa — undan yuqorida
+const TOAST =
+  "fixed bottom-[calc(24px+var(--safe-b))] left-1/2 z-80 flex max-w-[calc(100%-32px)] -translate-x-1/2 translate-y-5 items-center gap-2 rounded-xl px-4 py-2.5 text-sm text-white opacity-0 shadow-[0_6px_24px_rgba(0,0,0,.3)] transition-[opacity,transform] duration-[220ms] has-main:bottom-[calc(84px+var(--safe-b))] data-on:translate-y-0 data-on:opacity-100 [&_svg.i]:size-[18px]";
+// skaner signali: butun ekran bir lahza yashil/qizil
+const FLASH =
+  "pointer-events-none fixed inset-0 z-90 opacity-0 transition-opacity duration-[250ms] data-[k=bad]:bg-[rgba(236,57,66,.32)] data-[k=bad]:opacity-100 data-[k=ok]:bg-[rgba(49,181,69,.22)] data-[k=ok]:opacity-100";
+
 let toastT: ReturnType<typeof setTimeout> | undefined;
 export function toast(text: string, kind: "ok" | "bad" | "info" = "ok"): void {
-  let t = document.querySelector<HTMLDivElement>(".toast");
+  let t = document.querySelector<HTMLDivElement>("[data-toast]");
   if (!t) {
     t = document.createElement("div");
-    t.className = "toast";
+    t.dataset.toast = "";
+    t.className = TOAST;
     document.body.append(t);
   }
   t.innerHTML = kind === "bad" ? iconSvg("alert") : kind === "ok" ? iconSvg("check") : "";
@@ -62,9 +70,9 @@ export function toast(text: string, kind: "ok" | "bad" | "info" = "ok"): void {
   t.append(sp);
   t.style.background = kind === "bad" ? "rgba(180,35,40,.95)" : "rgba(30,30,30,.92)";
   const el = t;
-  requestAnimationFrame(() => el.classList.add("on"));
+  requestAnimationFrame(() => (el.dataset.on = ""));
   clearTimeout(toastT);
-  toastT = setTimeout(() => el.classList.remove("on"), kind === "bad" ? 4500 : 2200);
+  toastT = setTimeout(() => delete el.dataset.on, kind === "bad" ? 4500 : 2200);
   if (kind === "bad") hap.err();
   else hap.ok();
 }
@@ -86,14 +94,16 @@ export function beep(ok: boolean): void {
   } catch {
     /* ovozsiz */
   }
-  let f = document.querySelector<HTMLDivElement>(".flash");
+  let f = document.querySelector<HTMLDivElement>("[data-flash]");
   if (!f) {
     f = document.createElement("div");
+    f.dataset.flash = "";
+    f.className = FLASH;
     document.body.append(f);
   }
   const el = f;
-  el.className = "flash " + (ok ? "ok" : "bad");
-  setTimeout(() => (el.className = "flash"), 300);
+  el.dataset.k = ok ? "ok" : "bad";
+  setTimeout(() => delete el.dataset.k, 300);
   if (ok) hap.ok();
   else hap.err();
 }
@@ -155,7 +165,7 @@ export async function api<T = unknown>(path: string, body?: unknown): Promise<T>
 
 export const post = <T = unknown>(path: string, body: unknown = {}): Promise<T> => api<T>(path, body);
 
-/** Telegram muhiti: sinflar (erp_ui.css), mavzu, kengaytirish; zoom imo-ishoralari o'chiq. Bir marta chaqiriladi. */
+/** Telegram muhiti: sinflar (html.tg, body.in-tg — Tailwind tg: varianti), mavzu, kengaytirish; zoom imo-ishoralari o'chiq. Bir marta chaqiriladi. */
 let envDone = false;
 export function initErpEnv(): void {
   if (envDone || typeof window === "undefined") return;

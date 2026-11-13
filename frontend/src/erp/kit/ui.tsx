@@ -1,7 +1,7 @@
 "use client";
-// ERP UI to'plami — erp_ui.js (window.UI) ning React nusxasi. Sinflar va ko'rinish o'sha erp_ui.css'dan (backend
-// /app/erp/ui.css — eski va yangi sahifalar uchun bitta manba). Telegram ichida: BackButton, MainButton, haptic;
-// brauzerda: tepa panel (orqaga), pastki asosiy tugma, kirish oynasi.
+// ERP UI to'plami — erp_ui.js (window.UI) ning React nusxasi. Uslub — Tailwind: komponentlar o'z utility sinflari bilan,
+// modullarda xom ishlatiladigan primitivlar (list, item, field, btn, …) — src/shared/styles/ui-kit.css (@utility).
+// Telegram ichida: BackButton, MainButton, haptic; brauzerda: tepa panel (orqaga), pastki asosiy tugma, kirish oynasi.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -107,17 +107,34 @@ export const Check = ({ on }: { on: boolean }) => (
   <input type="checkbox" className="ck" tabIndex={-1} aria-hidden="true" readOnly checked={on} style={{ pointerEvents: "none" }} />
 );
 
+// ------------------------------------------------------------ uslub (Tailwind)
+/** Segment: yopishqoq (brauzerda tepa panel bo'lsa — uning ostida), tugmalar guruhi */
+const SEG =
+  "sticky top-0 z-15 mx-4 my-2 flex gap-0.5 overflow-x-auto rounded-[10px] bg-[linear-gradient(var(--fill),var(--fill)),var(--page)] p-0.5 shadow-[0_0_0_8px_var(--page)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:root:has(#topbar:not(.hidden))_&]:top-[52px]";
+const SEG_BTN = "flex-[1_0_auto] cursor-pointer whitespace-nowrap rounded-lg border-0 bg-transparent px-3 py-[7px] text-[13.5px] font-medium text-fg transition-colors coarse:min-h-10";
+
+/** Pastdan chiqadigan oyna (kompyuter karkasida — markazda): fon va quti */
+export const sheetBg = (on: boolean) => `fixed inset-0 z-60 bg-black/45 transition-opacity duration-200 ${on ? "opacity-100" : "opacity-0"}`;
+export const sheetBox = (on: boolean) =>
+  `fixed inset-x-0 bottom-0 z-61 mx-auto max-h-[92vh] max-w-[720px] overflow-y-auto overscroll-contain rounded-t-[14px] bg-page pt-1.5 pb-[calc(16px+var(--safe-b))] shadow-2 transition-transform duration-[260ms] ease-[cubic-bezier(.2,.8,.2,1)] desk:top-1/2 desk:right-auto desk:bottom-auto desk:left-1/2 desk:max-h-[86vh] desk:w-[min(560px,92vw)] desk:-translate-x-1/2 desk:rounded-2xl desk:pt-2 desk:pb-[18px] desk:transition-[transform,opacity] desk:duration-200 ${
+    on ? "translate-y-0 desk:-translate-y-1/2 desk:opacity-100" : "translate-y-full desk:-translate-y-[46%] desk:opacity-0"
+  }`;
+const SHEET_GRAB = "mx-auto mt-1 mb-1.5 h-[5px] w-9 rounded-[3px] bg-hint opacity-35 desk:hidden";
+const SHEET_HD = "flex items-center gap-2 px-4 pt-1 pb-1.5";
+const SHEET_H2 = "m-0 flex-1 text-center text-[17px] font-semibold";
+const SHEET_X = "min-w-[60px] cursor-pointer border-0 bg-transparent py-1.5 text-left text-base text-link coarse:min-h-11";
+
 export function Seg<K extends string>({ items, cur, onPick }: { items: [K, string][]; cur: K; onPick: (k: K) => void }) {
   return (
     // tugmalar guruhi (aria-pressed): to'liq tab naqshi (tabpanel, strelka bilan yurish) yo'q — tablist e'lon qilinmaydi
-    <div className="seg" role="group" data-seg="">
+    <div className={SEG} role="group" data-seg="">
       {items.map(([k, l]) => (
         <button
           key={k}
           data-k={k}
           type="button"
           aria-pressed={k === cur}
-          className={k === cur ? "on" : ""}
+          className={`${SEG_BTN} ${k === cur ? "bg-sec font-semibold shadow-[0_1px_3px_rgba(0,0,0,.18)]" : ""}`}
           onClick={() => {
             hap.tap();
             onPick(k);
@@ -193,24 +210,23 @@ export function Sheet({
   };
   return createPortal(
     <>
-      <div className={`sheet-bg ${on ? "on" : ""}`} onClick={close} />
-      <div className={`sheet ${on ? "on" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-        <div className="grab" />
-        <div className="hd">
-          <button className="x" onClick={close}>
+      <div className={sheetBg(on)} onClick={close} />
+      <div className={sheetBox(on)} role="dialog" aria-modal="true" aria-label={title}>
+        <div className={SHEET_GRAB} />
+        <div className={SHEET_HD}>
+          <button className={SHEET_X} onClick={close}>
             Bekor
           </button>
-          <h2>{title}</h2>
+          <h2 className={SHEET_H2}>{title}</h2>
           {done ? (
-            <button className="x go" onClick={ok}>
+            <button className={`${SHEET_X} text-right font-semibold`} onClick={ok}>
               {done}
             </button>
           ) : (
-            <span className="x" />
+            <span className={SHEET_X} />
           )}
         </div>
         <div
-          className="bd"
           ref={bodyRef}
           onKeyDown={(e) => {
             if (e.key === "Enter" && done && (e.target as HTMLElement).tagName === "INPUT") {
@@ -262,8 +278,16 @@ export function MainButton({ text, onClick, color, disabled }: { text: string; o
   }, [text, color, disabled, run]);
   if (t) return null;
   return createPortal(
-    <div className="mainbtn" id="mainbtn">
-      <button className="btn" disabled={disabled || busy} onClick={run} style={color ? { background: color } : undefined}>
+    <div
+      id="mainbtn"
+      className="fixed inset-x-0 bottom-0 z-30 bg-page/88 px-4 pt-2.5 pb-[calc(10px+var(--safe-b))] backdrop-blur-[14px] tg:hidden desk:pointer-events-none desk:left-[232px] desk:flex desk:justify-end desk:bg-transparent desk:px-9 desk:py-[18px] desk:backdrop-blur-none"
+    >
+      <button
+        className="btn mx-auto max-w-[688px] desk:pointer-events-auto desk:m-0 desk:w-auto desk:max-w-none desk:px-[30px] desk:py-3.5 desk:shadow-2"
+        disabled={disabled || busy}
+        onClick={run}
+        style={color ? { background: color } : undefined}
+      >
         {text}
       </button>
     </div>,
@@ -330,17 +354,24 @@ export function Shell({ title, nav, wide, bare, children }: { title: string; nav
     );
   return (
     <>
-      <div className={`top ${inTg ? "hidden" : ""}`} id="topbar">
-        <div className="bar">
-          <button className={`back ${nav.depth > 1 ? "on" : ""}`} onClick={nav.back}>
+      <div
+        className={`sticky top-0 z-20 bg-page/82 backdrop-blur-[16px] backdrop-saturate-180 ${inTg || (!title && nav.depth <= 1) ? "hidden" : ""}`}
+        id="topbar"
+      >
+        <div className="flex min-h-[52px] items-center gap-2 px-3 py-1.5">
+          <button
+            className={`${nav.depth > 1 ? "flex" : "hidden"} cursor-pointer items-center gap-0.5 border-0 bg-transparent px-1 py-1.5 text-base text-link coarse:min-h-11 [&_svg.i]:-ml-1.5 [&_svg.i]:size-6`}
+            onClick={nav.back}
+          >
             <Icon n="back" />
             Orqaga
           </button>
-          <h1>{title}</h1>
+          {/* bosh ekranda katta sarlavha bor — takrorlanmasin */}
+          <h1 className={`m-0 min-w-0 flex-1 truncate text-[17px] font-semibold ${nav.depth > 1 ? "" : "invisible"}`}>{title}</h1>
           <span />
         </div>
       </div>
-      <main className={`wrap ${wide ? "wide" : ""}`}>{ready ? children : <Skeleton />}</main>
+      <main className={`mx-auto pb-[calc(96px+var(--safe-b))] ${wide ? "max-w-[1200px]" : "max-w-[720px]"}`}>{ready ? children : <Skeleton />}</main>
       <Login />
     </>
   );
@@ -476,15 +507,15 @@ function Login() {
   if (!open) return null;
   return createPortal(
     <>
-      <div className="sheet-bg on" />
-      <div className="sheet on" role="dialog" aria-modal="true" aria-label="Kirish">
-        <div className="grab" />
-        <div className="hd">
-          <span className="x" />
-          <h2>Kirish</h2>
-          <span className="x" />
+      <div className={sheetBg(true)} />
+      <div className={sheetBox(true)} role="dialog" aria-modal="true" aria-label="Kirish">
+        <div className={SHEET_GRAB} />
+        <div className={SHEET_HD}>
+          <span className={SHEET_X} />
+          <h2 className={SHEET_H2}>Kirish</h2>
+          <span className={SHEET_X} />
         </div>
-        <div className="bd">
+        <div>
           <Empty icon="send" title="Telegram orqali kirish">
             Botda «Kirish»ni tasdiqlang — sahifa o&apos;zi ochiladi.
           </Empty>

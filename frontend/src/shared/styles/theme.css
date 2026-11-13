@@ -1,0 +1,55 @@
+/* Tailwind mavzusi: ranglar — Telegram mavzusidan keladigan CSS o'zgaruvchilari (base.css), shu sabab `inline`
+   (utility qiymati o'zgaruvchiga havola qoladi — Telegram mavzusi ish vaqtida almashsa ham to'g'ri).
+   ERP: bg-page, bg-sec, text-fg, text-hint, text-sub, text-link, bg-btn/text-btn-fg, border-sep, bg-fill, holat — st-*.
+   Jarvis/panel: bg-bg, bg-bg2, border-line. Tokenlar ro'yxati: .claude/skills/belting-design/references/tokens.md */
+@theme inline {
+  --color-page: var(--page);
+  --color-sec: var(--sec);
+  --color-fg: var(--text);
+  --color-hint: var(--hint);
+  --color-sub: var(--sub);
+  --color-link: var(--link);
+  --color-accent: var(--accent);
+  --color-btn: var(--btn);
+  --color-btn-fg: var(--btn-text);
+  --color-head: var(--head);
+  --color-sep: var(--sep);
+  --color-fill: var(--fill);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-focus: var(--focus);
+  --color-st-new: var(--st-new);
+  --color-st-work: var(--st-work);
+  --color-st-make: var(--st-make);
+  --color-st-done: var(--st-done);
+  --color-st-bad: var(--st-bad);
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg2);
+  --color-line: var(--border);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-code: "Barlow SC", "DIN Alternate", "Bahnschrift", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(127, 127, 127, 0.06);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.18), 0 16px 40px rgba(0, 0, 0, 0.3);
+
+  --animate-sk: sk 1.2s infinite;
+  --animate-spin-slow: spin 0.8s linear infinite;
+  @keyframes sk {
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+/* holat variantlari: telefon (qo'lqop — bosish maydoni ≥44px), Telegram ichi/tashqarisi, kompyuter karkasi (kit/layout),
+   pastki asosiy tugma bor, Telegram yorug' mavzusi */
+@custom-variant coarse (@media (pointer: coarse));
+@custom-variant fine (@media (pointer: fine));
+@custom-variant tg (&:where(body.in-tg *, body.in-tg));
+@custom-variant notg (&:where(body:not(.in-tg) *));
+@custom-variant desk (&:where(body.mod-desk *, body.mod-desk));
+@custom-variant has-main (&:where(body.has-main *));
+@custom-variant light (@media (prefers-color-scheme: light));
+@custom-variant reduce (@media (prefers-reduced-motion: reduce));

@@ -1,0 +1,262 @@
+/* Telegram uslubidagi UI to'plami (ERP) — Tailwind v4 @utility: modullarda xom sinf sifatida ishlatiladigan
+   primitivlar (bir nechta modulda takrorlanadi — har joyda uzun utility qatori o'rniga bitta nom).
+   Faqat ishlatilganda CSS chiqadi. Komponent ichidagi bir martalik uslub — JSX'da utility sinflar.
+   Eslatma: bu nomlar global — boshqa domenlar (lenta, geo, Jarvis) bularni ishlatmaydi, o'z utility'lari bilan. */
+
+/* ---------------------------------------------------------------- matn va raqam */
+/* texnik identifikator: 1040-8M · A-01-3 · P00000123 · BR-BU-26-00031 · 20 mm */
+@utility code {
+  font-family: var(--font-code);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0.015em;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  &.lg {
+    font-size: 1.3em;
+    line-height: 1.1;
+  }
+  &.xl {
+    font-size: 1.75em;
+    line-height: 1.05;
+    font-weight: 700;
+  }
+  &.mut {
+    color: var(--sub);
+    font-weight: 500;
+  }
+}
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+@utility large {
+  @apply px-4 pt-1.5 pb-0.5 text-[28px] font-bold tracking-[-0.02em] text-balance;
+  & small {
+    @apply mt-0.5 block text-sm font-normal tracking-normal text-hint;
+  }
+}
+
+/* holat belgisi: rang + matn (faqat rang emas) */
+@utility st {
+  --c: var(--hint);
+  @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full py-0.5 pr-[9px] pl-[7px] text-[12.5px] font-semibold;
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  &::before {
+    content: "";
+    @apply size-[7px] flex-none rounded-full bg-current;
+  }
+  &.new { --c: var(--st-new); }
+  &.work { --c: var(--st-work); }
+  &.make { --c: var(--st-make); }
+  &.done { --c: var(--st-done); }
+  &.bad { --c: var(--st-bad); }
+}
+@utility badge {
+  @apply inline-block flex-none rounded-md bg-fill px-2 py-0.5 text-xs font-medium text-hint;
+  &.ok { @apply bg-ok/15 text-ok; }
+  &.bad { @apply bg-danger/15 text-danger; }
+  &.warn { @apply bg-warn/15 text-warn; }
+  &.info { @apply bg-link/15 text-link; }
+}
+
+/* ---------------------------------------------------------------- ro'yxatlar (Telegram sozlamalari uslubi) */
+@utility sh {
+  @apply flex justify-between gap-2 px-8 pt-5 pb-[7px] text-[13px] font-medium tracking-[0.02em] text-head uppercase;
+  & > span:first-child { @apply min-w-0; }
+  & .r { @apply flex-none font-normal tracking-normal whitespace-nowrap text-hint normal-case; }
+}
+@utility sf {
+  @apply px-8 pt-[7px] text-[13px] text-hint text-pretty;
+}
+@utility list {
+  @apply mx-4 overflow-hidden rounded-xl bg-sec;
+  /* ajratgich: ikonka kvadratidan keyin (58px), oddiy ro'yxatda — 16px */
+  & > :is(.item, .field) + :is(.item, .field)::before {
+    content: "";
+    @apply absolute top-0 right-0 left-4 border-t border-sep;
+  }
+  & > .item + .item::before { @apply left-[58px]; }
+  &.plain > .item + .item::before { @apply left-4; }
+}
+@utility item {
+  @apply relative flex min-h-[46px] items-center gap-3 px-4 py-[9px];
+  a& { color: inherit; }
+  &.tap { @apply cursor-pointer active:bg-fill; }
+  &.tap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  &.center { @apply justify-center text-link; }
+  &.center.danger { @apply text-danger; }
+  & .main { @apply min-w-0 flex-1; }
+  & .ck + .main { @apply ml-0.5; }
+  & .t { @apply truncate; }
+  & .t.wrap2 { @apply line-clamp-2 whitespace-normal; }
+  & .t.link { @apply text-link; }
+  & .t.danger { @apply text-danger; }
+  & .s { @apply truncate text-[13px] text-sub; }
+  & .s.ml { @apply whitespace-normal text-pretty; }
+  & .val { @apply flex-none text-right text-[15px] text-hint tabular-nums; }
+  & .val.strong { @apply font-semibold text-fg; }
+  & .val small { @apply block text-xs font-normal text-hint; }
+  & .val .code:not(.mut) { @apply text-fg; }
+  & .chev { @apply size-[18px] text-hint opacity-55; }
+}
+/* ikonka kvadrati va avatar (rangi — style bilan) */
+@utility sq {
+  @apply grid size-[30px] flex-none place-items-center rounded-lg text-white;
+  & svg.i { @apply size-[18px]; }
+}
+@utility av {
+  @apply grid size-10 flex-none place-items-center rounded-full text-[15px] font-semibold text-white;
+}
+@utility hero {
+  @apply flex flex-col items-center px-4 pt-3.5 pb-1 text-center;
+  & .av { @apply mb-2.5 size-[76px] text-[28px]; }
+  & h2 { @apply m-0 text-[21px] font-bold; }
+  & p { @apply mt-[3px] text-sm text-hint; }
+}
+
+/* forma qatorlari (ro'yxat ichida) */
+@utility field {
+  @apply relative flex min-h-[46px] items-center gap-3 px-4 py-1.5 focus-within:bg-link/6;
+  & label { @apply min-w-24 flex-none text-fg; }
+  & :is(input, select, textarea):not(.switch, .ck) {
+    @apply min-w-0 flex-1 border-0 bg-transparent py-1.5 text-right text-fg outline-none;
+    font: inherit;
+  }
+  & textarea { @apply min-h-[70px] resize-y text-left; }
+  & select { @apply cursor-pointer appearance-none text-link; }
+  &.col { @apply flex-col items-stretch gap-0.5; }
+  &.col label { @apply text-[13px] text-hint; }
+  &.col :is(input, textarea) { @apply text-left; }
+}
+@utility switch {
+  @apply relative h-[31px] w-[51px] flex-none cursor-pointer appearance-none rounded-2xl bg-fill transition-colors checked:bg-ok;
+  margin-left: auto;
+  &::after {
+    content: "";
+    @apply absolute top-0.5 left-0.5 size-[27px] rounded-full bg-white shadow-[0_2px_4px_rgba(0,0,0,.25)] transition-[left];
+  }
+  &:checked::after { @apply left-[22px]; }
+}
+/* yumaloq belgilash (Telegram tanlash doirasi) */
+@utility ck {
+  @apply m-0 grid size-[22px] flex-none cursor-pointer appearance-none place-items-center rounded-full border-[1.5px] border-hint bg-transparent p-0 transition-colors checked:border-btn checked:bg-btn;
+  &:checked::after {
+    content: "";
+    @apply h-2.5 w-[5px] -translate-y-px rotate-45 border-solid border-btn-fg;
+    border-width: 0 2px 2px 0;
+  }
+}
+
+/* ---------------------------------------------------------------- tugmalar */
+@utility btn {
+  @apply flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-btn p-[13px] font-semibold text-btn-fg no-underline active:scale-[.985] disabled:opacity-50 reduce:active:scale-100;
+  font: inherit;
+  font-weight: 600;
+  &.sec { @apply bg-fill text-link; }
+  &.danger { @apply bg-danger/15 text-danger; }
+  &.plain { @apply bg-transparent font-medium text-link; }
+}
+@utility btns {
+  @apply mx-4 mt-3 flex gap-2;
+  & .btn { @apply flex-1; }
+}
+@utility mini {
+  @apply flex-none cursor-pointer rounded-[14px] border-0 bg-fill px-3 py-[5px] text-sm font-medium text-link active:opacity-70 coarse:min-h-11 coarse:rounded-[22px] coarse:px-3.5 coarse:py-2;
+  &.pri { @apply bg-btn text-btn-fg; }
+  &.danger { @apply text-danger; }
+}
+@utility chips {
+  @apply mx-4 mt-2 flex flex-wrap gap-1.5;
+}
+@utility chip {
+  @apply cursor-pointer rounded-2xl border-0 bg-sec px-3 py-1.5 text-[13.5px] text-fg coarse:min-h-11;
+  &.on { @apply bg-btn text-btn-fg; }
+}
+@utility icon-btn {
+  @apply grid size-9 flex-none cursor-pointer place-items-center rounded-full border-0 bg-transparent text-link active:scale-[.92] active:bg-fill coarse:size-11;
+}
+
+/* ---------------------------------------------------------------- qidiruv va skaner */
+@utility search {
+  @apply mx-4 my-2 flex h-[38px] items-center gap-2 rounded-[10px] bg-fill px-2.5 text-hint focus-within:shadow-[0_0_0_2px_var(--focus)] coarse:h-11;
+  & input { @apply min-w-0 flex-1 border-0 bg-transparent text-fg outline-none; font: inherit; }
+  & .i { @apply size-[18px]; }
+  & button { @apply grid cursor-pointer place-items-center border-0 bg-transparent p-0 text-link; }
+}
+@utility scanbar {
+  @apply mx-4 my-2 flex gap-2;
+  & .search { @apply m-0 flex-1; }
+  & .cam { @apply grid size-[38px] flex-none cursor-pointer place-items-center rounded-[10px] border-0 bg-btn text-btn-fg coarse:size-11 coarse:rounded-xl; }
+}
+
+/* ---------------------------------------------------------------- plitkalar, bo'sh holat, skelet */
+@utility tiles {
+  @apply mx-4 grid grid-cols-2 gap-2 min-[560px]:grid-cols-3;
+}
+@utility tile {
+  @apply relative block min-h-[74px] rounded-xl bg-sec px-3 py-[11px] text-inherit active:opacity-75;
+  & .l { @apply text-[12.5px] leading-tight text-hint; }
+  & .v { @apply mt-1 text-[21px] font-bold tracking-[-0.01em] tabular-nums; }
+  & .v small { @apply text-xs font-medium text-hint; }
+  &.bad .v { @apply text-danger; }
+  &.ok .v { @apply text-ok; }
+  & .ic { @apply absolute top-2.5 right-2.5 text-hint opacity-50; }
+  & .ic svg.i { @apply size-[18px]; }
+}
+@utility empty {
+  @apply px-8 py-[46px] text-center text-hint text-pretty;
+  & .ei { @apply mx-auto mb-3 grid size-16 place-items-center rounded-full bg-fill; }
+  & .ei svg.i { @apply size-[30px]; }
+  & b { @apply mb-1 block text-[17px] text-fg text-balance; }
+}
+@utility skel {
+  @apply mx-4 mb-px h-[46px] animate-sk rounded-lg;
+  background: linear-gradient(90deg, var(--sec) 25%, color-mix(in srgb, var(--sec) 80%, #888) 50%, var(--sec) 75%);
+  background-size: 200% 100%;
+}
+
+/* ---------------------------------------------------------------- kompyuter boshqaruvlari (kit/kit.css dan) */
+@utility b {
+  @apply inline-flex h-[34px] cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-sep bg-page px-3 text-sm whitespace-nowrap text-fg no-underline hover:border-link disabled:cursor-default disabled:opacity-50 coarse:min-h-11;
+  font: inherit;
+  font-size: 14px;
+  & svg.i { @apply size-4; }
+  &.on { @apply border-link bg-link text-white; }
+  &.pri { @apply border-btn bg-btn font-semibold text-btn-fg; }
+  &.danger { @apply text-danger; }
+  &.ok { @apply text-ok; }
+  &.ic { @apply w-[34px] p-0 coarse:min-w-11; }
+}
+@utility grp {
+  @apply inline-flex max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+  & .b { @apply rounded-none; }
+  & .b:first-child { @apply rounded-l-lg; }
+  & .b:last-child { @apply rounded-r-lg; }
+  & .b + .b { @apply -ml-px; }
+}
+@utility inp {
+  @apply h-[34px] max-w-full min-w-0 rounded-lg border border-sep bg-page px-2.5 text-fg outline-none focus:border-link coarse:min-h-11;
+  font: inherit;
+  @media (min-width: 768px) and (pointer: fine) {
+    font-size: 14px !important;
+  }
+  textarea& { @apply h-auto min-h-[70px] resize-y py-2; }
+}
+@utility sel {
+  @apply h-[34px] max-w-full min-w-0 rounded-lg border border-sep bg-page px-2.5 text-fg outline-none focus:border-link coarse:min-h-11;
+  font: inherit;
+  @media (min-width: 768px) and (pointer: fine) {
+    font-size: 14px !important;
+  }
+}
+/* oyna ichidagi tanlov qatori */
+@utility opt {
+  @apply flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[9px] text-left text-fg hover:bg-fill coarse:min-h-12;
+  font: inherit;
+  &.on { @apply bg-fill; }
+  & .s { @apply text-xs text-hint; }
+  & .dot { @apply size-2.5 flex-none rounded-full; }
+}
+@utility dd {
+  @apply mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-sep bg-page;
+}

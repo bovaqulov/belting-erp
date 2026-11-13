@@ -2,7 +2,7 @@
 // Yig'ish (buyurtma → jo'natish). Har tovar skaner bilan tasdiqlanadi — qo'lda qo'shib bo'lmaydi. Birlik QR — butun
 // birlik (kerakdan katta bo'lsa kesish taklif qilinadi). Donali tovar: birinchi skanda soni so'raladi, keyingi har skan +1.
 // Noto'g'ri tovar bloklanadi. Yorlig'i yo'q tovar — qatorni bosib stiker chiqariladi. Holat modul darajasida.
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { beep, confirm, toast } from "@/erp/kit/env";
 import { dnum, num, un } from "@/erp/kit/fmt";
@@ -27,7 +27,12 @@ const keepPicks = (p: Picked[]) => {
 const savedPicks = () => PK.picks;
 const savedOrder = () => PK.order;
 
-export function Pick({ open, onOpened }: { open: number | null; onOpened: () => void }) {
+/** Paneldan buyurtma bosilganda: bo'limga o'tishdan oldin buyurtmani yuklab qo'yish (Pick shu bilan ochiladi) */
+export async function preparePick(id: number): Promise<void> {
+  keepOrder(await api<PickOrder>(`/app/api/erp/picks/${id}`));
+}
+
+export function Pick() {
   const { can } = useWh();
   const [order, setOrder] = useState<PickOrder | null>(savedOrder);
   const [done, setDone] = useState<{ number: string; total: number } | null>(null);
@@ -41,12 +46,6 @@ export function Pick({ open, onOpened }: { open: number | null; onOpened: () => 
       toast((e as Error).message, "bad");
     }
   };
-  // paneldan buyurtma bilan kelindi — ochib, so'rovni tozalash (asinxron: effekt ichida sinxron setState yo'q)
-  useEffect(() => {
-    if (open === null) return;
-    void openId(open).finally(onOpened);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
   if (!can("sale", "create"))
     return (
       <Empty icon="alert" title="Ruxsat yo'q">

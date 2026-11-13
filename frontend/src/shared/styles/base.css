@@ -1,0 +1,182 @@
+/* Tokenlar va asosiy element uslubi (@layer base). Ranglar — CSS o'zgaruvchilari: Telegram ichida themeParams
+   (--tg-theme-*), brauzerda Telegram Night/Day. Ikki to'plam:
+   - umumiy (Jarvis, panel, lenta, geo): --bg, --bg2, --text, --hint, --btn, --border — qorong'i standart;
+   - ERP (/app/erp/*, `[data-erp]` bor sahifa): Telegram sozlamalari uslubi — --page, --sec, --sub, --link, --sep, --fill,
+     holat (--st-*), yorug' rejim. Nomlari to'qnashadiganlari (--text, --hint, --btn, --danger) ERP sahifasida qayta beriladi. */
+@layer base {
+  @font-face {
+    font-family: "Barlow SC";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url(/app/erp/fonts/barlow-sc-500-latin.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "Barlow SC";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url(/app/erp/fonts/barlow-sc-600-latin.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "Barlow SC";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url(/app/erp/fonts/barlow-sc-700-latin.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "Barlow SC";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url(/app/erp/fonts/barlow-sc-600-latin-ext.woff2) format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+
+  :root {
+    /* umumiy */
+    --bg: var(--tg-theme-bg-color, #0f1420);
+    --bg2: var(--tg-theme-secondary-bg-color, #171e2e);
+    --text: var(--tg-theme-text-color, #e9edf5);
+    --hint: var(--tg-theme-hint-color, #8a94a8);
+    --btn: var(--tg-theme-button-color, #3a8dff);
+    --btn-text: var(--tg-theme-button-text-color, #fff);
+    --danger: #e5484d;
+    --border: rgba(127, 127, 127, 0.3);
+    /* ERP (boshqa sahifalarda ham bor — zarari yo'q) */
+    --page: var(--tg-theme-secondary-bg-color, #0e1621);
+    --sec: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #17212b));
+    --sub: var(--tg-theme-subtitle-text-color, var(--tg-theme-hint-color, #708499));
+    --link: var(--tg-theme-link-color, #6ab3f3);
+    --accent: var(--tg-theme-accent-text-color, var(--tg-theme-link-color, #6ab3f3));
+    --head: var(--tg-theme-section-header-text-color, var(--tg-theme-accent-text-color, #6ab3f3));
+    --sep: var(--tg-theme-section-separator-color, rgba(255, 255, 255, 0.07));
+    --ok: #31b545;
+    --warn: #f5a623;
+    --fill: rgba(127, 127, 127, 0.14);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    /* holat ma'nosi (hamma sahifada bir xil): yangi · jarayonda · tayyorlanmoqda · tayyor · xato/kechikkan */
+    --st-new: #3e88f7;
+    --st-work: #e8961f;
+    --st-make: #9a5bea;
+    --st-done: var(--ok);
+    --st-bad: var(--danger);
+    --focus: color-mix(in srgb, var(--link) 75%, transparent);
+  }
+  :root:has([data-erp]) {
+    color-scheme: dark;
+    --text: var(--tg-theme-text-color, #f5f5f5);
+    --hint: var(--tg-theme-hint-color, #708499);
+    --btn: var(--tg-theme-button-color, #5288c1);
+    --btn-text: var(--tg-theme-button-text-color, #ffffff);
+    --danger: var(--tg-theme-destructive-text-color, #ec3942);
+  }
+  @media (prefers-color-scheme: light) {
+    /* yorug' rejim: holat/signal ranglari oq fonda o'qilsin (WCAG ≥4.5:1) — tus o'sha, faqat to'qroq */
+    :root:not(.tg):has([data-erp]) {
+      color-scheme: light;
+      --page: #efeff4;
+      --sec: #ffffff;
+      --text: #000000;
+      --hint: #8e8e93;
+      --sub: #8e8e93;
+      --link: #2481cc;
+      --accent: #2481cc;
+      --btn: #2481cc;
+      --head: #6d6d72;
+      --sep: rgba(60, 60, 67, 0.12);
+      --fill: rgba(118, 118, 128, 0.12);
+      --ok: #20772d;
+      --warn: #925d07;
+      --danger: #ca131d;
+      --st-new: #0960e2;
+      --st-work: #925d0f;
+      --st-make: #873be6;
+    }
+  }
+  :root.tg-light {
+    color-scheme: light;
+    --ok: #20772d;
+    --warn: #925d07;
+    --st-new: #0960e2;
+    --st-work: #925d0f;
+    --st-make: #873be6;
+  }
+
+  html {
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body {
+    overscroll-behavior: none;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.45 var(--font-sans);
+  }
+  :root:has([data-erp]) body {
+    background: var(--page);
+    line-height: 1.4;
+    min-height: 100vh;
+  }
+  /* iOS: 16px dan kichik bo'lsa fokusda zoom qiladi */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--hint);
+  }
+  select option {
+    background: var(--sec);
+    color: var(--text);
+  }
+  a {
+    color: var(--link);
+  }
+  button {
+    cursor: pointer;
+  }
+  svg.i {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    vertical-align: middle;
+  }
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+  /* klaviatura fokusi (sichqoncha bosganda ko'rinmaydi) */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  /* kamroq harakat so'ralgan bo'lsa */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

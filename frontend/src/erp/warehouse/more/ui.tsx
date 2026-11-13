@@ -1,5 +1,5 @@
 // "Amallar" (telefon): tablarga sig'magan bo'limlar ro'yxati va katalogga havola.
-import { List, Row, Sf } from "@/erp/kit/ui";
+import { C, Icon, List, Row, Sf } from "@/erp/kit/ui";
 import { MORE, SEC, type Sec } from "@/erp/warehouse/lib";
 
 const COLOR: Partial<Record<Sec, string>> = { stock: "green", acc: "teal", move: "blue", off: "red", cells: "orange", plan: "purple" };
@@ -13,7 +13,18 @@ export const MoreView = ({ onGo }: { onGo: (s: Sec) => void }) => (
       ))}
     </List>
     <List style={{ marginTop: 16 }}>
-      <Row icon="layers" color="green" t="Katalog" s="Tovarlar va kategoriyalar — Accounting › Mahsulotlar" chev onClick={() => location.assign("/app/erp/moliya/?a=products&sec=items")} />
+      <a className="item tap" href="/app/erp/moliya/?a=products&sec=items">
+        <span className="sq" style={{ background: C.green }} aria-hidden="true">
+          <Icon n="layers" />
+        </span>
+        <div className="main">
+          <div className="t">Katalog</div>
+          <div className="s">Tovarlar va kategoriyalar — Accounting › Mahsulotlar</div>
+        </div>
+        <span className="chev">
+          <Icon n="chev" />
+        </span>
+      </a>
     </List>
     <Sf>Ombor tuzilmasi (bloklar, javobgarlar) — kompyuterda, Joylar bo&apos;limida.</Sf>
   </>

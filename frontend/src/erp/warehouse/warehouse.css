@@ -2,7 +2,7 @@
    Bu yerda faqat omborga xos: skaner xabari (uzoqdan ko'rinadigan katta yashil/qizil), ikki ustun, filtr, teglar. */
 
 /* ---- skaner natijasi: katta xabar, ovoz bilan birga ---- */
-.wh-msg { margin: 10px 16px 0; border-radius: 12px; padding: 12px 14px; font-size: 17px; font-weight: 600; line-height: 1.3;
+.wh-msg { margin: 10px 16px 8px; border-radius: 12px; padding: 12px 14px; font-size: 17px; font-weight: 600; line-height: 1.3;
           display: flex; gap: 10px; align-items: center; background: var(--sec); overflow-wrap: anywhere; }
 .wh-msg svg.i { width: 26px; height: 26px; flex: none; }
 .wh-msg .tx { min-width: 0; flex: 1; }
@@ -23,7 +23,8 @@
 
 /* ---- plitkalar, sarlavha osti ---- */
 .wh-tiles { margin-top: 0; }
-.wh-tile-btn { border: 0; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.wh-tile-btn { display: block; border: 0; font: inherit; line-height: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.mod.wh .tbl .code { white-space: nowrap; }
 .wh-tile-btn:hover { box-shadow: inset 0 0 0 1px var(--link); }
 .wh-sub { margin: 2px 16px 12px; color: var(--hint); font-size: 14px; font-variant-numeric: tabular-nums; }
 .wh-u { color: var(--hint); font-size: .86em; margin-left: 3px; }

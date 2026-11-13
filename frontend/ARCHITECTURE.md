@@ -26,7 +26,7 @@ backend `/app/*` ni `out/` dan beradi, ma'lumot faqat `/app/api/*` dan.
    - Qism ichida qo'shimcha ko'rinish fayli bo'lishi mumkin (masalan `art.tsx` — rasmlar) — uni faqat o'sha qismning
      `ui.tsx` i import qiladi.
    - Sof mantiq — `*.lib.ts`, test — yonida `*.lib.test.ts`.
-   Namuna: `src/erp/crm/`, `src/erp/workshop/`. Ko'chgan: hammasi — home, ai (Jarvis), erp/home, erp/crm, erp/workshop, conveyor, geomap (analytics — joy egallovchi); yangi kod — darhol shu tartibda.
+   Namuna: `src/erp/crm/`, `src/erp/workshop/`. Ko'chgan: hammasi — home, ai (Jarvis), erp/home, erp/crm, erp/workshop, erp/warehouse, conveyor, geomap (analytics — joy egallovchi); yangi kod — darhol shu tartibda.
 6. **CSS:** domen uslubi o'z papkasida (`*.module.css` yoki domen global CSS). Umumiy tokenlar — `shared/styles/`.
 
 ## Daraxt
@@ -47,6 +47,7 @@ frontend/
     erp/layout.tsx  erp/sex/    ERP                               → @/erp/workshop
     erp/crm/                    CRM                               → @/erp/crm
     erp/marketplace/            Marketplace                       → @/erp/marketplace
+    erp/ombor/                  Ombor (Warehouse)                 → @/erp/warehouse
     erp/moliya/                 Accounting (Mahsulotlar, Shartnomalar, Maoshlar) → @/erp/finance
     erp/logistics/              logistika                         → @/erp/logistics
   src/
@@ -69,8 +70,13 @@ frontend/
       kit/                      ERP UI to'plami (erp_ui.js'ning React nusxasi; ikonkalar — shared/icons), env, fmt, colors, modal (Modal, useDialogs), layout (AppLayout: chap menyu / telefon tepasi, DemoStrip), table (Tbl), wide (useWide) + kit.css;
                                       workshop/                 ✅ /app/erp/sex — qism = papka: board/ job/ group/ (ekranlar), scan/ take/ (skaner, sarf),
                                 common/ (muddat, o'lcham, bosqichlar, material), lib/, api/
-      home/        ✅ /app/erp          modullar: CRM, Warehouse, Manufacturing (→ sex), Logistics, Accounting (→ moliya) (index + ui + art)
-      warehouse/   ⏳ /app/erp/ombor    erp_ombor.html    (1099)      ombor
+      home/        ✅ /app/erp          modullar: CRM, Warehouse (→ ombor), Manufacturing (→ sex), Logistics, Accounting (→ moliya) (index + ui + art)
+      warehouse/   ✅ /app/erp/ombor    erp_ombor.html dan, qism = papka, backend'siz — demo rejim (docs/api/warehouse.md):
+        index.tsx ui.tsx warehouse.css   ildiz: rejim, ko'rinish (?sec=), menyu (Kundalik/Jarayonlar/Asboblar) | telefonda 6 tab
+        api/ demo/ lib/ context.ts       adapter (haqiqiy/demo, stiker/PDF) · brauzer ichidagi backend · turlar va sof mantiq · WhCtx
+        scan-bar/ size-ask/ cut/ common/ skaner (navbat, katta xabar, ovoz) · o'lcham oynasi · birlikni kesish · umumiy ko'rinish
+        lookup/ lookup-scan/             birlik/tovar/joy kartochkalari · Skaner bo'limi
+        panel/ stock/ place/ (item-search/) count/ pick/ accept/ bag/ (ko'chirish + hisobdan chiqarish) cut-plan/ cells/ more/
       picking/     ⏳ /app/erp/yigish   erp_yigish.html   (236)       yig'ish (MP buyurtma terish)
       purchasing/  ⏳ /app/erp/xarid    erp_xarid.html    (169)       xarid
       sales/       ⏳ /app/erp/savdo    erp_savdo.html    (351)       savdo

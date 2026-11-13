@@ -249,7 +249,7 @@ function cycle(db: Db, wh: number, now: number): Cycle {
   const due = rows
     .filter((r) => r.due)
     .sort((a, b) => a.cls.localeCompare(b.cls) || Number(!!a.last) - Number(!!b.last) || b.age - a.age)
-    .map(({ due: _due, ...r }) => r);
+    .map((r): CycleRow => ({ item_id: r.item_id, name: r.name, cls: r.cls, last: r.last, age: r.age, locs: r.locs, units: r.units }));
   return { due_total: due.length, summary, due };
 }
 

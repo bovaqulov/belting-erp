@@ -31,6 +31,7 @@ export function CountView(p: {
   wh: string;
   firm: string;
   loc: string | null;
+  full: boolean;
   mode: string;
   items: number[] | null;
   plan: Cycle | null;
@@ -105,7 +106,7 @@ export function CountView(p: {
         <Sf>Har tovarning BARCHA birliklarini skanerlang: yakunlanganda shu tovarlarning sanalmagan qoldig&apos;i hisobdan chiqadi.</Sf>
       </>
     );
-  } else if (p.plan && !p.lines.length && p.mode !== "To'liq sanash") {
+  } else if (p.plan && !p.lines.length && !p.full) {
     const pl = p.plan;
     const sm = Object.entries(pl.summary)
       .map(([k, v]) => `${k}: ${v.due}/${v.items}`)

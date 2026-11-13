@@ -21,12 +21,14 @@
     "vis-network": "^9.1.9"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
+    "tailwindcss": "4.3.3",
     "typescript": "^5",
     "vitest": "^3.2.7"
   },
