@@ -2,14 +2,14 @@
 // "yozmoqda", xato), yozish maydoni (yuborish / to'xtatish).
 import type { KeyboardEvent, RefObject } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, Sq } from "@/shared/ui/panel/ui";
 import { toolName } from "@/ai/agents/agents.lib";
 import { buildDeptTree, flatten } from "@/ai/org/dept-tree";
 import type { Agent } from "@/ai/agents/model";
 
 import { SUGGESTIONS, type ChatMsg } from "./chat.lib";
-import c from "./chat.module.css";
+import c from "./styles";
 
 export function ChatView({
   agents,

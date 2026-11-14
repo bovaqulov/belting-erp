@@ -1,4 +1,8 @@
 .DS_Store
 .playwright-mcp/
 .docs
+.calude/
 graphify-out/
+# ish vaqtida yoziladigan fayllar
+backend/data/*
+!backend/data/.gitkeep

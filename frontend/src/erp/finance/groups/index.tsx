@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { confirm, toast } from "@/erp/kit/env";
 import { Empty, Icon, List, Row, Sf, Sh, Sheet } from "@/erp/kit/ui";
+import { CNT } from "@/erp/finance/tw";
 import { post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import { DIMS, groupDesc, KCOL, KIND, type Dims, type Group, type GroupAttrs, type Kind } from "@/erp/finance/lib";
@@ -25,7 +26,7 @@ export function Groups() {
   };
   return (
     <>
-      <div className="sf acc-cnt">
+      <div className={CNT}>
         {tops.length} kategoriya · {groups.length - tops.length} ichki
       </div>
       <div className="btns">
@@ -39,9 +40,9 @@ export function Groups() {
         )}
       </div>
       {tops.length ? (
-        <div className="acc-grid">
+        <div className="[.mod-wide_&]:grid [.mod-wide_&]:grid-cols-2 [.mod-wide_&]:items-start [.mod-wide_&]:gap-x-4">
           {tops.map((g) => (
-            <div key={g.id} className="acc-gcard">
+            <div key={g.id} className="mt-3.5">
               <List>
                 <Row
                   icon="layers"
@@ -56,9 +57,9 @@ export function Groups() {
                 {groups
                   .filter((c) => c.parent_id === g.id)
                   .map((c) => (
-                    <Row key={c.id} lead={<span className="acc-ind" />} t={`› ${c.name}`} s={groupDesc(c.attrs)} val={<span className="num">{c.items}</span>} chev onClick={() => setEdit(c)} />
+                    <Row key={c.id} lead={<span className="w-[30px] flex-none" />} t={`› ${c.name}`} s={groupDesc(c.attrs)} val={<span className="num">{c.items}</span>} chev onClick={() => setEdit(c)} />
                   ))}
-                <Row lead={<span className="acc-ind" />} t="+ Ichki kategoriya" tcls="link" tap onClick={() => setEdit({ parent_id: g.id })} />
+                <Row lead={<span className="w-[30px] flex-none" />} t="+ Ichki kategoriya" tcls="link" tap onClick={() => setEdit({ parent_id: g.id })} />
               </List>
             </div>
           ))}

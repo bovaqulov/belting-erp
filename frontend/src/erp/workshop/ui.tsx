@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Shell, type Nav } from "@/erp/kit/ui";
 
 export const WorkshopLayout = ({ title, nav, children }: { title: string; nav: Nav<unknown>; children: ReactNode }) => (
-  <Shell title={title} nav={nav} wide>
+  <Shell title={title} nav={nav} wide full>
     {children}
   </Shell>
 );

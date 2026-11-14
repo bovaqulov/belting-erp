@@ -1,9 +1,11 @@
 // Sex taxtasi (faqat ko'rinish): sarlavha (ochiq/kechikkan, soat, tanlash), 4 ustun (kompyuter/TV), telefonda —
 // bosqich tablari va ro'yxat; tanlov paneli, asosiy tugma (birga qabul / yig'ish / tayyor).
+import type { CSSProperties } from "react";
+
 import { d8, hhmm } from "@/erp/kit/fmt";
 import { Check, Empty, Icon, List, MainButton, Row, Seg } from "@/erp/kit/ui";
 import { Due, SizeOf } from "@/erp/workshop/common";
-import { ord, PH, PHN, rukavSize, same, type Board, type Job, type Phase } from "@/erp/workshop/lib";
+import { ord, PH, PHC, PHN, rukavSize, same, type Board, type Job, type Phase } from "@/erp/workshop/lib";
 
 export function BoardScreen({
   b,
@@ -54,9 +56,9 @@ export function BoardScreen({
   const n = ids.length;
   return (
     <>
-      <div className="boardhead">
-        <h1>Sex</h1>
-        <div className="meta">
+      <div className="hidden items-baseline gap-4 px-6 pt-[18px] pb-3 min-[1024px]:flex">
+        <h1 className="m-0 text-[30px] font-bold tracking-[-0.02em]">Sex</h1>
+        <div className="flex items-baseline gap-3.5 text-[15px] text-sub [&>span]:whitespace-nowrap">
           <span>{openN} ta ochiq zakaz</span>
           {late ? <span className="st bad">{late} kechikkan</span> : null}
           {err ? (
@@ -66,42 +68,42 @@ export function BoardScreen({
             </span>
           ) : null}
         </div>
-        <span className="code clock">{clock}</span>
+        <span className="code ml-auto text-[30px] text-sub">{clock}</span>
         <button
-          className="btn sec mini selb"
+          className="btn sec ml-4 w-auto flex-none self-center px-4 py-[9px] text-[15px]"
           id="selb"
           onClick={() => (selm ? onOff() : onSelm())}
         >
           {selm ? "Tanlashni tugatish" : "Bir nechtasini tanlash"}
         </button>
       </div>
-      <div className="large mob">
+      <div className="large min-[1024px]:hidden">
         Sex
         <small>
           {openN} ta ochiq
           {late ? (
             <>
               {" · "}
-              <span className="bad-t">{late} kechikkan</span>
+              <span className="text-danger">{late} kechikkan</span>
             </>
           ) : null}
         </small>
       </div>
 
-      <div className="kb">
+      <div className="hidden grid-cols-4 items-start gap-4 px-6 pt-1 pb-6 has-main:pb-24 min-[1024px]:grid">
         {PH.map((p) => (
-          <section key={p} className={`kcol ${p}`} aria-label={PHN[p]}>
-            <h3>
+          <section key={p} className="min-h-[140px] rounded-2xl border-t-4 border-(--pc) bg-sec px-2.5 pb-2.5" style={{ "--pc": `var(--st-${PHC[p]})` } as CSSProperties} aria-label={PHN[p]}>
+            <h3 className="m-0 flex items-baseline justify-between px-1 pt-3 pb-2.5 text-base font-bold text-(--pc)">
               {PHN[p]}
               {selm && p !== "ready" && cols[p].length ? (
                 <button
-                  className="all"
+                  className="mr-2.5 ml-auto cursor-pointer border-0 bg-transparent px-1.5 py-1 text-[13px] leading-none font-medium text-link"
                   onClick={() => onSelAll(p, cols[p])}
                 >
                   hammasi
                 </button>
               ) : null}
-              <span className="n">{cols[p].length}</span>
+              <span className="code text-[22px] text-fg">{cols[p].length}</span>
             </h3>
             {cols[p].length ? (
               cols[p].map((j) => (
@@ -114,7 +116,7 @@ export function BoardScreen({
                 />
               ))
             ) : (
-              <div className="kempty">
+              <div className="px-1 pt-1 pb-2 text-sm text-hint">
                 {p === "new" ? "Yangi zakaz yo'q" : "—"}
               </div>
             )}
@@ -122,7 +124,7 @@ export function BoardScreen({
         ))}
       </div>
 
-      <div className="mob">
+      <div className="min-[1024px]:hidden">
         <Seg
           items={PH.map(
             (p) =>
@@ -132,7 +134,7 @@ export function BoardScreen({
           onPick={onTab}
         />
         {tab !== "ready" && cols[tab].length > 1 ? (
-          <div className="selbar">
+          <div className="mx-4 mt-2 flex min-h-10 items-center gap-1 text-[15px] text-sub [&_b]:mr-auto [&_b]:text-fg [&_b]:tabular-nums [&_button]:cursor-pointer [&_button]:rounded-lg [&_button]:border-0 [&_button]:bg-transparent [&_button]:p-2 [&_button]:text-[15px] [&_button]:text-link [&_button:only-child]:ml-auto">
             {selm ? (
               <>
                 <b>
@@ -195,7 +197,7 @@ export function BoardScreen({
                       .join(" · ")}
                     val={
                       j.due ? (
-                        <span className={j.late ? "bad-t" : ""}>
+                        <span className={j.late ? "text-danger" : ""}>
                           {d8(j.due)}
                         </span>
                       ) : (
@@ -246,7 +248,7 @@ function Card({
   const can = selm && j.phase !== "ready";
   return (
     <div
-      className={`jc ${j.late ? "late" : j.priority ? "prio" : ""} ${on ? "on" : ""}`}
+      className={`mb-2 cursor-pointer rounded-xl border-l-4 px-[13px] pt-[11px] pb-2.5 transition-shadow duration-150 ${j.late ? "border-st-bad" : j.priority ? "border-st-work" : "border-transparent"} ${on ? "bg-[color-mix(in_srgb,var(--link)_7%,var(--page))] shadow-[var(--shadow-1),inset_0_0_0_2px_var(--link)]" : "bg-page shadow-1 hover:shadow-[var(--shadow-1),inset_0_0_0_1px_var(--link)]"} [&_.ck]:mr-2 [&_.ck]:inline-grid [&_.ck]:align-[-4px]`}
       tabIndex={0}
       role={can ? "checkbox" : "button"}
       aria-checked={can ? on : undefined}
@@ -260,8 +262,8 @@ function Card({
         }
       }}
     >
-      <div className="top1">
-        <span className="code no">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <span className="code text-lg whitespace-nowrap">
           {can ? (
             <>
               <Check on={on} />{" "}
@@ -271,13 +273,13 @@ function Card({
         </span>
         <Due j={j} />
       </div>
-      <div className="it">{j.item}</div>
+      <div className="mt-1 line-clamp-2 text-[15px] leading-[1.3]">{j.item}</div>
       {j.size || j.route === "rukav" ? (
-        <div className="code sz">
+        <div className="code mt-0.5 text-[30px] leading-[1.1] [&_small]:ml-0.5 [&_small]:text-[17px] [&_small]:font-medium [&_small]:text-sub">
           <SizeOf j={j} />
         </div>
       ) : null}
-      <div className="mt">
+      <div className="mt-1.5 flex justify-between gap-2 text-[13.5px] text-sub [&_svg.i]:size-[15px] [&_svg.i]:align-[-2px] [&>span:first-child]:min-w-0 [&>span:first-child]:truncate">
         <span>{j.customer || ""}</span>
         <span>
           {j.lenta_project ? (

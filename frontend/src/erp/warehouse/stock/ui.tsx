@@ -4,14 +4,14 @@ import type { ReactNode } from "react";
 import { num, short } from "@/erp/kit/fmt";
 import { Tbl } from "@/erp/kit/table";
 import { Empty, Icon, List, Loaded, Row } from "@/erp/kit/ui";
-import { Btns, Pane, Qty, Tags } from "@/erp/warehouse/common";
+import { Btns, COLS, Pane, Qty, STICKY, Tags } from "@/erp/warehouse/common";
 import type { StockRow, StockTable, Warehouse } from "@/erp/warehouse/lib";
 
 export type Filt = { q: string; wh: string; kind: "" | "measured" | "piece"; low: boolean };
 
 type St = { data: StockTable | undefined; err: string; net: boolean; reload: () => Promise<void> };
 
-const lowCls = (r: StockRow) => (r.min_qty > 0 && Number(r.qty) < Number(r.min_qty) ? "bad-t" : "");
+const lowCls = (r: StockRow) => (r.min_qty > 0 && Number(r.qty) < Number(r.min_qty) ? "text-danger" : "");
 
 export function StockView({
   wide,
@@ -50,7 +50,7 @@ export function StockView({
       </>
     );
   const filters = (
-    <div className="wh-filt">
+    <div className="mx-4 mt-2 mb-2.5 flex flex-wrap items-center gap-2 [&_.search]:!m-0 [&_.search]:flex-[1_1_260px] [&_.sel]:flex-[1_1_150px] min-[600px]:[&_.sel]:flex-none">
       <div className="search">
         <Icon n="search" />
         <input value={q} onChange={(e) => onQ(e.target.value)} placeholder="Nom, artikul yoki remen belgisi" aria-label="Qidirish" autoComplete="off" />
@@ -68,7 +68,7 @@ export function StockView({
         <option value="measured">Rulon, bo&apos;lak, rukav</option>
         <option value="piece">Donali</option>
       </select>
-      <label className="b wh-chk">
+      <label className="b gap-2 [&_input]:m-0 [&_input]:size-[18px] [&_input]:accent-link">
         <input type="checkbox" checked={f.low} onChange={(e) => onF({ low: e.target.checked })} /> Kam qolgan
       </label>
       {wide ? (
@@ -90,7 +90,7 @@ export function StockView({
         {(d) => {
           const t = d.total;
           const head = (
-            <p className="wh-sub">
+            <p className="mx-4 mt-0.5 mb-3 text-sm text-hint tabular-nums">
               {num(t.items, 0)} tovar · {num(t.units, 0)} birlik · rulon {num(t.rolls, 0)} · bo&apos;lak {num(t.pieces, 0)}
               {t.cost !== undefined && d.see_cost ? ` · tannarx ${short(t.cost)} so'm` : ""}
             </p>
@@ -123,7 +123,7 @@ export function StockView({
           return (
             <>
               {head}
-              <div className="wh-cols r">
+              <div className={`${COLS} grid-cols-[minmax(0,8fr)_minmax(340px,4fr)]`}>
                 <div>
                   {d.rows.length ? (
                     <Tbl
@@ -146,7 +146,7 @@ export function StockView({
                     empty
                   )}
                 </div>
-                <div className="wh-sticky">
+                <div className={STICKY}>
                   {detail ?? (
                     <Pane>
                       <Empty icon="package" title="Tovarni tanlang">

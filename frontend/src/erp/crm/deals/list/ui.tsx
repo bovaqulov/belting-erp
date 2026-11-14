@@ -7,6 +7,7 @@ import { Modal } from "@/erp/kit/modal";
 import { Empty, ErrHint, Icon, Skeleton } from "@/erp/kit/ui";
 import { AvaView, Tags, TaskBadge } from "@/erp/crm/badges";
 import { days, SRC, type Deal, type DealKind, type Query, type Stage } from "@/erp/crm/lib";
+import { idle as idleCls, PANE, PILL, RT, SP, SUM, TB_IN, TCK, TN, TR, TR_SEL, TTL, WHO } from "@/erp/crm/tw";
 
 /** Ustun ko'rsatish uchun kerakli lug'atlar (konteyner kontekstdan beradi) */
 export type Lookups = { stg: Record<string, Stage>; pipes: Record<string, string>; users: Record<number, string> };
@@ -19,17 +20,17 @@ export const COLDEF: Col[] = [
     "",
     (d) => {
       const idle = days(d.touched || d.updated);
-      return <span className={d.rotten ? `idle ${idle !== null && idle > 90 ? "bad" : ""}` : ""}>{idle ?? ""} kun</span>;
+      return <span className={d.rotten ? idleCls(idle !== null && idle > 90) : ""}>{idle ?? ""} kun</span>;
     },
   ],
   [
     "title",
     "Bitim",
-    "ttl",
+    TTL,
     (d) => (
       <>
         <b>{dtitle(d.title)}</b>
-        <div className="sum">
+        <div className={SUM}>
           #{d.id} <Tags d={d} />
         </div>
       </>
@@ -44,18 +45,18 @@ export const COLDEF: Col[] = [
       const st = lk.stg[d.stage];
       return (
         <>
-          <span className="pill">
+          <span className={PILL}>
             <i style={{ background: st?.color || "#888" }} />
             {st?.name || d.stage}
           </span>
-          {!pipe && st ? <div className="sum">{lk.pipes[st.pipeline] || ""}</div> : null}
-          {d.lost_reason ? <div className="sum bad-t">{d.lost_reason}</div> : null}
+          {!pipe && st ? <div className={SUM}>{lk.pipes[st.pipeline] || ""}</div> : null}
+          {d.lost_reason ? <div className={`${SUM} !text-danger`}>{d.lost_reason}</div> : null}
         </>
       );
     },
   ],
-  ["amount", "Summa", "n", (d) => (d.amount && Number(d.amount) ? num(d.amount, 0) : "")],
-  ["prob", "Ehtimollik", "n", (d) => (d.prob != null ? num(d.prob, 0) + "%" : "")],
+  ["amount", "Summa", TN, (d) => (d.amount && Number(d.amount) ? num(d.amount, 0) : "")],
+  ["prob", "Ehtimollik", TN, (d) => (d.prob != null ? num(d.prob, 0) + "%" : "")],
   [
     "owner",
     "Mas'ul",
@@ -63,7 +64,7 @@ export const COLDEF: Col[] = [
     (d, lk) => {
       const n = (d.owner_tg != null && lk.users[d.owner_tg]) || "";
       return (
-        <span className="who">
+        <span className={WHO}>
           <AvaView name={n || "—"} /> {n}
         </span>
       );
@@ -71,7 +72,7 @@ export const COLDEF: Col[] = [
   ],
   ["source", "Manba", "", (d) => SRC[d.source || ""] || d.source || ""],
   ["task", "Keyingi vazifa", "", (d) => (d.closed ? "" : <TaskBadge d={d} />)],
-  ["close", "Yopilish sanasi", "", (d) => (d.close_date ? <span className={d.close_date < iso() ? "idle bad" : ""}>{d8(d.close_date)}</span> : "")],
+  ["close", "Yopilish sanasi", "", (d) => (d.close_date ? <span className={d.close_date < iso() ? idleCls(true) : ""}>{d8(d.close_date)}</span> : "")],
   ["created", "Ochilgan", "", (d) => d8(d.created)],
   ["updated", "Yangilangan", "", (d) => ago(d.updated)],
 ];
@@ -142,8 +143,8 @@ export function DealListView({
   children?: ReactNode;
 }) {
   return (
-    <div className="pane">
-      <div className="tb in">
+    <div className={PANE}>
+      <div className={TB_IN}>
         <div className="grp" role="group" aria-label="Holat">
           {KINDS.map(([k, t]) => (
             <button key={k} type="button" className={`b ${f.kind === k ? "on" : ""}`} aria-pressed={f.kind === k} onClick={() => onKind(k)}>
@@ -159,7 +160,7 @@ export function DealListView({
             </option>
           ))}
         </select>
-        <span className="sp" />
+        <span className={SP} />
         <button type="button" className="b" onClick={onCols}>
           <Icon n="layers" /> Ustunlar
         </button>
@@ -182,7 +183,7 @@ export function DealListView({
         </Empty>
       ) : (
         <>
-          <table className="t rt">
+          <table className={RT}>
             <thead>
               <tr>
                 <th style={{ width: 34 }}>
@@ -197,12 +198,12 @@ export function DealListView({
                 {cols.map(([k, t, c]) => (
                   <th
                     key={k}
-                    className={`${c} ${f.sort === k ? "on" : ""} ${SORTABLE.has(k) ? "srt" : ""}`}
+                    className={`${c} ${f.sort === k ? "!text-link" : ""} ${SORTABLE.has(k) ? "cursor-pointer" : ""}`}
                     aria-sort={f.sort === k ? "descending" : undefined}
                     onClick={SORTABLE.has(k) ? () => onSort(k) : undefined}
                   >
                     {SORTABLE.has(k) ? (
-                      <button type="button" className="thb">
+                      <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-inherit [font:inherit]">
                         {t}
                         {f.sort === k ? " ↓" : ""}
                       </button>
@@ -215,8 +216,8 @@ export function DealListView({
             </thead>
             <tbody>
               {rows.map((d) => (
-                <tr key={d.id} className={`r ${sel.has(d.id) ? "sel" : ""}`} onClick={(e) => !(e.target as HTMLElement).closest(".ck") && onOpen(d.id)}>
-                  <td className="cks">
+                <tr key={d.id} className={`${TR} ${sel.has(d.id) ? TR_SEL : ""}`} onClick={(e) => !(e.target as HTMLElement).closest(".ck") && onOpen(d.id)}>
+                  <td className={TCK}>
                     <input type="checkbox" className="ck" aria-label={`#${d.id} belgilash`} checked={sel.has(d.id)} onChange={(e) => onToggle(d.id, e.target.checked)} />
                   </td>
                   {cols.map(([k, t, c, fn]) => (
@@ -234,7 +235,7 @@ export function DealListView({
             </Empty>
           ) : null}
           {rows.length < total ? (
-            <div className="lm">
+            <div className="p-3.5 text-center">
               <button type="button" className="b" disabled={more} onClick={onMore}>
                 Yana yuklash ({rows.length} / {total})
               </button>
@@ -244,9 +245,9 @@ export function DealListView({
       )}
 
       {sel.size ? (
-        <div className="bulk" role="toolbar" aria-label="Ommaviy amallar">
+        <div className="fixed bottom-[calc(18px+var(--safe-b))] left-1/2 z-45 flex w-[min(1100px,calc(100vw-32px))] -translate-x-1/2 flex-wrap items-center gap-2 rounded-xl bg-sec px-3.5 py-2.5 shadow-2 max-md:right-2 max-md:bottom-[calc(8px+var(--safe-b))] max-md:left-2 max-md:w-auto max-md:translate-x-0 max-md:gap-1.5 max-md:p-2 max-md:[&>.b]:flex-[1_0_auto] max-md:[&>b]:w-full" role="toolbar" aria-label="Ommaviy amallar">
           <b>{sel.size} ta tanlandi</b>
-          <span className="sp" />
+          <span className={`${SP} max-md:hidden`} />
           <button type="button" className="b" onClick={() => onBulk("stage")}>
             <Icon n="layers" /> Bosqich
           </button>

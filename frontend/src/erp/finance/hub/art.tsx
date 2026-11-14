@@ -1,5 +1,5 @@
 // Qism kartochkalari rasmlari (SVG). Rang — currentColor (kartochka rangi), oq qismlar — .paper: mavzuga o'zi moslashadi.
-import g from "@/shared/ui/tiles/tiles.module.css";
+import g from "@/shared/ui/tiles/styles";
 
 const VB = "0 0 160 100";
 

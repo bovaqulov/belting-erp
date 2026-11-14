@@ -2,6 +2,7 @@
 // buyurtmalar, javobsiz sharhlar, jo'natish xatolari) va kartochka auditi (muammo → ro'yxat → "Xato emas").
 import { useState } from "react";
 
+import { LINK_BTN, WIDE_COLS } from "@/erp/kit/layout";
 import { toast } from "@/erp/kit/env";
 import { num } from "@/erp/kit/fmt";
 import { Empty, List, Loaded, Row, Sf, Sh, Sheet, useLoad } from "@/erp/kit/ui";
@@ -18,7 +19,7 @@ export function Overview({ onGo }: { onGo: (v: View) => void }) {
         <>
           <Channels o={o} onGo={(ch) => onGo({ home: false, ch, sec: "products" })} />
           <Sf>Qoldiq manbasi — {sourcesText(o.sources)}. Omborda ERP inventarizatsiyasi o&apos;tkazilgach, manba o&apos;zi ERP&apos;ga o&apos;tadi.</Sf>
-          <div className="cols">
+          <div className={WIDE_COLS}>
             <div>
               <Sh t="Bugun" />
               <Today o={o} onGo={onGo} />
@@ -36,12 +37,12 @@ export function Overview({ onGo }: { onGo: (v: View) => void }) {
 
 function Channels({ o, onGo }: { o: O; onGo: (ch: OrderCh) => void }) {
   return (
-    <div className="tiles mk-tiles">
+    <div className="tiles mt-3 !grid-cols-3 [&_.l]:[overflow-wrap:anywhere] max-[420px]:[&_.tile]:p-2.5 max-[420px]:[&_.v]:text-[19px] [&_.v_small]:ml-0.5">
       {(Object.entries(o.channels) as [OrderCh, O["channels"][OrderCh]][]).map(([k, c]) => {
         const managed = c.n - c.off;
         const full = c.linked >= managed;
         return (
-          <button key={k} type="button" className={`tile ${full ? "ok" : ""}`} onClick={() => onGo(k)} aria-label={`${c.name}: ${c.linked} / ${managed} bog'langan`}>
+          <button key={k} type="button" className={`tile !flex w-full cursor-pointer flex-col border-0 text-left [font:inherit] ${full ? "ok" : ""}`} onClick={() => onGo(k)} aria-label={`${c.name}: ${c.linked} / ${managed} bog'langan`}>
             <div className="l">{c.name}</div>
             <div className="v num">
               {num(c.linked, 0)}
@@ -112,7 +113,7 @@ function Audit({ items, onOpen, onRan }: { items: AuditSum[]; onOpen: (a: AuditS
         t="Kartochka auditi"
         r={
           admin ? (
-            <button type="button" className="mod-link" disabled={busy} onClick={() => void run()}>
+            <button type="button" className={LINK_BTN} disabled={busy} onClick={() => void run()}>
               Hozir tekshirish
             </button>
           ) : null

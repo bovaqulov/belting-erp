@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "@/erp/kit/env";
 import { num } from "@/erp/kit/fmt";
 import { Icon, List, Loaded, Row, Sf, Sh, Sheet, useLoad } from "@/erp/kit/ui";
+import { LINK_BTN } from "@/erp/kit/layout";
 import { api, post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import { dimsLabel, groupName, groupOptions, KCOL, KIND, priceFor, priceLabel, splitWidths, un, type Item } from "@/erp/finance/lib";
@@ -63,7 +64,7 @@ export function ItemView({
                   {it.min_qty ? <Row t="Minimal qoldiq" val={`${num(it.min_qty, 3)} ${un(it.unit)}`} /> : null}
                   {it.material ? <Row t="Xom ashyosi" s={it.material.name} chev onClick={() => onOpen(it.material!.id)} /> : null}
                 </List>
-                <Sh t="Narx" r={<button type="button" className="mod-link" onClick={() => setPr(it)}>Belgilash</button>} />
+                <Sh t="Narx" r={<button type="button" className={LINK_BTN} onClick={() => setPr(it)}>Belgilash</button>} />
                 <List>
                   <Row icon="coins" color={it.price?.price != null || Object.keys(it.price?.overrides ?? {}).length ? "green" : "gray"} t={priceLabel(it.price, (x) => num(x, 0))} tap onClick={() => setPr(it)} chev />
                   {it.chars.map((c) => {

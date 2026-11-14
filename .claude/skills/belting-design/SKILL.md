@@ -51,7 +51,8 @@ Batafsil tokenlar: `references/tokens.md`.
   faqat haqiqiy ketma-ketlikda (sex bosqichlari — ha).
 - Har kartochkaga hover-animatsiya, har bo'limga "fade-in". Harakat faqat foydalanuvchi amaliga javob.
 - `transition: all`, `outline: none` (o'rnini bosuvchi fokus halqasisiz), faqat rang bilan holat.
-- Yangi CSS fayl/kutubxona (Tailwind, React) ERP static sahifalariga — yo'q. `erp_ui.css` + `window.UI` yetadi.
+- Yangi CSS fayl/kutubxona (Tailwind, React) eski ERP static sahifalariga (`static/erp_*.html`) — yo'q. `erp_ui.css` + `window.UI` yetadi.
+  Next.js frontend (`frontend/`) esa — **Tailwind CSS v4** (egasi qarori 2026-11-14): §7.
 
 ## 4. Majburiy sifat (Vercel/ECC dan, shu loyiha uchun)
 
@@ -85,7 +86,12 @@ Yangi komponent kerak bo'lsa — avval erp_ui.css'ga umumiy qilib qo'sh, keyin i
 
 ## 7. Frontend (Next.js, `frontend/`)
 
-Admin, lenta, geo, report — o'z CSS modullari bor. Xuddi shu tokenlar va qoidalar; `.code` o'rniga o'sha
+**Uslub — Tailwind v4** (2026-11-14 dan; qoidalar — `frontend/ARCHITECTURE.md` §6). Komponent uslubi — JSX'da utility
+sinflar, yangi `.css`/`.module.css` yo'q. Tokenlar o'sha (`tokens.md`), Tailwind nomlari: `bg-page bg-sec text-fg text-hint
+text-sub text-link bg-btn text-btn-fg border-sep bg-fill text-st-*`, `font-code`. ERP primitivlari (list, item, field, btn, mini,
+chip, tile, st, badge, code, sh, sf, empty, skel, b, inp, sel) — `shared/styles/ui-kit.css` (@utility), modulda xom nom bilan.
+Telefon bosish maydoni — `coarse:min-h-11`; Telegram ichi — `tg:`; kompyuter karkasi — `desk:` / `[.mod-wide_&]:`.
+Admin, lenta, geo, report — o'z ko'rinish konstantalari bor (`styles.ts`; geo — `geo.css` @apply). `.code` o'rniga o'sha
 loyihadagi monospace/raqam uslubini Barlow'ga moslash — alohida vazifa sifatida.
 
 ## 8. Skrinshot
@@ -121,6 +127,9 @@ Ko'chish tartibi: ombor → savdo → yig'ish → katalog → bosh sahifa → CR
 2026-11-14 — Ombor Next.js'ga ko'chdi (`frontend/src/erp/warehouse/`, `/app/erp/ombor`): 11 bo'lim, backend'siz demo rejim
 (`docs/api/warehouse.md`). Skaner xabari — `.wh-msg` (yashil/qizil, `--st-done`/`--st-bad`), joy/birlik/o'lcham — `.code`,
 kompyuterda ikki ustun (`Split`), telefonda 6 tab + "Amallar". Kit: `Tbl` ga `sel` (tanlangan qator `.picked`).
+
+2026-11-14 — frontend to'liq Tailwind CSS v4 ga o'tdi: ui.css/kit.css va barcha modul CSS'lari (CRM, Marketplace, Accounting,
+Ombor, Sex, panel, tiles, Jarvis, lenta) — utility sinflar; geo — @apply. Solishtirish suratlari (36 ta, 1440/390) — farq ≤1–2px.
 
 Keyingi (ustuvorlik bo'yicha): savdo (erp_savdo.html — mijoz/buyurtma kartochkasi, narx, kenglik tanlash) →
 yig'ish (erp_yigish.html — omborchi telefoni) → ombor qolgan tablar (sanash, qabul, skaner natijasi) →

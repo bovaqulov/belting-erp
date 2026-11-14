@@ -1,7 +1,7 @@
 // Agent jadvali oynasi (faqat ko'rinish): nomi, ko'rsatma, takror (kunlar / oy kuni / sana), vaqt, natija qayerga, yoqilgan.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader } from "@/shared/ui/panel/ui";
-import a from "@/ai/agents/agents.module.css";
+import a from "@/ai/agents/styles";
 import { CHANNEL_NAMES, type Agent, type Repeat, type Schedule } from "@/ai/agents/model";
 import { DAY_SHORT, describe, REPEAT_NAMES } from "@/ai/agents/schedule.lib";
 

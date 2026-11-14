@@ -2,7 +2,7 @@
 // boshliq belgisi va huquq ikonkalari, xodimga biriktirilgan agentlar.
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Avatar, avColor, Icon, initials, PERM_ICONS, ROLE_NAMES, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 import type { Agent } from "@/ai/agents/model";
 import OrgChart from "@/ai/org";

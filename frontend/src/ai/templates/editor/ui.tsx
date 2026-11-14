@@ -1,5 +1,5 @@
 // Shablon tahrirlash oynasi (faqat ko'rinish): bo'lim, sarlavha, eslatma/jadval vaqti, maydonlar (kalit, nomi, turi).
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq } from "@/shared/ui/panel/ui";
 import { deptOf, TYPE_NAMES, type TemplatesData } from "@/ai/templates/templates.lib";
 

@@ -7,6 +7,7 @@ import { Modal } from "@/erp/kit/modal";
 import { Empty, Icon, Loaded } from "@/erp/kit/ui";
 import { AvaView } from "@/erp/crm/badges";
 import { leadWait, LSRC, waitText, type Lead, type Meta } from "@/erp/crm/lib";
+import { idle, PANE, RT, SP, SRCH, SUM, TACTS, TB_IN, TTL, WHO } from "@/erp/crm/tw";
 
 export const STATES: [string, string][] = [
   ["new,work", "Ochiq"],
@@ -51,9 +52,9 @@ export function LeadsView({
   children?: ReactNode;
 }) {
   return (
-    <div className="pane">
-      <div className="tb in">
-        <div className="srch">
+    <div className={PANE}>
+      <div className={TB_IN}>
+        <div className={SRCH}>
           <Icon n="search" />
           <input className="inp" value={q} placeholder="Ism, telefon, kompaniya" aria-label="Lid qidirish" onChange={(e) => onQ(e.target.value)} />
         </div>
@@ -74,12 +75,12 @@ export function LeadsView({
           ))}
         </select>
         {st.data ? (
-          <span className="sum">
+          <span className={SUM}>
             {st.data.length} lid
-            {st.data.some((l) => !l.owner_tg) ? <b className="bad-t"> · {st.data.filter((l) => !l.owner_tg).length} taqsimlanmagan</b> : null}
+            {st.data.some((l) => !l.owner_tg) ? <b className="text-danger"> · {st.data.filter((l) => !l.owner_tg).length} taqsimlanmagan</b> : null}
           </span>
         ) : null}
-        <span className="sp" />
+        <span className={SP} />
         <button type="button" className="b pri" onClick={onAdd}>
           <Icon n="plus" /> Lid
         </button>
@@ -87,7 +88,7 @@ export function LeadsView({
       <Loaded st={st}>
         {(ls) =>
           ls.length ? (
-            <table className="t rt">
+            <table className={RT}>
               <thead>
                 <tr>
                   <th>Kelgan</th>
@@ -106,12 +107,12 @@ export function LeadsView({
                     <tr key={l.id}>
                       <td data-l="Kelgan">
                         {dt(l.created)}
-                        <div className="sum">{ago(l.created)}</div>
+                        <div className={SUM}>{ago(l.created)}</div>
                       </td>
-                      <td className="ttl">
+                      <td className={TTL}>
                         <b>{dtitle(l.title || l.name || "—")}</b>
-                        {l.company ? <div className="sum">{l.company}</div> : null}
-                        {l.note ? <div className="sum">{l.note.slice(0, 120)}</div> : null}
+                        {l.company ? <div className={SUM}>{l.company}</div> : null}
+                        {l.note ? <div className={SUM}>{l.note.slice(0, 120)}</div> : null}
                       </td>
                       <td data-l="Telefon">
                         {l.phone ? (
@@ -139,17 +140,17 @@ export function LeadsView({
                             ))}
                           </select>
                         ) : l.owner_tg ? (
-                          <span className="who">
+                          <span className={WHO}>
                             <AvaView name={users[l.owner_tg] || "—"} /> {users[l.owner_tg] || ""}
                           </span>
                         ) : (
-                          <span className="idle bad">taqsimlanmagan</span>
+                          <span className={idle(true)}>taqsimlanmagan</span>
                         )}
                       </td>
                       <td data-l="Javob">
-                        {wait !== null ? <span className={`idle ${wait > 30 ? "bad" : ""}`}>{waitText(wait)} kutmoqda</span> : l.first_touch ? "✓" : ""}
+                        {wait !== null ? <span className={idle(wait > 30)}>{waitText(wait)} kutmoqda</span> : l.first_touch ? "✓" : ""}
                       </td>
-                      <td className="acts2">
+                      <td className={TACTS}>
                         {l.status === "converted" ? (
                           l.deal_id ? (
                             <button type="button" className="b" onClick={() => onOpenDeal(l.deal_id!)}>

@@ -1,6 +1,5 @@
 "use client";
-// Ombor (/app/erp/ombor, erp_ombor.html dan): panel, qoldiq, skaner, joylashtirish, sanash, yig'ish, qabul, ko'chirish,
-// hisobdan chiqarish, kesish rejasi, joylar. Kompyuterda — chap menyu va ikki ustun, telefonda / Telegram'da — tablar,
+// Ombor (/app/erp/ombor, erp_ombor.html dan): joylashtirish, sanash, qabul, ko'chirish, hisobdan chiqarish, joylar. Kompyuterda — chap menyu va ikki ustun, telefonda / Telegram'da — tablar,
 // katta skaner xabari, pastki asosiy tugma. Ildiz: ishga tushish (rejim: haqiqiy/demo, foydalanuvchi), ko'rinish (?sec=).
 // API: /app/api/erp/* (Jarvis kontrakti, docs/api/warehouse.md) — api/ orqali; backend bo'lmasa demo/.
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,20 +14,14 @@ import { Bag } from "@/erp/warehouse/bag";
 import { Cells } from "@/erp/warehouse/cells";
 import { makeHelpers, WhCtx, type Wh } from "@/erp/warehouse/context";
 import { Count } from "@/erp/warehouse/count";
-import { CutPlan } from "@/erp/warehouse/cut-plan";
 import { DEMO_CODES } from "@/erp/warehouse/demo";
-import { deskView, parseView, viewQs, viewTitle, type Cell, type Me, type PickBrief, type Sec, type View } from "@/erp/warehouse/lib";
-import { LookupScan } from "@/erp/warehouse/lookup-scan";
+import { deskView, HOME, parseView, viewQs, viewTitle, type Cell, type Me, type Sec, type View } from "@/erp/warehouse/lib";
 import { More } from "@/erp/warehouse/more";
-import { Panel } from "@/erp/warehouse/panel";
-import { Pick, preparePick } from "@/erp/warehouse/pick";
 import { Place } from "@/erp/warehouse/place";
 import { useSizeAsk } from "@/erp/warehouse/size-ask";
-import { Stock } from "@/erp/warehouse/stock";
 
 import { BootView, WhLayout } from "./ui";
 
-import "./warehouse.css";
 
 export default function WarehouseApp() {
   return (
@@ -53,7 +46,6 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
   const dialogs = useDialogs();
   const size = useSizeAsk();
   const [view, setView] = useState<View>(() => parseView(location.search));
-  const [picks, setPicks] = useState<number | null>(null);
   const helpers = useMemo(() => makeHelpers(me), [me]);
   const shown: View = wide ? deskView(view) : view;
 
@@ -64,15 +56,8 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
   }, []);
 
   useEffect(() => {
-    document.title = shown === "panel" ? "Ombor" : `${viewTitle(shown)} — Ombor`;
+    document.title = shown === HOME ? "Ombor" : `${viewTitle(shown)} — Ombor`;
   }, [shown]);
-  // menyudagi yig'ish navbati soni (bo'lim almashganda yangilanadi)
-  useEffect(() => {
-    if (!helpers.can("sale", "create")) return;
-    api<PickBrief[]>("/app/api/erp/picks")
-      .then((r) => setPicks(r.length))
-      .catch(() => {}); // raqamsiz ham ishlaydi
-  }, [helpers, shown]);
 
   const { choose } = dialogs;
   const pickCell = useCallback(
@@ -97,33 +82,16 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
 
   const section = (v: View) => {
     switch (v) {
-      case "panel":
-        return (
-          <Panel
-            onPick={async (id) => {
-              if (id !== null) await preparePick(id).catch((e: Error) => toast(e.message, "bad"));
-              go("pick");
-            }}
-          />
-        );
-      case "stock":
-        return <Stock />;
-      case "scan":
-        return <LookupScan />;
       case "place":
         return <Place />;
       case "inv":
         return <Count />;
-      case "pick":
-        return <Pick />;
       case "acc":
         return <Accept />;
       case "move":
         return <Bag mode="move" />;
       case "off":
         return <Bag mode="off" />;
-      case "plan":
-        return <CutPlan />;
       case "cells":
         return <Cells />;
       default:
@@ -136,7 +104,6 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
       <WhLayout
         view={shown}
         wide={wide}
-        picks={picks}
         demo={demo}
         demoText={wide ? `namunaviy ma'lumot, faqat shu brauzerda. Sinov kodlari: ${DEMO_CODES}` : "namunaviy ma'lumot"}
         onGo={go}

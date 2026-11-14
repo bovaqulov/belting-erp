@@ -30,7 +30,7 @@ export function SizeModal({
       }}
     >
       {dims === "wl" ? (
-        <div className="wh-two">
+        <div className="grid grid-cols-2 gap-2.5 [&_.inp]:w-full">
           <div>
             <label className="l" htmlFor="sz-w">
               Eni, mm
@@ -52,7 +52,7 @@ export function SizeModal({
           <input id="sz-q" className="inp code" inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} />
         </>
       )}
-      {pre.hint ? <p className="wh-hint">{pre.hint}</p> : null}
+      {pre.hint ? <p className="mt-2.5 mb-0 text-[13px] text-hint">{pre.hint}</p> : null}
     </Modal>
   );
 }

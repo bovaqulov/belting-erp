@@ -64,10 +64,10 @@ export function NewDealView({
               </span>
             </button>
           ))}
-          {!shown.length ? <div className="opt s">Topilmadi — «Yaratish» bosilsa yangi mijoz qo&apos;shiladi</div> : null}
+          {!shown.length ? <div className="opt text-hint">Topilmadi — «Yaratish» bosilsa yangi mijoz qo&apos;shiladi</div> : null}
         </div>
       ) : null}
-      {cp ? <div className="sf ok-t">Tanlandi: {cp.name}</div> : null}
+      {cp ? <div className="sf text-ok">Tanlandi: {cp.name}</div> : null}
       <label className="l" htmlFor="nd-t">
         Bitim nomi
       </label>

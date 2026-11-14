@@ -2,6 +2,7 @@
 // Yetkazib berishda | Yakunlanganlar | Bekor qilinganlar.
 import { useState } from "react";
 
+import { LINK_BTN } from "@/erp/kit/layout";
 import { toast } from "@/erp/kit/env";
 import { dt } from "@/erp/kit/fmt";
 import { Check, Empty, List, Loaded, Row, Sh, useLoad } from "@/erp/kit/ui";
@@ -179,7 +180,7 @@ function Supplies({ rows, onOpen }: { rows: Order[]; onOpen: (sid: string) => vo
       <Sh
         t={`Postavkalar${st.data ? ` · ${st.data.length}` : ""}`}
         r={
-          <button type="button" className="mod-link" onClick={() => void create()}>
+          <button type="button" className={LINK_BTN} onClick={() => void create()}>
             + Bo&apos;sh yetkazma yaratish
           </button>
         }

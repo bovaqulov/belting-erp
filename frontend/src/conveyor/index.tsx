@@ -8,14 +8,13 @@ import { api } from "@/shared/api/client";
 import { disableZoom, initData, initTelegram, tg } from "@/shared/telegram/telegram";
 import { Composer, Side } from "@/conveyor/form";
 import Fullscreen from "@/conveyor/fullscreen";
-import { c, observeResize } from "@/conveyor/kit";
+import { observeResize } from "@/conveyor/kit";
 import { barChips, sized } from "@/conveyor/lib/logic";
 import { askMeta } from "@/conveyor/meta-ask";
 import { openMenu } from "@/conveyor/menu";
 import { Lenta, LentaContext } from "@/conveyor/model";
 import Center from "@/conveyor/viewer";
 
-import "./conveyor-global.css";
 import { ActBarView, ConveyorView, LoginScreen, PricePopView, type LoginMsg } from "./ui";
 
 const POLL_MS = 2000;
@@ -95,7 +94,7 @@ function ActBar({ L }: { L: Lenta }) {
   // pastki panel balandligi (sabab yozuvi, safe-area bilan o'zgaradi) -> kontentning pastki chekinishi
   useEffect(() => {
     const bar = ref.current as HTMLDivElement;
-    const upd = () => document.documentElement.style.setProperty("--bar-real", (bar.classList.contains(c("hide")) ? 0 : bar.offsetHeight) + "px");
+    const upd = () => document.documentElement.style.setProperty("--bar-real", (bar.classList.contains("cv-hide") ? 0 : bar.offsetHeight) + "px");
     upd();
     return observeResize(bar, upd);
   }, []);

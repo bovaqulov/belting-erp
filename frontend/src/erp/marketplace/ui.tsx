@@ -2,13 +2,17 @@
 // buyurtmalar yonida "yangi | yig'ilmoqda"). Telefon: sarlavha, kanal segmenti, bo'lim tablari. Ishga tushish ekrani.
 import type { ReactNode } from "react";
 
-import { AppLayout, AppTabs, AppTop, DemoStrip, type NavGroup } from "@/erp/kit/layout";
+import { AppLayout, AppTabs, AppTop, DemoStrip, NAV_CNT, NAV_HOT, TAB_CNT, type NavGroup } from "@/erp/kit/layout";
+
+/** Marketplace ichida: qatordagi kod/nishon o'lchami, kompyuterda kanal plitalari — 3 ustun */
+const MK =
+  "[&_.badge]:tabular-nums [&_.item_.val_.code]:text-[15px] [&_.item_.s_.badge]:px-1.5 [&_.item_.s_.badge]:py-px [&_.item_.s_.badge]:text-[11.5px] [&.mod-wide_.tiles]:grid-cols-3";
 import { Empty, ErrHint, Seg, Skeleton } from "@/erp/kit/ui";
 import { CHN, CHS, SEC, SECS, switchCh, viewTitle, type Ch, type Counts, type Sec, type View } from "@/erp/marketplace/lib";
 
 /** Ishga tushish: yuklanmoqda (skelet) yoki xato + "Qayta urinish" */
 export const BootView = ({ err, net, onRetry }: { err: string; net: boolean; onRetry: () => void }) => (
-  <div className="mod mk">
+  <div className="min-h-screen">
     <div className="large">Marketplace</div>
     {err ? (
       <Empty icon="alert" title="Marketplace ochilmadi">
@@ -29,9 +33,9 @@ export const BootView = ({ err, net, onRetry }: { err: string; net: boolean; onR
 /** Buyurtmalar yonidagi raqam: yangi (qizil, bo'lsa) | yig'ilmoqda */
 const OrderCnt = ({ c }: { c?: { new: number; assembly: number } }) =>
   c ? (
-    <span className="cnt" title="yangi | yig'ilmoqda">
-      <b className={c.new ? "hot" : ""}>{c.new}</b>
-      <span className="sl"> | </span>
+    <span className={NAV_CNT} title="yangi | yig'ilmoqda">
+      <b className={c.new ? NAV_HOT : ""}>{c.new}</b>
+      <span className="opacity-50"> | </span>
       {c.assembly}
     </span>
   ) : null;
@@ -77,14 +81,14 @@ export function MkLayout({
           label="Bo'limlar"
           cur={view.sec}
           onPick={(s) => onGo({ ...view, sec: s })}
-          items={SECS[view.ch].map((s) => [s, SEC[s].t, s === "orders" && view.ch !== "site" && counts?.[view.ch]?.new ? <b className="cnt">{counts[view.ch].new}</b> : null])}
+          items={SECS[view.ch].map((s) => [s, SEC[s].t, s === "orders" && view.ch !== "site" && counts?.[view.ch]?.new ? <b className={TAB_CNT}>{counts[view.ch].new}</b> : null])}
         />
       )}
     </>
   );
   return (
     <AppLayout
-      cls="mk"
+      cls={MK}
       brand="Marketplace"
       up="/app/erp"
       upLabel="ERP"

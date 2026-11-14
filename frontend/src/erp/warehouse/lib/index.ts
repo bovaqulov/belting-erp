@@ -44,5 +44,5 @@ export type {
   WhKind,
   WhTree,
 } from "./types.lib";
-export { deskView, MORE, NAV, parseView, SEC, tabOf, TABS, viewQs, viewTitle, type Sec, type View } from "./nav.lib";
+export { deskView, HOME, MORE, NAV, parseView, SEC, tabOf, TABS, viewQs, viewTitle, type Sec, type View } from "./nav.lib";
 export { ago, cutText, dimsHint, EPS, genCells, invKey, KINDN, parseNeeds, size, stockCsv } from "./wh.lib";

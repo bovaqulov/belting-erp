@@ -108,7 +108,7 @@ export function TakeSheetView({
               <input id="tl" inputMode="numeric" value={l} onChange={(e) => onL(e.target.value)} />
             </div>
           </List>
-          {cur?.err && <Sf><span className="bad-t">{cur.err}</span></Sf>}
+          {cur?.err && <Sf><span className="text-danger">{cur.err}</span></Sf>}
           {cur?.r && (
             <>
               <Sh t={manual ? "Avtomatik hisob (tekshirish uchun)" : "Qoldiq — avtomatik"} />

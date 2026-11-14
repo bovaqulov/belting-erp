@@ -3,7 +3,6 @@
 // o'zida tekshiriladi; bu yerga bosh sahifadagi ERP kartochkasidan kelinadi.
 import { useEffect } from "react";
 
-import "@/shared/ui/panel/panel-global.css";
 import { disableZoom, initTelegram } from "@/shared/telegram/telegram";
 
 import { ErpHomeView, MODULES } from "./ui";

@@ -2,6 +2,7 @@
 // 2) yuk joylari (1 quti = 1 yuk joyi, QR qutiga), 3) yetkazib berishga topshirish → postavka QR.
 import { useState } from "react";
 
+import { WIDE_COLS } from "@/erp/kit/layout";
 import { confirm, toast } from "@/erp/kit/env";
 import { dt } from "@/erp/kit/fmt";
 import { List, Loaded, Row, Sf, Sh, useLoad } from "@/erp/kit/ui";
@@ -80,21 +81,21 @@ export function SupplyView({ sid, onBack }: { sid: string; onBack: () => void })
 
           return (
             <>
-              <div className="large mk-sup">
+              <div className="large mt-1 !text-2xl [&_small]:leading-normal">
                 {sp.name || sid}
                 <small>
                   <span className="code">{sid}</span> · Мой склад · {rs.length} buyurtma · {d.boxes.length} yuk joyi · {dt(sp.createdAt)} dan
                 </small>
               </div>
-              <ol className="mk-steps" aria-label="Bosqichlar">
+              <ol className="mx-4 mt-2.5 mb-0 flex list-none flex-wrap gap-1.5 p-0" aria-label="Bosqichlar">
                 {STEPS.map((t, i) => (
-                  <li key={t} className={i + 1 < d.step ? "done" : i + 1 === d.step ? "on" : ""} aria-current={i + 1 === d.step ? "step" : undefined}>
-                    <span className="n">{i + 1 < d.step ? "✓" : i + 1}</span>
+                  <li key={t} className={`inline-flex items-center gap-1.5 rounded-full bg-sec py-[5px] pr-3 pl-1.5 text-[13.5px] font-medium ${i + 1 <= d.step ? "text-fg" : "text-hint"}`} aria-current={i + 1 === d.step ? "step" : undefined}>
+                    <span className={`grid size-[22px] place-items-center rounded-full text-xs font-bold tabular-nums ${i + 1 < d.step ? "bg-st-done text-white" : i + 1 === d.step ? "bg-st-new text-white" : "bg-fill"}`}>{i + 1 < d.step ? "✓" : i + 1}</span>
                     {t}
                   </li>
                 ))}
               </ol>
-              <div className="cols">
+              <div className={WIDE_COLS}>
                 <div>
                   <Sh t="Amallar" />
                   <List>
@@ -132,7 +133,7 @@ export function SupplyView({ sid, onBack }: { sid: string; onBack: () => void })
                           t={<span className="code">{x.id}</span>}
                           s={`${x.orders.length} buyurtma`}
                           right={
-                            <span className="mk-acts">
+                            <span className="inline-flex flex-none gap-1.5">
                               <button type="button" className="chip" onClick={printBoxes([x.id])}>
                                 QR
                               </button>
@@ -180,7 +181,7 @@ export function SupplyView({ sid, onBack }: { sid: string; onBack: () => void })
                     { h: "Narx", f: sold, n: true },
                     {
                       h: "Yig'ildi",
-                      f: (o) => (o.assembled_at ? <span className="ok-t">✓</span> : <span className="code">{`${o.picked.length}/${o.need || 1}`}</span>),
+                      f: (o) => (o.assembled_at ? <span className="text-ok">✓</span> : <span className="code">{`${o.picked.length}/${o.need || 1}`}</span>),
                       n: true,
                     },
                   ]}

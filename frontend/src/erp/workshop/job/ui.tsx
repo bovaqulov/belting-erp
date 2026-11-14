@@ -108,7 +108,7 @@ export function JobScreen({
           t="Muddat"
           val={
             j.due ? (
-              <span className={j.late ? "bad-t" : ""}>{d8(j.due)}</span>
+              <span className={j.late ? "text-danger" : ""}>{d8(j.due)}</span>
             ) : (
               "—"
             )
@@ -180,7 +180,7 @@ export function JobScreen({
             <div className="ei" style={{ color: "var(--ok)" }}>
               <Icon n="check" />
             </div>
-            <b className="ok-t">Tayyor — omborga topshirildi</b>
+            <b className="text-ok">Tayyor — omborga topshirildi</b>
             {j.product_code ? (
               <>
                 <br />

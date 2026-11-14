@@ -3,7 +3,6 @@
 // oynalar navbati (BackButton bilan), toast, tablar, Esc; ko'rinish — ./ui, kirish — ./login.
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 
-import "@/shared/ui/panel/panel-global.css";
 import { api } from "@/shared/api/client";
 import { backOff, backShow, confirmDo, disableZoom, haptic, hapticSelect, initData, initTelegram, tg } from "@/shared/telegram/telegram";
 import {

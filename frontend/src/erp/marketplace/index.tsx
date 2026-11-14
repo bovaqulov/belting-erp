@@ -17,7 +17,6 @@ import { useWide } from "@/erp/kit/wide";
 
 import { BootView, MkLayout } from "./ui";
 
-import "./marketplace.css";
 
 export default function MarketplaceApp() {
   return (

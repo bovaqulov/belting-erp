@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { toast } from "@/erp/kit/env";
 import { List, Sf, Sh, Sheet } from "@/erp/kit/ui";
+import { TWO } from "@/erp/finance/tw";
 import { post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import { autoName, DIMS, groupAttrs, groupOptions, KIND, splitWidths, type Dims, type Item, type Kind } from "@/erp/finance/lib";
@@ -118,7 +119,7 @@ export function ItemForm({ it, onClose, onSaved }: { it: Partial<Item>; onClose:
       {belt ? (
         <>
           <Sh t="Remen belgisi" />
-          <List cls="acc-two">
+          <List cls={TWO}>
             <Field id="acc-profile" label="Profil">
               {inp("profile", { ph: "8M, RPP8, XL, SPB, PJ" })}
             </Field>
@@ -151,7 +152,7 @@ export function ItemForm({ it, onClose, onSaved }: { it: Partial<Item>; onClose:
           </Field>
         ) : null}
       </List>
-      <List cls="acc-two" style={{ marginTop: 8 }}>
+      <List cls={TWO} style={{ marginTop: 8 }}>
         <Field id="acc-sku" label="Artikul">
           {inp("sku")}
         </Field>

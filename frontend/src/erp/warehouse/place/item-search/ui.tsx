@@ -23,12 +23,12 @@ export function ItemSearchView({
 }) {
   return (
     <Modal title="Tovar" onClose={onClose}>
-      <input className="inp wh-full" value={q} onChange={(e) => onQ(e.target.value)} placeholder="Nom yoki belgi: 1040 8M, SPB 1650" aria-label="Tovar qidirish" autoComplete="off" />
-      <div className="wh-res">
+      <input className="inp w-full" value={q} onChange={(e) => onQ(e.target.value)} placeholder="Nom yoki belgi: 1040 8M, SPB 1650" aria-label="Tovar qidirish" autoComplete="off" />
+      <div className="mt-2.5 [&_.skel]:!mx-0">
         <Loaded st={st}>
           {(rs) =>
             rs.length ? (
-              <List cls="flush">
+              <List cls="!mx-0">
                 {rs.slice(0, 60).map((x) => (
                   <Row
                     key={x.id}

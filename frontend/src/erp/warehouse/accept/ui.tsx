@@ -69,7 +69,7 @@ export function AccCountView({
       <List>
         <Row icon="truck" color="teal" t={r.supplier ?? "Ta'minotchi"} s={<span className="code">{r.number}</span>} />
         <Row icon="pin" color="red" t="Qayerga" val={to} chev onClick={onTo} />
-        <label className="item wh-sw">
+        <label className="item cursor-pointer">
           <span className="sq" style={{ background: C.orange }} aria-hidden="true">
             <Icon n="clock" />
           </span>
@@ -101,7 +101,7 @@ export function AccCountView({
               t={x.name}
               tcls="wrap2"
               s={[x.char, `kutilgan ${num(x.qty, 3)} ${un(x.unit)}`].filter(Boolean).join(" · ")}
-              val={<span className={`num ${d < 0 ? "bad-t" : d > 0 ? "warn-t" : "ok-t"}`}>{num(c, 3)}</span>}
+              val={<span className={`num ${d < 0 ? "text-danger" : d > 0 ? "text-warn" : "text-ok"}`}>{num(c, 3)}</span>}
               valSmall={d ? `${d > 0 ? "+" : ""}${num(d, 3)}` : "✓"}
               chev
               onClick={() => onLine(x)}
@@ -128,7 +128,7 @@ export const AccDoneView = ({ r, onBack }: { r: AccResult; onBack: () => void })
             key={i}
             t={x.name}
             s={`kutilgan ${num(x.expected, 3)} → keldi ${num(x.counted, 3)}`}
-            val={<span className={`num ${Number(x.diff) < 0 ? "bad-t" : "warn-t"}`}>{`${Number(x.diff) > 0 ? "+" : ""}${num(x.diff, 3)}`}</span>}
+            val={<span className={`num ${Number(x.diff) < 0 ? "text-danger" : "text-warn"}`}>{`${Number(x.diff) > 0 ? "+" : ""}${num(x.diff, 3)}`}</span>}
           />
         ))}
       </List>

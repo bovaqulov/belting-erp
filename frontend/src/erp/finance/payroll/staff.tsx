@@ -5,6 +5,7 @@ import { toast } from "@/erp/kit/env";
 import { d8, num } from "@/erp/kit/fmt";
 import { Tbl } from "@/erp/kit/table";
 import { Empty, Icon, List, Loaded, Row, Sf, Sheet, useLoad } from "@/erp/kit/ui";
+import { CNT, FILT, TWO } from "@/erp/finance/tw";
 import { api, post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import type { Employee } from "@/erp/finance/lib";
@@ -16,7 +17,7 @@ export function Staff() {
   if (!admin) return <Empty icon="alert" title="Ruxsat yo'q">Maoshlarni faqat rahbariyat ko&apos;radi.</Empty>;
   return (
     <>
-      <div className="acc-filt">
+      <div className={FILT}>
         <button type="button" className="b pri" onClick={() => setEdit({ active: true })}>
           <Icon n="plus" /> Yangi xodim
         </button>
@@ -28,7 +29,7 @@ export function Staff() {
             <Empty icon="users" title="Xodim yo'q">«Yangi xodim» bilan qo&apos;shing.</Empty>
           ) : (
             <>
-              <div className="sf acc-cnt">
+              <div className={CNT}>
                 {on.length} faol xodim · oklad jami {num(on.reduce((a, e) => a + e.salary, 0), 0)} so&apos;m
               </div>
               {wide ? (
@@ -38,7 +39,7 @@ export function Staff() {
                   rowKey={(e) => String(e.id)}
                   onRow={setEdit}
                   cols={[
-                    { h: "Xodim", f: (e) => <span className={e.active ? "" : "hint-t"}>{e.name}</span> },
+                    { h: "Xodim", f: (e) => <span className={e.active ? "" : "text-hint"}>{e.name}</span> },
                     { h: "Lavozim", f: (e) => e.position },
                     { h: "Bo'lim", f: (e) => e.dept },
                     { h: "Oklad, so'm", f: (e) => num(e.salary, 0), n: true },
@@ -114,7 +115,7 @@ function StaffForm({ e, onClose, onSaved }: { e: Partial<Employee>; onClose: () 
         {inp("position", "Lavozim", { ph: "Sotuv menejeri" })}
         {inp("dept", "Bo'lim", { ph: "Savdo" })}
       </List>
-      <List cls="acc-two" style={{ marginTop: 8 }}>
+      <List cls={TWO} style={{ marginTop: 8 }}>
         {inp("salary", "Oklad, so'm", { num: true, ph: "6 000 000" })}
         <div className="field col">
           <label htmlFor="acc-shired">Ishga kirgan</label>

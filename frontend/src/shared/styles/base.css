@@ -1,7 +1,7 @@
 /* Tokenlar va asosiy element uslubi (@layer base). Ranglar — CSS o'zgaruvchilari: Telegram ichida themeParams
    (--tg-theme-*), brauzerda Telegram Night/Day. Ikki to'plam:
    - umumiy (Jarvis, panel, lenta, geo): --bg, --bg2, --text, --hint, --btn, --border — qorong'i standart;
-   - ERP (/app/erp/*, `[data-erp]` bor sahifa): Telegram sozlamalari uslubi — --page, --sec, --sub, --link, --sep, --fill,
+   - Telegram UI (`[data-tg-ui]` bor sahifa — ERP, Jarvis paneli, bosh sahifa): Telegram sozlamalari uslubi — --page, --sec, --sub, --link, --sep, --fill,
      holat (--st-*), yorug' rejim. Nomlari to'qnashadiganlari (--text, --hint, --btn, --danger) ERP sahifasida qayta beriladi. */
 @layer base {
   @font-face {
@@ -47,6 +47,8 @@
     --btn-text: var(--tg-theme-button-text-color, #fff);
     --danger: #e5484d;
     --border: rgba(127, 127, 127, 0.3);
+    --line: rgba(127, 127, 127, 0.32);
+    --gold: #f5a623;
     /* ERP (boshqa sahifalarda ham bor — zarari yo'q) */
     --page: var(--tg-theme-secondary-bg-color, #0e1621);
     --sec: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #17212b));
@@ -67,7 +69,7 @@
     --st-bad: var(--danger);
     --focus: color-mix(in srgb, var(--link) 75%, transparent);
   }
-  :root:has([data-erp]) {
+  :root:has([data-tg-ui]) {
     color-scheme: dark;
     --text: var(--tg-theme-text-color, #f5f5f5);
     --hint: var(--tg-theme-hint-color, #708499);
@@ -77,7 +79,7 @@
   }
   @media (prefers-color-scheme: light) {
     /* yorug' rejim: holat/signal ranglari oq fonda o'qilsin (WCAG ≥4.5:1) — tus o'sha, faqat to'qroq */
-    :root:not(.tg):has([data-erp]) {
+    :root:not(.tg):has([data-tg-ui]) {
       color-scheme: light;
       --page: #efeff4;
       --sec: #ffffff;
@@ -90,6 +92,7 @@
       --head: #6d6d72;
       --sep: rgba(60, 60, 67, 0.12);
       --fill: rgba(118, 118, 128, 0.12);
+      --line: rgba(60, 60, 67, 0.25);
       --ok: #20772d;
       --warn: #925d07;
       --danger: #ca131d;
@@ -105,6 +108,51 @@
     --st-new: #0960e2;
     --st-work: #925d0f;
     --st-make: #873be6;
+  }
+
+  /* lenta (konveyer chizmasi): o'lchamlar va Telegram yorug' mavzusidagi zaxira ranglar (data-scheme — ConveyorApp) */
+  :root:has([data-lenta]) {
+    --side: 392px;
+    --hdr: 56px;
+    --barh: 72px;
+    --field: rgba(127, 127, 127, 0.12);
+    --focus: var(--accent);
+  }
+  :root.tg[data-scheme="light"]:has([data-lenta]) {
+    --sep: var(--tg-theme-section-separator-color, rgba(60, 60, 67, 0.12));
+    --line: rgba(60, 60, 67, 0.25);
+    --page: var(--tg-theme-secondary-bg-color, #efeff4);
+    --sec: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+    --text: var(--tg-theme-text-color, #000000);
+    --hint: var(--tg-theme-hint-color, #8e8e93);
+    --sub: var(--tg-theme-subtitle-text-color, var(--tg-theme-hint-color, #8e8e93));
+    --link: var(--tg-theme-link-color, #2481cc);
+    --accent: var(--tg-theme-accent-text-color, var(--tg-theme-link-color, #2481cc));
+    --btn: var(--tg-theme-button-color, #2481cc);
+    --head: var(--tg-theme-section-header-text-color, var(--tg-theme-accent-text-color, #6d6d72));
+  }
+  /* kompyuterda sahifa aylanmaydi (panellar o'zi aylanadi); telefonda aylantirish chizig'i kenglikni o'zgartirmasin
+     (chizma o'lchami kenglikka bog'liq — aks holda tebranish) */
+  @media (min-width: 1024px) {
+    :root:has([data-lenta]),
+    :root:has([data-lenta]) body {
+      height: 100%;
+      overflow: hidden;
+    }
+  }
+  @media (max-width: 1023px) {
+    :root:has([data-lenta]) {
+      scrollbar-gutter: stable;
+    }
+  }
+  [data-lenta] kbd {
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 5px;
+    background: var(--field);
+    color: var(--sub);
   }
 
   html {
@@ -128,16 +176,10 @@
     color: var(--text);
     font: 15px/1.45 var(--font-sans);
   }
-  :root:has([data-erp]) body {
+  :root:has([data-tg-ui]) body {
     background: var(--page);
     line-height: 1.4;
     min-height: 100vh;
-  }
-  /* iOS: 16px dan kichik bo'lsa fokusda zoom qiladi */
-  input,
-  select,
-  textarea {
-    font-size: 16px !important;
   }
   input::placeholder,
   textarea::placeholder {
@@ -153,15 +195,86 @@
   button {
     cursor: pointer;
   }
+  /* ikonka matn ichida ham turadi (preflight svg'ni block qiladi) */
   svg.i {
+    display: inline-block;
     width: 20px;
     height: 20px;
     flex: none;
     vertical-align: middle;
   }
+  /* brauzer standart matn uslublari (preflight nolga tushiradi; eski belgilashlar shularga tayanadi). Utility doim ustun. */
+  h1 {
+    font-size: 2em;
+    font-weight: bold;
+    margin-block: 0.67em;
+  }
+  h2 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-block: 0.83em;
+  }
+  h3 {
+    font-size: 1.17em;
+    font-weight: bold;
+    margin-block: 1em;
+  }
+  h4 {
+    font-weight: bold;
+    margin-block: 1.33em;
+  }
+  p {
+    margin-block: 1em;
+  }
+  ul,
+  ol {
+    margin-block: 1em;
+    padding-inline-start: 40px;
+  }
+  ul {
+    list-style: disc;
+  }
+  ol {
+    list-style: decimal;
+  }
   h1,
   h2 {
     text-wrap: balance;
+  }
+  /* panel sahifalari (Jarvis, ERP bosh sahifasi, logistika — `[data-panel]`): maydonlar ramkasiz, qator ichida */
+  [data-panel] :is(input, select, textarea):not([type="checkbox"], [type="radio"]) {
+    width: 100%;
+    font: inherit;
+    color: var(--text);
+    background: transparent;
+    border: 0;
+    outline: none;
+    padding: 0;
+  }
+  [data-panel] select {
+    appearance: none;
+  }
+  [data-panel] select:disabled {
+    color: var(--hint);
+  }
+  [data-panel] textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  [data-panel] pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font: 13px/1.45 ui-monospace, Menlo, monospace;
+    color: var(--sub);
+    margin: 0;
+  }
+  [data-panel] main {
+    padding-bottom: 40px;
+  }
+  @media (max-width: 640px) {
+    [data-panel] main {
+      padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    }
   }
   /* klaviatura fokusi (sichqoncha bosganda ko'rinmaydi) */
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
@@ -179,4 +292,13 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+/* iOS: 16px dan kichik maydon fokusda sahifani kattalashtiradi. Qatlamdan TASHQARIDA (ataylab): qatlamli !important
+   teskari ustuvorlikda ishlaydi — base qatlamida bo'lsa utility'dagi "!text-[14px]" ni ham yengib qo'yardi.
+   Shu holatda: oddiy utility'lardan ustun, "!" bilan yozilgan utility (masalan kompyuterdagi .inp 14px) — undan ustun. */
+input,
+select,
+textarea {
+  font-size: 16px !important;
 }

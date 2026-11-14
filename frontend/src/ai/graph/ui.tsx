@@ -2,7 +2,7 @@
 // "Ko'proq", jamoa chiplari, hisobot / qayta qurish, markaziy tushunchalar, kutilmagan bog'lanishlar, savollar.
 import type { ReactNode, RefObject } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader } from "@/shared/ui/panel/ui";
 
 import { bigCommunities, commColor, confPct, countText, type GraphSummary } from "./graph.lib";

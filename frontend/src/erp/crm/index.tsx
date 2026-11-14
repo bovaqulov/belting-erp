@@ -19,7 +19,7 @@ import { NewDeal } from "@/erp/crm/new-deal";
 
 import { BootView, CrmLayout } from "./ui";
 
-import "./crm.css";
+import { MAIN } from "@/erp/crm/tw";
 
 export default function CrmApp() {
   return (
@@ -126,11 +126,11 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
         }}
       >
         {sec === "leads" ? (
-          <main className="cmain">
+          <main className={MAIN}>
             <Leads tick={tick} onUnassigned={setUnassigned} />
           </main>
         ) : sec === "goals" ? (
-          <main className="cmain">
+          <main className={MAIN}>
             <Goals tick={tick} />
           </main>
         ) : (

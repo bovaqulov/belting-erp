@@ -1,6 +1,6 @@
 // /app/analytics — Analitika (savdo, ombor, marketplace ko'rsatkichlari). Hozircha joy egallovchi: mazmuni kelishilgach
 // shu papkada quriladi (API — backend ko'chirilgach).
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
 
 export default function AnalyticsApp() {

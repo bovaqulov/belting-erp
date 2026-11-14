@@ -20,7 +20,7 @@ export function Orders({ ch }: { ch: OrderCh }) {
 export const Lines = ({ o }: { o: Order }) => (
   <>
     {o.lines.map((l, i) => (
-      <div key={i} className="ln">
+      <div key={i} className="whitespace-normal text-fg [&+&]:mt-0.5">
         {l.title || l.key || o.article} <span className="code mut">× {l.qty}</span>
       </div>
     ))}
@@ -28,10 +28,10 @@ export const Lines = ({ o }: { o: Order }) => (
 );
 
 const Left = ({ o }: { o: Order }) =>
-  o.left_min === null ? null : <span className={o.left_min < 0 ? "bad-t" : o.left_min < 180 ? "warn-t" : undefined}>{leftText(o.left_min)}</span>;
+  o.left_min === null ? null : <span className={o.left_min < 0 ? "text-danger" : o.left_min < 180 ? "text-warn" : undefined}>{leftText(o.left_min)}</span>;
 
 const Picked = ({ o }: { o: Order }) =>
-  o.need ? <span className={`code ${o.assembled_at ? "ok-t" : ""}`}>{o.assembled_at ? "✓" : `${o.picked.length}/${o.need}`}</span> : null;
+  o.need ? <span className={`code ${o.assembled_at ? "text-ok" : ""}`}>{o.assembled_at ? "✓" : `${o.picked.length}/${o.need}`}</span> : null;
 
 function ChannelBoard({ ch }: { ch: Exclude<OrderCh, "wb"> }) {
   const { wide } = useMk();

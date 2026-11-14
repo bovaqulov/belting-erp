@@ -2,10 +2,10 @@
 // butun firma, ikonka, rang), Huquqlar (slot), Persona; xatolar, Bekor / Saqlash.
 import type { CSSProperties, ReactNode } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq } from "@/shared/ui/panel/ui";
 import { DEPT_COLORS, DEPT_ICONS, type AgentForm } from "@/ai/agents/agents.lib";
-import a from "@/ai/agents/agents.module.css";
+import a from "@/ai/agents/styles";
 import { KIND_NAMES, type Agent, type AgentKind } from "@/ai/agents/model";
 import type { AdminUser } from "@/ai/users/users.lib";
 

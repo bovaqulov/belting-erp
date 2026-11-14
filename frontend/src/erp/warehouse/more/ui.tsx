@@ -2,7 +2,7 @@
 import { C, Icon, List, Row, Sf } from "@/erp/kit/ui";
 import { MORE, SEC, type Sec } from "@/erp/warehouse/lib";
 
-const COLOR: Partial<Record<Sec, string>> = { stock: "green", acc: "teal", move: "blue", off: "red", cells: "orange", plan: "purple" };
+const COLOR: Partial<Record<Sec, string>> = { acc: "teal", move: "blue", off: "red", cells: "orange" };
 
 export const MoreView = ({ onGo }: { onGo: (s: Sec) => void }) => (
   <>

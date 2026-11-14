@@ -110,7 +110,7 @@ export const Check = ({ on }: { on: boolean }) => (
 // ------------------------------------------------------------ uslub (Tailwind)
 /** Segment: yopishqoq (brauzerda tepa panel bo'lsa — uning ostida), tugmalar guruhi */
 const SEG =
-  "sticky top-0 z-15 mx-4 my-2 flex gap-0.5 overflow-x-auto rounded-[10px] bg-[linear-gradient(var(--fill),var(--fill)),var(--page)] p-0.5 shadow-[0_0_0_8px_var(--page)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:root:has(#topbar:not(.hidden))_&]:top-[52px]";
+  "sticky top-0 z-15 mx-4 my-2 flex gap-0.5 overflow-x-auto rounded-[10px] [background:linear-gradient(var(--fill),var(--fill)),var(--page)] p-0.5 shadow-[0_0_0_8px_var(--page)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:root:has(#topbar:not(.hidden))_&]:top-[52px]";
 const SEG_BTN = "flex-[1_0_auto] cursor-pointer whitespace-nowrap rounded-lg border-0 bg-transparent px-3 py-[7px] text-[13.5px] font-medium text-fg transition-colors coarse:min-h-10";
 
 /** Pastdan chiqadigan oyna (kompyuter karkasida — markazda): fon va quti */
@@ -337,7 +337,22 @@ export function useNav<V>(first: V): Nav<V> {
 
 /** Sahifa karkasi: brauzerda tepa panel (orqaga + sarlavha), Telegram ichida yashirin; kirish oynasi.
  *  bare — o'z sarlavhasi va to'liq ekran tartibi bor ilova (CRM): tepa panel va .wrap yo'q, faqat muhit + kirish oynasi. */
-export function Shell({ title, nav, wide, bare, children }: { title: string; nav?: Nav<unknown>; wide?: boolean; bare?: boolean; children: ReactNode }) {
+export function Shell({
+  title,
+  nav,
+  wide,
+  full,
+  bare,
+  children,
+}: {
+  title: string;
+  nav?: Nav<unknown>;
+  wide?: boolean;
+  /** brauzerda to'liq kenglik (sex taxtasi — TV) */
+  full?: boolean;
+  bare?: boolean;
+  children: ReactNode;
+}) {
   // statik eksport: serverda (build) skelet, brauzerda darhol kontent
   const ready = useSyncExternalStore(noop, () => true, () => false);
   if (ready) initErpEnv();
@@ -371,7 +386,7 @@ export function Shell({ title, nav, wide, bare, children }: { title: string; nav
           <span />
         </div>
       </div>
-      <main className={`mx-auto pb-[calc(96px+var(--safe-b))] ${wide ? "max-w-[1200px]" : "max-w-[720px]"}`}>{ready ? children : <Skeleton />}</main>
+      <main className={`mx-auto pb-[calc(96px+var(--safe-b))] ${wide ? "max-w-[1200px]" : "max-w-[720px]"} ${full ? "notg:max-w-none" : ""}`}>{ready ? children : <Skeleton />}</main>
       <Login />
     </>
   );

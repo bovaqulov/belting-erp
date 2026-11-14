@@ -1,9 +1,9 @@
 // Agent huquqlari (faqat ko'rinish; tahrir oynasining "Huquqlar" qismi): vositalar, ma'lumot doirasi, kim foydalanadi, kanallar.
 // Huquqlarni IT bo'limi yoki Rahbariyat belgilaydi (model.ts canManage) — oyna faqat ularga ochiladi.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader } from "@/shared/ui/panel/ui";
 import { toggleTool, TOOLS, type AgentForm } from "@/ai/agents/agents.lib";
-import a from "@/ai/agents/agents.module.css";
+import a from "@/ai/agents/styles";
 import { CHANNEL_NAMES, rid, SCOPE_AREAS, SCOPE_NAMES, type Channel, type ChannelType, type Scope } from "@/ai/agents/model";
 import type { Dept } from "@/ai/shell/AdminContext";
 import type { AdminUser } from "@/ai/users/users.lib";

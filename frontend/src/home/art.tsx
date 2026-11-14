@@ -1,6 +1,6 @@
 // Bo'lim kartochkalari rasmlari (SVG). Rang — `currentColor` (kartochka rangi), oq qog'oz qismlari — `.paper` (--sec):
 // yorug'/qorong'i rejim va Telegram mavzusida o'zi moslashadi. Bezak emas — bo'lim nima ekanini bir qarashda aytadi.
-import s from "@/shared/ui/tiles/tiles.module.css";
+import s from "@/shared/ui/tiles/styles";
 
 const VB = "0 0 160 100";
 

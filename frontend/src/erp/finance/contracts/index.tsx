@@ -6,6 +6,7 @@ import { confirm, toast } from "@/erp/kit/env";
 import { d8, num } from "@/erp/kit/fmt";
 import { Tbl } from "@/erp/kit/table";
 import { Empty, Icon, List, Loaded, Row, Sf, Sheet, useLoad } from "@/erp/kit/ui";
+import { CNT, FILT } from "@/erp/finance/tw";
 import { api, post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import { CKIND, CSTATE, CSTATE_ST, leftLabel, type CKind, type CState, type Contract } from "@/erp/finance/lib";
@@ -45,7 +46,7 @@ export function Contracts() {
   }, [dq, kind, state]);
   return (
     <>
-      <div className="acc-filt">
+      <div className={FILT}>
         <label className="search">
           <Icon n="search" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Raqam, kontragent yoki INN" aria-label="Qidiruv" enterKeyHint="search" />
@@ -77,7 +78,7 @@ export function Contracts() {
             </Empty>
           ) : (
             <>
-              <div className="sf acc-cnt">{rs.length} shartnoma</div>
+              <div className={CNT}>{rs.length} shartnoma</div>
               {wide ? (
                 <Tbl
                   label="Shartnomalar"
@@ -111,7 +112,7 @@ export function Contracts() {
                       f: (c) => (
                         <>
                           {c.valid_until ? d8(c.valid_until) : "—"}
-                          {c.active && c.days_left !== null ? <div className={`t2 ${c.days_left < 0 ? "bad-t" : c.days_left <= 30 ? "warn-t" : ""}`}>{leftLabel(c.days_left)}</div> : null}
+                          {c.active && c.days_left !== null ? <div className={`t2 ${c.days_left < 0 ? "text-danger" : c.days_left <= 30 ? "text-warn" : ""}`}>{leftLabel(c.days_left)}</div> : null}
                         </>
                       ),
                       n: true,

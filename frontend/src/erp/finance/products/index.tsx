@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { num } from "@/erp/kit/fmt";
 import { Tbl } from "@/erp/kit/table";
 import { Empty, Icon, List, Loaded, Row, useLoad } from "@/erp/kit/ui";
+import { CNT, FILT, KIND_CLS } from "@/erp/finance/tw";
 import { api } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import { groupOptions, KCOL, KIND, un, type Item, type ItemRow, type Kind } from "@/erp/finance/lib";
@@ -47,7 +48,7 @@ export function Products() {
   const filtered = !!(dq || group || kind);
   return (
     <>
-      <div className="acc-filt">
+      <div className={FILT}>
         <label className="search">
           <Icon n="search" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, belgi (1040 8M), artikul" aria-label="Qidiruv" enterKeyHint="search" />
@@ -80,7 +81,7 @@ export function Products() {
             </Empty>
           ) : (
             <>
-              <div className="sf acc-cnt">
+              <div className={CNT}>
                 {rs.length}
                 {rs.length >= 200 ? "+" : ""} tovar
               </div>
@@ -107,7 +108,7 @@ export function Products() {
                       ),
                     },
                     { h: "Kategoriya", f: (r) => [r.parent_grp, r.grp].filter(Boolean).join(" › ") },
-                    { h: "Turi", f: (r) => <span className={`badge k-${r.kind}`}>{KIND[r.kind]}</span> },
+                    { h: "Turi", f: (r) => <span className={`badge ${KIND_CLS[r.kind] ?? ""}`}>{KIND[r.kind]}</span> },
                     { h: "Variant", f: (r) => (r.chars ? num(r.chars, 0) : ""), n: true },
                     {
                       h: "Narx, so'm",
@@ -120,7 +121,7 @@ export function Products() {
                         ) : Object.keys(r.price?.overrides ?? {}).length ? (
                           <span className="t2">kenglik bo&apos;yicha</span>
                         ) : (
-                          <span className="hint-t">—</span>
+                          <span className="text-hint">—</span>
                         ),
                       n: true,
                     },
@@ -129,11 +130,11 @@ export function Products() {
                       f: (r) =>
                         r.qty ? (
                           <>
-                            {num(r.qty, 3)} <span className="u">{un(r.unit)}</span>
+                            {num(r.qty, 3)} <span className="text-xs text-hint">{un(r.unit)}</span>
                             <div className="t2">{r.units} birlik</div>
                           </>
                         ) : (
-                          <span className="hint-t">—</span>
+                          <span className="text-hint">—</span>
                         ),
                       n: true,
                     },

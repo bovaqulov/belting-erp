@@ -2,9 +2,9 @@
 // modul — "Tez orada" (bosilmaydi).
 import type { CSSProperties } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
-import g from "@/shared/ui/tiles/tiles.module.css";
+import g from "@/shared/ui/tiles/styles";
 
 import { ERP_ART } from "./art";
 
@@ -28,7 +28,7 @@ export const MODULES: Module[] = [
 
 export function ErpHomeView({ modules }: { modules: Module[] }) {
   return (
-    <>
+    <div data-panel="" className="contents">
       <div className={s.top}>
         <div className={s.wrap}>
           <div className={s.bar}>
@@ -77,6 +77,6 @@ export function ErpHomeView({ modules }: { modules: Module[] }) {
           })}
         </nav>
       </main>
-    </>
+    </div>
   );
 }

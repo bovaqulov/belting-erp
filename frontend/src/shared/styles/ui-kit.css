@@ -260,3 +260,7 @@
 @utility dd {
   @apply mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-sep bg-page;
 }
+/* jadval katagidagi ikkinchi qator (izoh) */
+@utility t2 {
+  @apply mt-0.5 text-xs text-hint;
+}

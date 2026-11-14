@@ -8,7 +8,7 @@ import { Empty, ErrHint, Seg, Skeleton } from "@/erp/kit/ui";
 import { AREAS, areaOf, type Sec, type View } from "@/erp/finance/lib";
 
 export const BootView = ({ err, net, onRetry }: { err: string; net: boolean; onRetry: () => void }) => (
-  <div className="mod acc">
+  <div className="min-h-screen">
     <div className="large">Accounting</div>
     {err ? (
       <Empty icon="alert" title="Accounting ochilmadi">

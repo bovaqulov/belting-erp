@@ -1,9 +1,9 @@
 // Agent oynasi (faqat ko'rinish): kimligi, statistika, sub-agentlar, jadval (keyingi ishga tushish), topshiriqlar,
 // huquqlar (vositalar, ma'lumot doirasi, kim foydalanadi, kanallar), persona; tahrirlash / o'chirish.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 import { toolName } from "@/ai/agents/agents.lib";
-import a from "@/ai/agents/agents.module.css";
+import a from "@/ai/agents/styles";
 import { CHANNEL_NAMES, KIND_NAMES, SCOPE_AREAS, SCOPE_NAMES, TASK_STATUS, type Agent, type AgentTask, type Schedule } from "@/ai/agents/model";
 import { describe, nextRun, whenText } from "@/ai/agents/schedule.lib";
 import type { DeptStat } from "@/ai/shell/AdminContext";

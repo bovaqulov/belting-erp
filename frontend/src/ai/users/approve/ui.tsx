@@ -1,5 +1,5 @@
 // Xodimni tasdiqlash oynasi (faqat ko'rinish): kim, qaysi bo'limga (bosilganda tasdiqlanadi).
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Avatar, Icon, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 import type { AdminUser, UDept } from "@/ai/users/users.lib";
 

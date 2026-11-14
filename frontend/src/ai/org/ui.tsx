@@ -2,7 +2,7 @@
 // Agentlar va Xodimlar daraxtlari shu komponent bilan chiziladi — tuzilma va ko'rinish bir xil.
 import type { ReactNode } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 
 import type { DeptTree } from "./dept-tree";
 

@@ -12,6 +12,7 @@ import { ViewBar } from "@/erp/crm/views";
 import { Board } from "./board";
 import { DealList } from "./list";
 import { DealsToolbar, IdleBanner } from "./ui";
+import { MAIN } from "@/erp/crm/tw";
 
 export function Deals({
   tick,
@@ -136,7 +137,7 @@ export function Deals({
         onRefresh={crm.refresh}
       />
       {showBanner && banner.data?.total ? <IdleBanner total={banner.data.total} onReview={() => applyView(SYSV.find((v) => v.id === "s-old")!)} /> : null}
-      <main className="cmain">
+      <main className={MAIN}>
         {view === "board" ? (
           <Board pipe={pipe || "main"} fp={fp} tick={tick} paused={paused} onLoaded={onLoaded} />
         ) : (

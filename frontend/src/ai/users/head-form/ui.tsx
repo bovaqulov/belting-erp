@@ -1,7 +1,7 @@
 // Boshliq tayinlash oynasi (faqat ko'rinish): @username, bo'lim, "Tayinlash"; tayinlangan, botga hali kirmaganlar.
 import type { RefObject } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq } from "@/shared/ui/panel/ui";
 import { deptOf, type HeadScope, type PendingHead, type UDept } from "@/ai/users/users.lib";
 

@@ -81,8 +81,8 @@ export function PriceForm({ it, onClose, onSaved }: { it: Item; onClose: () => v
               const auto = priceFor(calc, w);
               const on = sel.includes(w);
               return (
-                <div key={w} className="field acc-pw">
-                  <button type="button" className="acc-ck" role="checkbox" aria-checked={on} aria-label={`${w} mm tanlash`} onClick={() => setSel((s) => (on ? s.filter((x) => x !== w) : [...s, w]))}>
+                <div key={w} className="field [&_input]:!text-right [&_label]:!min-w-[70px]">
+                  <button type="button" className="grid size-8 flex-none cursor-pointer place-items-center border-0 bg-transparent p-0 coarse:size-11" role="checkbox" aria-checked={on} aria-label={`${w} mm tanlash`} onClick={() => setSel((s) => (on ? s.filter((x) => x !== w) : [...s, w]))}>
                     <Check on={on} />
                   </button>
                   <label htmlFor={`acc-pw${w}`} className="code">

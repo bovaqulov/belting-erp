@@ -1,5 +1,5 @@
 // Brauzerda kirish (faqat ko'rinish): logo, "Telegram orqali kirish", holat matni yoki bot havolasi.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
 
 export type LoginMsg = { kind: "text"; text: string } | { kind: "link"; link: string };

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { toast } from "@/erp/kit/env";
 import { List, Row, Sf, Sh, Sheet, useLoad } from "@/erp/kit/ui";
+import { TWO } from "@/erp/finance/tw";
 import { api, post } from "@/erp/finance/api";
 import { CKIND, CURRENCIES, type CKind, type Contract, type Counterparty, type Firm } from "@/erp/finance/lib";
 
@@ -84,7 +85,7 @@ export function ContractForm({ c, onClose, onSaved }: { c: Partial<Contract>; on
             </select>
           </div>
         </List>
-        <List cls="acc-two" style={{ marginTop: 8 }}>
+        <List cls={TWO} style={{ marginTop: 8 }}>
           <F id="acc-cn" label="Raqami">
             <input id="acc-cn" value={f.number} onChange={(e) => set("number", e.target.value)} placeholder="avtomatik" />
           </F>
@@ -103,7 +104,7 @@ export function ContractForm({ c, onClose, onSaved }: { c: Partial<Contract>; on
           </F>
         </List>
         <Sh t="Pul shartlari" />
-        <List cls="acc-two">
+        <List cls={TWO}>
           <F id="acc-ca" label={`Summa, ${f.currency}`}>
             <input id="acc-ca" inputMode="decimal" value={f.amount} onChange={(e) => set("amount", e.target.value)} placeholder="ixtiyoriy" />
           </F>

@@ -28,26 +28,26 @@ function CreateModal({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
       <label className="l" htmlFor="c-z">
         Zona (harf)
       </label>
-      <input id="c-z" className="inp code wh-full" value={z} maxLength={3} onChange={(e) => setZ(e.target.value)} />
-      <div className="wh-two">
+      <input id="c-z" className="inp code w-full" value={z} maxLength={3} onChange={(e) => setZ(e.target.value)} />
+      <div className="grid grid-cols-2 gap-2.5 [&_.inp]:w-full">
         <div>
           <label className="l" htmlFor="c-a">
             Javon: dan
           </label>
-          <input id="c-a" className="inp wh-full" inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
+          <input id="c-a" className="inp w-full" inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
         </div>
         <div>
           <label className="l" htmlFor="c-b">
             gacha
           </label>
-          <input id="c-b" className="inp wh-full" inputMode="numeric" value={b} onChange={(e) => setB(e.target.value)} />
+          <input id="c-b" className="inp w-full" inputMode="numeric" value={b} onChange={(e) => setB(e.target.value)} />
         </div>
       </div>
       <label className="l" htmlFor="c-f">
         Qavatlar soni (0 — qavatsiz)
       </label>
-      <input id="c-f" className="inp wh-full" inputMode="numeric" value={f} onChange={(e) => setF(e.target.value)} />
-      <p className={`wh-hint ${codes.length ? "" : "bad-t"}`} aria-live="polite">
+      <input id="c-f" className="inp w-full" inputMode="numeric" value={f} onChange={(e) => setF(e.target.value)} />
+      <p className={`mt-2.5 mb-0 text-[13px] text-hint ${codes.length ? "" : "text-danger"}`} aria-live="polite">
         {codes.length ? (
           <>
             {codes.length} ta: <span className="code">{codes.slice(0, 4).join(", ")}</span>
@@ -125,7 +125,7 @@ export function CellsView({
                     key={c.id}
                     icon="pin"
                     color="red"
-                    cls={sel?.id === c.id ? "wh-on" : ""}
+                    cls={sel?.id === c.id ? "bg-link/12" : ""}
                     t={<span className="code">{c.code}</span>}
                     val={<span className="num">{c.units}</span>}
                     valSmall="birlik"

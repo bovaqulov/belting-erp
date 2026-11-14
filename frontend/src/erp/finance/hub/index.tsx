@@ -4,9 +4,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { useLoad } from "@/erp/kit/ui";
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
-import g from "@/shared/ui/tiles/tiles.module.css";
+import g from "@/shared/ui/tiles/styles";
 import { api } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
 import {
@@ -104,7 +104,7 @@ export function Hub({ demo }: { demo?: ReactNode }) {
                   </div>
                   <div className={g.sub}>{a.sub}</div>
                   {stat ? (
-                    <div className={`acc-stat ${stat.hot ? "hot" : ""}`}>
+                    <div className={`mt-2 text-[13px] font-semibold tabular-nums ${stat.hot ? "text-st-work" : "text-st-done"}`}>
                       {stat.text}
                     </div>
                   ) : null}

@@ -1,5 +1,5 @@
 // ERP modul kartochkalari rasmlari (SVG). Rang — `currentColor` (kartochka rangi), oq qog'oz qismlari — `.paper` (--sec).
-import s from "@/shared/ui/tiles/tiles.module.css";
+import s from "@/shared/ui/tiles/styles";
 
 const VB = "0 0 160 100";
 

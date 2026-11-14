@@ -1,7 +1,7 @@
 // Audit (faqat ko'rinish): "Hammasi / Ovozli xabarlar" filtri, hodisalar ro'yxati, ovozli xabar qatori (tinglash).
 import type { ReactNode } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq } from "@/shared/ui/panel/ui";
 
 import { auditIcon, auditToolInfo, auditTs, type AuditRow, type voiceInfo } from "./audit.lib";
@@ -40,7 +40,7 @@ export function VoiceRowView({
             )}
             {a.dept ? " · " + a.dept : ""} · {d.duration} s
           </span>{" "}
-          <span className={cx(s.vst, d.cls && s[d.cls])}>{d.label}</span>
+          <span className={cx(s.vst, d.cls && s[`v${d.cls}`])}>{d.label}</span>
         </div>
         {d.text && <div className={s.vtext}>«{d.text}»</div>}
         <div className={s.vplay}>

@@ -22,7 +22,7 @@ export function PickList({ wide, rs, onOpen }: { wide: boolean; rs: PickBrief[];
   if (wide)
     return (
       <>
-        <p className="wh-sub">{rs.length} buyurtma yig&apos;ishga tayyor</p>
+        <p className="mx-4 mt-0.5 mb-3 text-sm text-hint tabular-nums">{rs.length} buyurtma yig&apos;ishga tayyor</p>
         <Tbl
           label="Yig'ish navbati"
           rows={rs}
@@ -118,8 +118,8 @@ export function PickOrderView({
               s={
                 <>
                   {hint ? `Taklif: ${hint}` : "Omborda mos birlik yo'q"}
-                  <span className="wh-prog" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label="Yig'ildi">
-                    <i style={{ width: `${pct}%` }} />
+                  <span className="mt-1.5 block h-1 overflow-hidden rounded-sm bg-fill" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label="Yig'ildi">
+                    <i className="block h-full bg-st-done" style={{ width: `${pct}%` }} />
                   </span>
                 </>
               }

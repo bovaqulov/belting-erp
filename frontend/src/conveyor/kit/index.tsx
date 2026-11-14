@@ -1,17 +1,17 @@
-// Lenta umumiy UI bo'laklari: c() — CSS Modules klasslari (eski HTML nomlari bilan), Icon, observeResize. Telegram — @/shared/telegram.
+// Lenta umumiy UI bo'laklari: c() — Tailwind uslublari (eski HTML klass nomlari bilan, kit/styles), Icon, observeResize. Telegram — @/shared/telegram.
 import { ICONS } from "@/shared/icons/lucide";
 import { SvgIcon } from "@/shared/ui/svg-icon";
 
-import s from "@/conveyor/conveyor.module.css";
+import S from "./styles";
 
-/** c("field col", cond && "bad") — lenta.module.css klasslari (eski HTML'dagi klass nomlari bilan) */
+/** c("field col", cond && "bad") — har nom → kit/styles dagi utility'lar; noma'lum nom — uslubsiz belgi (cv-<nom>) */
 export const c = (...names: (string | false | null | undefined)[]): string =>
   names
     .filter(Boolean)
     .join(" ")
     .split(/\s+/)
     .filter(Boolean)
-    .map((n) => s[n] ?? n)
+    .map((n) => S[n] ?? `cv-${n}`)
     .join(" ");
 
 /** ic(n, cls): noma'lum nom → "info" (eskidagidek) */

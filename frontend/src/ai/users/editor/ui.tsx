@@ -1,6 +1,6 @@
 // Xodimni tahrirlash oynasi (faqat ko'rinish): kim, bo'limlar, rol va rahbar, xarakteristika (agent o'rgangan),
 // afzalliklar, IP-telefoniya va CRM bog'lanishi, boshliq qilish (bo'lim + huquqlar); ega — o'zgartirilmaydi.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Avatar, fmtTime, Icon, noEmoji, PERM_ICONS, ROLE_NAMES, SectionHeader, Sq } from "@/shared/ui/panel/ui";
 import { activityLine, EDIT_ROLES, hasProfile, topWords, type AdminUser, type HeadScope, type PrefOpts, type ScopeState, type UDept } from "@/ai/users/users.lib";
 
@@ -70,7 +70,7 @@ function PrefsSection({
     p[k] && p[k]?.source === "learned" ? (
       <>
         {" "}
-        <span className={`${s.vst} ${s.warn}`}>o&apos;rganilgan</span>
+        <span className={`${s.vst} ${s.vwarn}`}>o&apos;rganilgan</span>
       </>
     ) : null;
   return (

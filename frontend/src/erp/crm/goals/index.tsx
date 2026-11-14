@@ -9,6 +9,7 @@ import { api, post } from "@/erp/crm/api";
 import type { Goals as G } from "@/erp/crm/lib";
 
 import { GoalsView } from "./ui";
+import { PANE } from "@/erp/crm/tw";
 
 export function Goals({ tick }: { tick: number }) {
   const [gm, setGm] = useState(() => new Date().toISOString().slice(0, 7));
@@ -23,7 +24,7 @@ export function Goals({ tick }: { tick: number }) {
     }
   };
   return (
-    <div className="pane">
+    <div className={PANE}>
       <Loaded st={st}>{(g) => <GoalsView g={g} gm={gm} onGm={setGm} onSave={(tg, v) => void save(tg, v)} />}</Loaded>
     </div>
   );

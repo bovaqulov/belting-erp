@@ -1,39 +1,43 @@
 // Modul karkasi (ERP kit): kompyuterda — chap menyu (brend, "Bo'limlar"ga qaytish, guruhlangan bo'limlar) + sarlavha;
 // telefonda / Telegram ichida — modul o'z tepasini beradi (AppTop + Seg / AppTabs). Demo rejim belgisi — ikkalasida.
-// Uslub: kit.css (.mod*; .app ui.css'da band — ilova ikonkasi). Foydalanuvchilar: Marketplace, Accounting.
+// Uslub — Tailwind. Kompyuterda body'ga `mod-desk` qo'yiladi (desk: varianti — oynalar markazda, pastki tugma o'ngda).
+// Foydalanuvchilar: Marketplace, Accounting, Ombor.
 import { useEffect, type ReactNode } from "react";
 
 import { Icon } from "./ui";
-
-import "./kit.css";
 
 export type NavItem = { key: string; label: string; icon: string; on: boolean; onClick: () => void; extra?: ReactNode };
 export type NavGroup = { title?: string; items: NavItem[] };
 
 /** Demo rejimi belgisi (yopilmaydi): "Qayta tiklash" — boshlang'ich ma'lumotlar */
 export const DemoStrip = ({ text, onReset }: { text: string; onReset: () => void }) => (
-  <div className="mod-demo" role="status">
-    <span className="dtag">Demo rejim</span>
-    <span className="dtx">{text}</span>
-    <button type="button" className="b" onClick={onReset}>
+  <div
+    className="flex min-h-9 items-center gap-2 border-b border-sep bg-[color-mix(in_srgb,var(--st-work)_12%,var(--page))] px-4 py-1 text-[13px] [.mod-wide_&]:-mx-3 [.mod-wide_&]:px-7"
+    role="status"
+  >
+    <span className="font-bold whitespace-nowrap text-st-work">Demo rejim</span>
+    <span className="min-w-0 flex-1 leading-tight text-sub">{text}</span>
+    <button type="button" className="b h-7 flex-none px-2.5 text-[13px]" onClick={onReset}>
       <Icon n="refresh" /> Qayta tiklash
     </button>
   </div>
 );
 
+const UP = "grid size-11 flex-none cursor-pointer place-items-center rounded-[10px] border-0 bg-transparent p-0 text-link hover:bg-fill [&_svg.i]:size-[22px]";
+
 /** Telefon sarlavhasi: chapda qaytish (havola yoki ilova ichida — onUp), katta sarlavha va izoh */
 export const AppTop = ({ up, upLabel, title, sub, onUp }: { up: string; upLabel: string; title: string; sub?: string; onUp?: () => void }) => (
-  <div className="mod-top">
+  <div className="flex items-start gap-1 px-2 pt-2.5">
     {onUp ? (
-      <button type="button" className="mod-up" onClick={onUp} aria-label={upLabel} title={upLabel}>
+      <button type="button" className={UP} onClick={onUp} aria-label={upLabel} title={upLabel}>
         <Icon n="back" />
       </button>
     ) : (
-      <a className="mod-up" href={up} aria-label={upLabel} title={upLabel}>
+      <a className={UP} href={up} aria-label={upLabel} title={upLabel}>
         <Icon n="layout-grid" />
       </a>
     )}
-    <div className="large">
+    <div className="large min-w-0 pt-0.5 pl-1">
       {title}
       {sub ? <small>{sub}</small> : null}
     </div>
@@ -43,9 +47,15 @@ export const AppTop = ({ up, upLabel, title, sub, onUp }: { up: string; upLabel:
 /** Bo'lim tablari (telefon): pastki chiziq bilan — filtr chiplaridan ajralib tursin */
 export function AppTabs<K extends string>({ items, cur, onPick, label }: { items: [K, string, ReactNode?][]; cur: K; onPick: (k: K) => void; label: string }) {
   return (
-    <nav className="mod-tabs" aria-label={label}>
+    <nav className="mx-4 mt-1 flex gap-0.5 overflow-x-auto border-b border-sep [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={label}>
       {items.map(([k, t, extra]) => (
-        <button key={k} type="button" className={cur === k ? "on" : ""} aria-current={cur === k ? "page" : undefined} onClick={() => onPick(k)}>
+        <button
+          key={k}
+          type="button"
+          className={`-mb-px min-h-11 cursor-pointer border-0 border-b-2 bg-transparent px-2.5 pt-2.5 pb-[9px] text-[14.5px] whitespace-nowrap ${cur === k ? "border-link font-semibold text-fg" : "border-transparent font-medium text-hint"}`}
+          aria-current={cur === k ? "page" : undefined}
+          onClick={() => onPick(k)}
+        >
           {t}
           {extra}
         </button>
@@ -53,6 +63,15 @@ export function AppTabs<K extends string>({ items, cur, onPick, label }: { items
     </nav>
   );
 }
+
+/** modul ichida: chiplar bir qatorda aylanadi (telefonda o'ralib ketmasin), raqamlar teng kenglikda */
+const MAIN = "[&_.chips]:flex-nowrap [&_.chips]:overflow-x-auto [&_.chips]:pb-0.5 [&_.chips]:[scrollbar-width:none] [&_.chips::-webkit-scrollbar]:hidden [&_.chip]:whitespace-nowrap [&_.chip]:tabular-nums";
+/** kompyuterda ikki teng ustun (telefonda — ketma-ket) */
+export const WIDE_COLS = "[.mod-wide_&]:grid [.mod-wide_&]:grid-cols-2 [.mod-wide_&]:items-start [.mod-wide_&]:gap-4";
+/** matn ko'rinishidagi tugma (havola kabi) */
+export const LINK_BTN = "cursor-pointer border-0 bg-transparent p-0 text-link normal-case disabled:cursor-default disabled:opacity-50 coarse:min-h-11";
+
+const SIDE_BTN = "group/nav flex min-h-9 cursor-pointer items-center gap-2.5 rounded-[9px] border-0 px-2.5 py-2 text-left text-[14.5px] [&_svg.i]:size-[18px] [&_svg.i]:flex-none";
 
 export function AppLayout({
   brand,
@@ -68,7 +87,8 @@ export function AppLayout({
   children,
 }: {
   brand: string;
-  up?: string;
+  /** null — chap menyuda qaytish havolasi yo'q */
+  up?: string | null;
   upLabel?: string;
   /** ilova ichida qaytish (havola o'rniga tugma) */
   onUp?: () => void;
@@ -82,30 +102,40 @@ export function AppLayout({
   cls?: string;
   children: ReactNode;
 }) {
-  // kompyuterda oynalar (Sheet — body'ga portal) pastdan emas, markazda chiqsin: kit.css body.mod-desk .sheet
+  // kompyuterda oynalar (Sheet — body'ga portal) pastdan emas, markazda chiqsin: body.mod-desk (desk: varianti)
   useEffect(() => {
     document.body.classList.toggle("mod-desk", wide);
     return () => document.body.classList.remove("mod-desk");
   }, [wide]);
+  const upCls = "inline-flex items-center gap-1 self-start rounded-md border-0 bg-transparent pt-0.5 pr-2 pb-2.5 pl-1.5 text-[13px] text-hint hover:text-link [&_svg.i]:size-[15px]";
   return (
-    <div className={`mod ${wide ? "wide" : ""} ${cls}`}>
+    <div className={`min-h-screen min-h-dvh ${wide ? "mod-wide pl-[232px]" : ""} ${cls}`}>
       {wide ? (
-        <nav className="mod-side" aria-label={`${brand} bo'limlari`}>
-          <div className="brand">{brand}</div>
+        <nav
+          className="fixed top-0 bottom-0 left-0 z-20 flex w-[232px] flex-col gap-0.5 overflow-y-auto border-r border-sep bg-sec px-2 pt-4 pb-6"
+          aria-label={`${brand} bo'limlari`}
+        >
+          <div className="px-2.5 pt-0.5 text-xl font-bold">{brand}</div>
           {onUp ? (
-            <button type="button" className="up" onClick={onUp}>
+            <button type="button" className={`${upCls} cursor-pointer`} onClick={onUp}>
               <Icon n="back" /> {upLabel}
             </button>
-          ) : (
-            <a className="up" href={up}>
+          ) : up ? (
+            <a className={upCls} href={up}>
               <Icon n="back" /> {upLabel}
             </a>
-          )}
+          ) : null}
           {nav.map((g, i) => (
-            <div key={g.title ?? i} className="grp" role="group" aria-label={g.title}>
-              {g.title ? <div className="gh">{g.title}</div> : null}
+            <div key={g.title ?? i} className="flex flex-col gap-0.5" role="group" aria-label={g.title}>
+              {g.title ? <div className="mx-2.5 mt-3 mb-0.5 text-[12.5px] font-semibold text-hint">{g.title}</div> : null}
               {g.items.map((x) => (
-                <button key={x.key} type="button" className={x.on ? "on" : ""} aria-current={x.on ? "page" : undefined} onClick={x.onClick}>
+                <button
+                  key={x.key}
+                  type="button"
+                  className={`${SIDE_BTN} ${x.on ? "bg-btn text-btn-fg [&_svg.i]:text-btn-fg" : "bg-transparent text-fg hover:bg-fill [&_svg.i]:text-hint"}`}
+                  aria-current={x.on ? "page" : undefined}
+                  onClick={x.onClick}
+                >
                   <Icon n={x.icon} />
                   {x.label}
                   {x.extra}
@@ -115,11 +145,18 @@ export function AppLayout({
           ))}
         </nav>
       ) : null}
-      <main className="mod-main">
+      <main className={`min-w-0 ${MAIN} ${wide ? "max-w-[1400px] px-3 pb-10 [&_.btns]:max-w-[420px]" : "pb-[calc(40px+var(--safe-b,0px))]"}`}>
         {demo}
-        {wide ? <h1 className="mod-h1">{title}</h1> : top}
+        {wide ? <h1 className="mx-4 mt-[18px] mb-1 text-[26px] font-bold tracking-[-0.01em]">{title}</h1> : top}
         {children}
       </main>
     </div>
   );
 }
+
+/** Menyudagi son (masalan "yangi | yig'ilmoqda"): tanlangan bo'limda rangi tugma matniga moslanadi */
+export const NAV_CNT = "ml-auto text-xs tabular-nums opacity-85";
+/** e'tibor talab qiladigan son: qizil (tanlangan bo'limda — oq) */
+export const NAV_HOT = "text-danger group-aria-[current=page]/nav:text-inherit";
+/** telefon tabidagi son */
+export const TAB_CNT = "ml-1 text-xs text-danger tabular-nums";

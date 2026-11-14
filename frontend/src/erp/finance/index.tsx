@@ -28,7 +28,6 @@ import { Products } from "@/erp/finance/products";
 
 import { AccLayout, BootView } from "./ui";
 
-import "./finance.css";
 
 export default function AccountingApp() {
   return (

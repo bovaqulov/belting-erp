@@ -1,6 +1,6 @@
 // Tizim holati (faqat ko'rinish): jarayonlar (web, worker, DB, tunnel) holati matn + rang bilan, loglar ro'yxati,
 // log oynasi.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 
 import { dur, size, type Status } from "./system.lib";

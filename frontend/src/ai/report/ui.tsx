@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 
 import { isoToDmy, money, normNumber } from "./format.lib";
 import type { ReportData } from "./report.lib";
-import s from "./report.module.css";
+import s from "./styles";
 
 export type State =
   | { kind: "loading" }

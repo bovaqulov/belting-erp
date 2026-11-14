@@ -1,7 +1,7 @@
 // Xotira (faqat ko'rinish): ro'yxat/graf tugmalari, firma / bo'lim / xodim guruhlari, arxiv; qator amallari.
 import { Fragment } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { fmtTime, Icon, Sq } from "@/shared/ui/panel/ui";
 
 import type { groupMemory, MemoryItem } from "./memory.lib";

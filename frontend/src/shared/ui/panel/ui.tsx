@@ -2,7 +2,7 @@
 // Sof funksiyalar (hue, avColor, initials, noEmoji, fmtTime …) — ./format (shu yerdan qayta eksport).
 import { useCallback, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
-import s from "./panel.module.css";
+import s from "./styles";
 import { SvgIcon } from "@/shared/ui/svg-icon";
 
 import { ICONS } from "@/shared/icons/lucide";

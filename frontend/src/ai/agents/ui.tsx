@@ -1,12 +1,12 @@
 // Agentlar (faqat ko'rinish): daraxt (OrgChart) yoki ro'yxat, "Yangi agent" tugmasi, izoh.
 import type { CSSProperties } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 import OrgChart from "@/ai/org";
 import { flatten, type DeptTree } from "@/ai/org/dept-tree";
 
-import a from "./agents.module.css";
+import a from "./styles";
 import { KIND_NAMES, type Agent } from "./model";
 
 export function AgentsView({

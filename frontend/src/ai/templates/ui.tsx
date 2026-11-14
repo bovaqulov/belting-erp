@@ -1,6 +1,6 @@
 // Shablonlar (faqat ko'rinish): tasdiqlovchi izohi, kutayotgan takliflar (tasdiqlash/rad etish), bo'limlar bo'yicha faol
 // shablonlar (tahrirlash mumkin bo'lsa — bosiladi), yangi shablon, tarix.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { fmtTime, Icon, noEmoji, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 
 import { deptOf, editableDepts, groupByDept, pendingOf, STATUS_NAMES, TYPE_NAMES, type Template, type TemplatesData } from "./templates.lib";

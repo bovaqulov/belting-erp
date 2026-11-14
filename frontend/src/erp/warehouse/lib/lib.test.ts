@@ -5,20 +5,21 @@ import { genCells, invKey, parseNeeds, size, stockCsv } from "./wh.lib";
 
 describe("ombor navigatsiyasi", () => {
   it("URL ↔ ko'rinish", () => {
-    expect(parseView("")).toBe("panel");
+    expect(parseView("")).toBe("place");
     expect(parseView("?sec=inv")).toBe("inv");
-    expect(parseView("?sec=xx")).toBe("panel");
+    expect(parseView("?sec=xx")).toBe("place");
+    expect(parseView("?sec=pick")).toBe("place");
     expect(parseView("?sec=more")).toBe("more");
-    expect(viewQs("panel")).toBe("");
+    expect(viewQs("place")).toBe("");
     expect(viewQs("cells")).toBe("?sec=cells");
   });
   it("telefon tablari va Amallar", () => {
     expect(TABS).toContain("more");
-    expect(MORE).not.toContain("panel");
-    expect(MORE).toContain("acc");
-    expect(tabOf("acc")).toBe("more");
+    expect(MORE).not.toContain("place");
+    expect(MORE).toContain("cells");
+    expect(tabOf("cells")).toBe("more");
     expect(tabOf("inv")).toBe("inv");
-    expect(deskView("more")).toBe("panel");
+    expect(deskView("more")).toBe("place");
   });
 });
 

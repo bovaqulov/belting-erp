@@ -2,13 +2,15 @@
 import { CH, d8, num, short, un } from "@/erp/kit/fmt";
 import { Tbl } from "@/erp/kit/table";
 import { List, Row, Sf, Sh } from "@/erp/kit/ui";
-import { Btns, Qty, Tile } from "@/erp/warehouse/common";
+import { Btns, COLS, Qty, TAG, Tile } from "@/erp/warehouse/common";
 import type { Cls, Cycle, Dashboard, PickBrief } from "@/erp/warehouse/lib";
+
+const CLS_TAG: Record<Cls, string> = { A: "bg-st-bad/16 text-st-bad", B: "bg-st-work/16 text-st-work", C: "" };
 
 const Tiles = ({ d, onPicks }: { d: Dashboard; onPicks: () => void }) => {
   const s = d.stock;
   return (
-    <div className="tiles wh-tiles">
+    <div className="tiles">
       <Tile l="Birliklar omborda" v={num(s.units, 0)} sub={`${num(s.items, 0)} tovar`} />
       <Tile l="Rulon / bo'lak" v={`${num(s.rolls, 0)} / ${num(s.pieces, 0)}`} />
       {d.picks !== null ? <Tile l="Yig'ish navbati" v={num(d.picks, 0)} k={d.picks ? "" : "ok"} sub="buyurtma" onClick={onPicks} /> : null}
@@ -62,7 +64,7 @@ export function PanelView({
         {d.low.length ? (
           <List>
             {d.low.map((x) => (
-              <Row key={x.name} icon="alert" color="orange" t={x.name} tcls="wrap2" s={`minimum ${num(x.min_qty, 3)} ${un(x.unit)}`} val={<span className="num bad-t">{num(x.qty, 3)}</span>} />
+              <Row key={x.name} icon="alert" color="orange" t={x.name} tcls="wrap2" s={`minimum ${num(x.min_qty, 3)} ${un(x.unit)}`} val={<span className="num text-danger">{num(x.qty, 3)}</span>} />
             ))}
           </List>
         ) : (
@@ -89,7 +91,7 @@ export function PanelView({
                   color={c.diff ? "orange" : "green"}
                   t={<span className="code">{c.number}</span>}
                   s={d8(c.date)}
-                  val={c.diff ? <span className="num bad-t">{c.diff} farq</span> : <span className="ok-t">farqsiz</span>}
+                  val={c.diff ? <span className="num text-danger">{c.diff} farq</span> : <span className="text-ok">farqsiz</span>}
                   valSmall={`${c.positions} poz.`}
                 />
               ))}
@@ -102,9 +104,9 @@ export function PanelView({
   const cycRows = cyc ? (Object.entries(cyc.summary) as [Cls, Cycle["summary"][Cls]][]) : [];
   return (
     <>
-      <p className="wh-sub">{stamp} holati</p>
+      <p className="mx-4 mt-0.5 mb-3 text-sm text-hint tabular-nums">{stamp} holati</p>
       <Tiles d={d} onPicks={onPicks} />
-      <div className="wh-cols e">
+      <div className={`${COLS} grid-cols-2`}>
         <div>
           <Sh t="Yig'ish navbati" r={picks.length ? `${picks.length} buyurtma` : undefined} />
           {picks.length ? (
@@ -141,10 +143,10 @@ export function PanelView({
                 rows={cycRows}
                 rowKey={(r) => r[0]}
                 cols={[
-                  { h: "Sinf", f: (r) => <span className={`wh-tag cls-${r[0]}`}>{r[0]}</span> },
+                  { h: "Sinf", f: (r) => <span className={`${TAG} font-semibold ${CLS_TAG[r[0]]}`}>{r[0]}</span> },
                   { h: "Oraliq", f: (r) => `har ${r[1].days} kun` },
                   { h: "Tovar", n: true, f: (r) => num(r[1].items, 0) },
-                  { h: "Muddati o'tgan", n: true, f: (r) => (r[1].due ? <span className="bad-t">{num(r[1].due, 0)}</span> : <span className="ok-t">0</span>) },
+                  { h: "Muddati o'tgan", n: true, f: (r) => (r[1].due ? <span className="text-danger">{num(r[1].due, 0)}</span> : <span className="text-ok">0</span>) },
                 ]}
               />
               <Btns>
@@ -167,7 +169,7 @@ export function PanelView({
               cols={[
                 { h: "Tovar", f: (x) => x.name },
                 { h: "Minimum", n: true, f: (x) => <Qty v={x.min_qty} u={x.unit} /> },
-                { h: "Bor", n: true, f: (x) => <span className="bad-t">{num(x.qty, 3)}</span> },
+                { h: "Bor", n: true, f: (x) => <span className="text-danger">{num(x.qty, 3)}</span> },
               ]}
             />
           ) : (
@@ -189,7 +191,7 @@ export function PanelView({
                 { h: "Hujjat", f: (c) => <span className="code">{c.number}</span> },
                 { h: "Sana", f: (c) => d8(c.date) },
                 { h: "Pozitsiya", n: true, f: (c) => c.positions },
-                { h: "Farq", n: true, f: (c) => (c.diff ? <span className="bad-t">{c.diff}</span> : <span className="ok-t">farqsiz</span>) },
+                { h: "Farq", n: true, f: (c) => (c.diff ? <span className="text-danger">{c.diff}</span> : <span className="text-ok">farqsiz</span>) },
               ]}
             />
           ) : (

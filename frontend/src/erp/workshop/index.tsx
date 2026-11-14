@@ -12,7 +12,6 @@ import type { View } from "@/erp/workshop/lib";
 
 import { WorkshopLayout } from "./ui";
 
-import "./workshop.css";
 
 export default function WorkshopApp() {
   const nav = useNav<View>({ k: "board" });

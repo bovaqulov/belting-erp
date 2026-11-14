@@ -2,7 +2,7 @@
 // yangilash, chiqish), tablar (tepada va telefonda pastda), holatlar, bo'lim (xato chegarasi bilan), oynalar, toast.
 import { Component, useEffect, useState, type ReactNode } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
 
 import type { Me, ToastKind } from "./AdminContext";
@@ -83,7 +83,7 @@ export function ShellView({
 }) {
   const app = mode.kind === "app";
   return (
-    <div className={readonly ? s.ro : undefined}>
+    <div data-tg-ui="" data-panel="" className={readonly ? s.ro : undefined}>
       <div className={s.top}>
         <div className={s.wrap}>
           <div className={s.bar}>
@@ -123,7 +123,7 @@ export function ShellView({
       ))}
       {toastSt && (
         <div
-          className={cx(s.toast, toastSt.kind === "err" && s.err)}
+          className={cx(s.toast, toastSt.kind === "err" && s.toastErr)}
           style={{ opacity: toastSt.shown ? 1 : 0 }}
           role={toastSt.kind === "err" ? "alert" : "status"}
         >

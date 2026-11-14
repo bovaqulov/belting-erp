@@ -2,7 +2,7 @@
 // bo'lim → mavzu → hujjat daraxti; hujjat oynasi; yangi hujjat formasi.
 import type { MouseEvent, ReactNode } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader, Sq, tapProps } from "@/shared/ui/panel/ui";
 import type { Dept } from "@/ai/shell/AdminContext";
 

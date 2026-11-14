@@ -40,11 +40,11 @@ export function Flow({ phase }: { phase: Phase }) {
   const at = PH.indexOf(phase);
   return (
     <div
-      className="flow"
+      className="mx-4 mt-2.5 flex gap-1.5"
       style={{ "--c": `var(--st-${PHC[phase] || "new"})` } as CSSProperties}
     >
       {PH.map((p, i) => (
-        <span key={p} className={i < at ? "done" : i === at ? "cur" : ""}>
+        <span key={p} className={`flex-1 rounded-[10px] px-1 py-2 text-center text-[13px] font-medium ${i < at ? "bg-st-done/16 text-st-done" : i === at ? "bg-(--c) font-bold text-white" : "bg-fill text-hint"}`}>
           {i < at ? "✓ " : ""}
           {PHN[p]}
         </span>
@@ -76,7 +76,7 @@ export function Material({ plan, work }: { plan: Plan[]; work: boolean }) {
                   color={c.loc ? "red" : "gray"}
                   t={
                     c.loc ? (
-                      <span className="code loc">{c.loc}</span>
+                      <span className="code text-[19px]">{c.loc}</span>
                     ) : (
                       "Joyi belgilanmagan"
                     )

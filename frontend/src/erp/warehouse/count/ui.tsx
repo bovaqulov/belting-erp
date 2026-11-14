@@ -19,7 +19,12 @@ export type Result = { number: string; diff: (InvDiff & { name: string; from: st
 const CLSC: Record<string, string> = { A: "red", B: "orange", C: "gray" };
 
 const Chip = ({ icon, children, onClick, label }: { icon?: string; children: ReactNode; onClick: () => void; label: string }) => (
-  <button type="button" className="chip" onClick={onClick} aria-label={label}>
+  <button
+    type="button"
+    className="chip inline-flex max-w-full items-center gap-1.5 [&_svg.i]:size-4 [&_svg.i]:flex-none [&_svg.i]:text-hint"
+    onClick={onClick}
+    aria-label={label}
+  >
     {icon ? <Icon n={icon} /> : null} {children}
   </button>
 );
@@ -63,7 +68,7 @@ export function CountView(p: {
                 t={x.name}
                 tcls="wrap2"
                 s={`hisobda ${num(x.book, 3)} → sanaldi ${num(x.counted, 3)}${x.from ? ` · ${x.from} dan ko'chdi` : ""}`}
-                val={<span className={`num ${Number(x.diff) < 0 ? "bad-t" : "ok-t"}`}>{`${Number(x.diff) > 0 ? "+" : ""}${num(x.diff, 3)}`}</span>}
+                val={<span className={`num ${Number(x.diff) < 0 ? "text-danger" : "text-ok"}`}>{`${Number(x.diff) > 0 ? "+" : ""}${num(x.diff, 3)}`}</span>}
               />
             ))}
           </List>
@@ -150,7 +155,7 @@ export function CountView(p: {
   const left = (
     <>
       {p.bar}
-      <div className="wh-ctx">
+      <div className="mx-4 mt-2 flex flex-wrap gap-1.5">
         <Chip icon="store" onClick={p.onWh} label={`Ombor: ${p.wh}`}>
           {p.wh}
         </Chip>

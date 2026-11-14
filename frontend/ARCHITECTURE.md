@@ -27,7 +27,19 @@ backend `/app/*` ni `out/` dan beradi, ma'lumot faqat `/app/api/*` dan.
      `ui.tsx` i import qiladi.
    - Sof mantiq — `*.lib.ts`, test — yonida `*.lib.test.ts`.
    Namuna: `src/erp/crm/`, `src/erp/workshop/`. Ko'chgan: hammasi — home, ai (Jarvis), erp/home, erp/crm, erp/workshop, erp/warehouse, conveyor, geomap (analytics — joy egallovchi); yangi kod — darhol shu tartibda.
-6. **CSS:** domen uslubi o'z papkasida (`*.module.css` yoki domen global CSS). Umumiy tokenlar — `shared/styles/`.
+6. **Uslub — Tailwind CSS v4** (`@tailwindcss/postcss`, yagona kirish `src/shared/styles/globals.css`). Komponent uslubi —
+   JSX'da utility sinflar; yangi `.css` / `.module.css` fayl yaratilmaydi. Bir necha joyda takrorlanadigan uslub —
+   ko'rinish konstantasi (`tw.ts`, `styles.ts`: sinf satrlari) yoki, juda keng ishlatilsa, `@utility` (`shared/styles/ui-kit.css`).
+   - Tokenlar — CSS o'zgaruvchilari (Telegram mavzusi ish vaqtida almashadi), Tailwind'ga `@theme inline` bilan ulangan
+     (`theme.css`): `bg-page bg-sec text-fg text-hint text-sub text-link bg-btn text-btn-fg border-sep bg-fill`, holat `st-*`,
+     Jarvis to'plami `bg-bg bg-bg2 border-edge`, `font-code`. Yangi rang ixtiro qilinmaydi (belting-design tokens.md).
+   - Token to'plami sahifa belgisi bilan: `data-tg-ui` (ERP, Jarvis paneli, bosh sahifa, lenta — Telegram sozlamalari uslubi,
+     yorug' rejim), `data-panel` (panel sahifalarida maydon/`main` qoidalari), `data-lenta` (lenta o'lchamlari). `base.css`.
+   - Variantlar: `coarse:` (sensor — bosish ≥44px), `tg:`/`notg:` (Telegram ichi/tashqarisi), `desk:` (kit karkasi kompyuterda),
+     `has-main:` (pastki asosiy tugma bor), `reduce:` (kam harakat). Kompyuter karkasi ichida — `[.mod-wide_&]:`.
+   - `!important` kerak bo'lsa — utility'da `!` (masalan `!mx-0`): primitiv @utility'lar oddiy utility'lar bilan bir qatlamda,
+     tartibga tayanmang. Tailwind faqat manbada TO'LIQ yozilgan sinfni ko'radi — `${x}` bilan bo'laklab yasalgan sinf ishlamaydi.
+   - Istisno: geo (`geomap/styles/geo.css`, `@reference` + `@apply`, gm-* nomlari bilan; MapLibre DOM'i shu yerda).
 
 ## Daraxt
 
@@ -57,8 +69,8 @@ frontend/
       telegram/telegram.ts      WebApp o'rami, zoom
       icons/lucide.ts           YAGONA ikonka to'plami (Lucide, [teg, atributlar]) — panel, ERP kit, lenta shu yerdan
       demo/                     backend'siz modullar uchun demo rejim: rejim qarori (404/5xx/tarmoq → demo), localStorage ombori (CRM, Marketplace, Accounting)
-      ui/svg-icon.tsx           ui/panel/  (panel UI to'plami, format, panel CSS)  ui/tiles/ (bo'lim kartochkalari)
-      styles/globals.css
+      ui/svg-icon.tsx           ui/panel/  (panel UI to'plami, format, styles.ts — s.list …)  ui/tiles/ (bo'lim kartochkalari, styles.ts)
+      styles/                   Tailwind: globals.css (kirish) · theme.css (@theme, variantlar) · base.css (tokenlar, element) · ui-kit.css (ERP @utility)
     home/                       bo'lim tanlash — index.tsx + ui.tsx (+ art.tsx)
     ai/                         Jarvis (umumiy nom) — firma agentlari; har bo'lim — qism = papka (index.tsx + ui.tsx):
       shell/ (login/)           karkas: boot, AdminContext (useAdmin), oynalar, toast, tablar · brauzerda kirish
@@ -67,12 +79,12 @@ frontend/
       chat/ memory/ kb/ graph/ audit/ system/ report/ templates/ (editor/)
       org/                      BITTA daraxt: dept-tree.ts (mantiq) + OrgChart (ui) — Agentlar va Xodimlar shu bilan
     erp/
-      kit/                      ERP UI to'plami (erp_ui.js'ning React nusxasi; ikonkalar — shared/icons), env, fmt, colors, modal (Modal, useDialogs), layout (AppLayout: chap menyu / telefon tepasi, DemoStrip), table (Tbl), wide (useWide) + kit.css;
+      kit/                      ERP UI to'plami (erp_ui.js'ning React nusxasi; ikonkalar — shared/icons), env, fmt, colors, modal (Modal, useDialogs), layout (AppLayout: chap menyu / telefon tepasi, DemoStrip; WIDE_COLS, LINK_BTN, NAV_CNT), table (Tbl), wide (useWide);
                                       workshop/                 ✅ /app/erp/sex — qism = papka: board/ job/ group/ (ekranlar), scan/ take/ (skaner, sarf),
                                 common/ (muddat, o'lcham, bosqichlar, material), lib/, api/
       home/        ✅ /app/erp          modullar: CRM, Warehouse (→ ombor), Manufacturing (→ sex), Logistics, Accounting (→ moliya) (index + ui + art)
       warehouse/   ✅ /app/erp/ombor    erp_ombor.html dan, qism = papka, backend'siz — demo rejim (docs/api/warehouse.md):
-        index.tsx ui.tsx warehouse.css   ildiz: rejim, ko'rinish (?sec=), menyu (Kundalik/Jarayonlar/Asboblar) | telefonda 6 tab
+        index.tsx ui.tsx                 ildiz: rejim, ko'rinish (?sec=), menyu (Kundalik/Jarayonlar/Asboblar) | telefonda 6 tab
         api/ demo/ lib/ context.ts       adapter (haqiqiy/demo, stiker/PDF) · brauzer ichidagi backend · turlar va sof mantiq · WhCtx
         scan-bar/ size-ask/ cut/ common/ skaner (navbat, katta xabar, ovoz) · o'lcham oynasi · birlikni kesish · umumiy ko'rinish
         lookup/ lookup-scan/             birlik/tovar/joy kartochkalari · Skaner bo'limi
@@ -81,14 +93,14 @@ frontend/
       purchasing/  ⏳ /app/erp/xarid    erp_xarid.html    (169)       xarid
       sales/       ⏳ /app/erp/savdo    erp_savdo.html    (351)       savdo
       finance/     ✅ /app/erp/moliya   Accounting — 3 alohida qism (hub: 3 kartochka), backend'siz — demo rejim (docs/api/catalog.md, accounting.md):
-        index.tsx ui.tsx finance.css  ildiz: rejim, kategoriyalar, ko'rinish (?a=&sec=) | karkas (kit/layout)
+        index.tsx ui.tsx tw.ts        ildiz: rejim, kategoriyalar, ko'rinish (?a=&sec=) | karkas (kit/layout)
         api/ demo/ lib/ context.ts    adapter · brauzer ichidagi backend (catalog + contracts.lib + payroll.lib) · sof mantiq · AccCtx
         hub/                          3 kartochka (rasm + jonli holat)
         products/ (form view) groups/ Mahsulotlar: tovarlar, kategoriyalar (/app/api/erp/cat/*)
         contracts/ (form cp)          Shartnomalar: holat (imzosiz/amalda/tugayapti/o'tgan/yopilgan), kontragent tanlagich
         payroll/ (month staff)        Maoshlar (faqat admin/owner): oylik hisob qoralama → tasdiq → to'lov, xodimlar
       marketplace/ 🟡 /app/erp/marketplace — ERP moduli (erp_mp.html dan), qism = papka, backend'siz — demo rejim (docs/api/marketplace.md):
-        index.tsx ui.tsx marketplace.css   ildiz: rejim, ko'rinish (?ch=&sec=), menyu raqamlari | karkas: chap menyu / segment + tablar
+        index.tsx ui.tsx                   ildiz: rejim, ko'rinish (?ch=&sec=), menyu raqamlari | karkas: chap menyu / segment + tablar
         api/ demo/ lib/ context.ts         adapter (haqiqiy/demo) · brauzer ichidagi backend · turlar va sof mantiq · MkCtx
         overview/                          Umumiy: kanallar, bugun, kartochka auditi
         orders/ order/ wb/                 buyurtmalar (Ozon/Uzum taxtasi) · yig'ish oynasi (skaner) · WB postavkalari
@@ -97,7 +109,7 @@ frontend/
       logistics/   ✅ /app/erp/logistics  yetkazish: EMU, Yandex Go, Bito, Fargo (ro'yxat; API ulanmagan)
       (katalog — Accounting › Tovarlar ga ko'chdi; ombor tuzilmasi — warehouse'da)
       crm/         ✅ /app/erp/crm      erp_crm.html      (800)       qism = papka (index.tsx + ui.tsx), backend'siz — demo rejim:
-        index.tsx ui.tsx  crm.css     ildiz: rejim, bo'limlar (?tab), bitim paneli (?deal), Esc | sarlavha, demo belgisi
+        index.tsx ui.tsx  tw.ts       ildiz: rejim, bo'limlar (?tab), bitim paneli (?deal), Esc | sarlavha, demo belgisi
         api/  demo/  lib/  context/   adapter (haqiqiy/demo) · brauzer ichidagi backend · turlar va sof mantiq · CrmCtx, moveTo
         badges/                       avatar, vazifa, teglar
         deals/ (board/ list/)         bitimlar: voronka, filtrlar, Smart View, banner · kanban · ro'yxat (+ommaviy amallar)
@@ -127,10 +139,10 @@ ga komponentlar, `app/erp/<url>/page.tsx` o'ram, `scripts/release.sh` dagi `PAGE
 ## Ma'lum qarz
 
 - Qoida 3 dan istisnolar: `home/index.tsx` → `@/ai/shell` (`LoginView`, `Me`) — keyinroq `shared/auth/` ga o'tadi.
-- `app/erp/layout.tsx` umumiy uslubni backend'dan oladi (`/app/erp/ui.css`, Barlow SC shriftlari `/app/erp/fonts/`).
-  ERP sahifalari to'liq ko'chgach — `src/erp/kit/` ga o'tadi.
+- `public/erp/ui.css` — eski static sahifalar bilan bitta manba edi; Next sahifalari endi ishlatmaydi (Tailwind). Shriftlar —
+  `public/erp/fonts/` (Barlow SC, `base.css` @font-face).
 - Reja: bitta API mijozi, bitta login oqimi, ikonkalar/tokenlar birlashuvi,
-  katta fayllarni bo'lish (geo.css 1172, GeoApp 723, conveyor controller 676 …), o'lik kod.
+  katta fayllarni bo'lish (GeoApp 723, conveyor controller 676 …), o'lik kod.
 
 ## Tekshiruv
 

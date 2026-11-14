@@ -122,7 +122,7 @@ export function OrderSheet({ o, onClose, onChanged }: { o: Order; onClose: () =>
               </>
             }
             val={
-              <span className={`code ${picked[i] >= l.qty ? "ok-t" : ""}`}>
+              <span className={`code ${picked[i] >= l.qty ? "text-ok" : ""}`}>
                 {picked[i]}/{l.qty}
               </span>
             }
@@ -143,7 +143,7 @@ export function OrderSheet({ o, onClose, onChanged }: { o: Order; onClose: () =>
             <div className="field col">
               <input
                 ref={inp}
-                className={`scanin ${bad ? "bad" : ""}`}
+                className={`font-code !text-lg tracking-[.5px] ${bad ? "text-danger" : ""}`}
                 placeholder="Skaner bilan o'qing yoki kiriting"
                 autoComplete="off"
                 enterKeyHint="go"
@@ -159,7 +159,7 @@ export function OrderSheet({ o, onClose, onChanged }: { o: Order; onClose: () =>
             </div>
           </div>
           {bad ? (
-            <div className="mk-bad" role="alert">
+            <div className="mx-4 mt-2 rounded-[10px] bg-danger/12 px-3 py-2.5 text-sm font-semibold text-danger" role="alert">
               {bad}
             </div>
           ) : (

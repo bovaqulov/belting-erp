@@ -3,6 +3,7 @@ import type { ReactNode, RefObject } from "react";
 
 import { Icon } from "@/erp/kit/ui";
 import { SRC, type Meta, type Query } from "@/erp/crm/lib";
+import { HDR2, SCROLL_X, SP, SRCH, SUM, TB } from "@/erp/crm/tw";
 
 export function DealsToolbar({
   meta,
@@ -47,28 +48,28 @@ export function DealsToolbar({
   onRefresh: () => void;
 }) {
   return (
-    <div className="hdr2">
-      <div className="ptabs" role="group" aria-label="Voronkalar">
+    <div data-hdr2="" className={HDR2}>
+      <div className={`mt-0.5 flex gap-0.5 ${SCROLL_X}`} role="group" aria-label="Voronkalar">
         {meta.pipelines.map((p) => (
           <button
             key={p.code}
             type="button"
-            className={`ptab ${p.code === pipe ? "on" : ""}`}
+            className={`cursor-pointer border-0 border-b-2 bg-transparent px-3.5 pt-2.5 pb-[9px] font-medium whitespace-nowrap coarse:min-h-11 ${p.code === pipe ? "border-link text-link" : "border-transparent text-hint"}`}
             aria-pressed={p.code === pipe}
             onClick={() => onPipe(p.code)}
           >
             {p.name}
-            <b className="num">{counts ? (counts[p.code] ?? 0) : "…"}</b>
+            <b className="ml-1 inline-block min-w-5 rounded-[10px] bg-fill px-1.5 text-xs text-fg tabular-nums">{counts ? (counts[p.code] ?? 0) : "…"}</b>
           </button>
         ))}
         {view === "list" ? (
-          <button type="button" className={`ptab ${pipe === "" ? "on" : ""}`} aria-pressed={pipe === ""} onClick={() => onPipe("")}>
+          <button type="button" className={`cursor-pointer border-0 border-b-2 bg-transparent px-3.5 pt-2.5 pb-[9px] font-medium whitespace-nowrap coarse:min-h-11 ${pipe === "" ? "border-link text-link" : "border-transparent text-hint"}`} aria-pressed={pipe === ""} onClick={() => onPipe("")}>
             Hammasi
           </button>
         ) : null}
       </div>
-      <div className="tb">
-        <div className="srch">
+      <div className={TB}>
+        <div className={SRCH}>
           <Icon n="search" />
           <input
             ref={qRef}
@@ -82,13 +83,13 @@ export function DealsToolbar({
         </div>
         <button
           type="button"
-          className={`b ftog ${filtersOpen ? "on" : ""}`}
+          className={`b hidden max-md:inline-flex ${filtersOpen ? "on" : ""}`}
           aria-expanded={filtersOpen}
           onClick={onFilters}
         >
           <Icon n="list" /> Filtrlar{nFilters ? ` · ${nFilters}` : ""}
         </button>
-        <div className={`flt ${filtersOpen ? "open" : ""}`}>
+        <div className={`contents ${filtersOpen ? "max-md:order-5 max-md:flex max-md:w-full max-md:flex-wrap max-md:gap-1.5 max-md:[&>*]:flex-[1_1_150px]" : "max-md:hidden"}`}>
           <select
             className="sel"
             aria-label="Mas'ul"
@@ -123,8 +124,8 @@ export function DealsToolbar({
             ))}
           </select>
         </div>
-        <span className="sum">{sum}</span>
-        <span className="sp" />
+        <span className={`${SUM} max-md:order-6 max-md:w-full`}>{sum}</span>
+        <span className={SP} />
         <div className="grp" role="group" aria-label="Ko'rinish">
           <button
             type="button"
@@ -154,13 +155,13 @@ export function DealsToolbar({
 
 /** 300+ kun tegilmagan ochiq bitimlar ogohlantirishi */
 export const IdleBanner = ({ total, onReview }: { total: number; onReview: () => void }) => (
-  <div className="banner" role="status">
+  <div className="mx-5 mt-3 flex flex-none flex-wrap items-center gap-2.5 rounded-[10px] bg-[color-mix(in_srgb,var(--warn)_16%,var(--sec))] px-3.5 py-2.5 max-md:mx-3 max-md:mt-2" role="status">
     <Icon n="alert" />
     <div>
       <b>{total} ta ochiq bitim 300 kundan ortiq tegilmagan.</b> Har birini ko&apos;rib chiqing: davom etsa — keyingi vazifa qo&apos;ying,
       bo&apos;lmasa — sababi bilan yoping.
     </div>
-    <span className="sp" />
+    <span className={SP} />
     <button type="button" className="b pri" onClick={onReview}>
       Ko&apos;rib chiqish
     </button>

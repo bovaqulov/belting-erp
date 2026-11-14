@@ -1,7 +1,7 @@
 // Agent topshirig'i oynasi (faqat ko'rinish): nomi, ko'rsatma, muddat, holat, natija.
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon, SectionHeader } from "@/shared/ui/panel/ui";
-import a from "@/ai/agents/agents.module.css";
+import a from "@/ai/agents/styles";
 import { TASK_STATUS, type Agent, type AgentTask, type TaskStatus } from "@/ai/agents/model";
 
 export function TaskSheetView({

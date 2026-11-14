@@ -52,14 +52,14 @@ export function GroupScreen({
                 Number(j.left) ? (
                   <span className="num">{num(j.left, 3)}</span>
                 ) : (
-                  <span className="ok-t">
+                  <span className="text-ok">
                     <Icon n="check" />
                   </span>
                 )
               ) : j.phase !== ph ? (
                 PHN[j.phase]
               ) : j.due ? (
-                <span className={j.late ? "bad-t" : ""}>{d8(j.due)}</span>
+                <span className={j.late ? "text-danger" : ""}>{d8(j.due)}</span>
               ) : (
                 ""
               )

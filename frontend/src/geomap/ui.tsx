@@ -93,8 +93,8 @@ export function GeoView({
         <div className="gm-topbar">
           <input className="gm-input gm-search-top" type="search" placeholder="Qidirish…" aria-label="Mijozlarni qidirish" value={search} onChange={(e) => onSearch(e.target.value)} />
           <span className="gm-pill" title="Filtrga mos / jami mijozlar">{num(shown)} / {num(total)}</span>
-          <button type="button" className={toolKind === "lasso" ? "gm-pill btn on" : "gm-pill btn"} aria-pressed={toolKind === "lasso"} onClick={onLasso} title="Xaritada o'rab tanlash (lasso)">◌ Tanlash</button>
-          <button type="button" className="gm-pill btn" onClick={onFitAll} title="Filtrlangan mijozlarni to'liq ko'rsatish" aria-label="Filtrlangan mijozlarni to'liq ko'rsatish">⤢</button>
+          <button type="button" className={toolKind === "lasso" ? "gm-pill gm-pill-btn on" : "gm-pill gm-pill-btn"} aria-pressed={toolKind === "lasso"} onClick={onLasso} title="Xaritada o'rab tanlash (lasso)">◌ Tanlash</button>
+          <button type="button" className="gm-pill gm-pill-btn" onClick={onFitAll} title="Filtrlangan mijozlarni to'liq ko'rsatish" aria-label="Filtrlangan mijozlarni to'liq ko'rsatish">⤢</button>
         </div>
 
         {noData && (

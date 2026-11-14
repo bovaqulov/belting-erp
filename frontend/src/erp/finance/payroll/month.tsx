@@ -52,12 +52,12 @@ export function Month() {
 
   return (
     <>
-      <div className="acc-month">
+      <div className="mx-4 mt-3 flex flex-wrap items-center gap-2.5 [&_b]:min-w-[132px] [&_b]:text-center [&_b]:text-lg [&_b]:tabular-nums">
         <button type="button" className="b ic" aria-label="Oldingi oy" onClick={() => setMonth((m) => addMonth(m, -1))}>
           <Icon n="back" />
         </button>
         <b>{monthLabel(month)}</b>
-        <button type="button" className="b ic flip" aria-label="Keyingi oy" onClick={() => setMonth((m) => addMonth(m, 1))}>
+        <button type="button" className="b ic [&_svg.i]:-scale-x-100" aria-label="Keyingi oy" onClick={() => setMonth((m) => addMonth(m, 1))}>
           <Icon n="back" />
         </button>
         {st.data ? <span className={`st ${MSTATE_ST[st.data.state]}`}>{MSTATE[st.data.state]}</span> : null}
@@ -79,7 +79,7 @@ export function Month() {
           const draft = m.state === "draft";
           return (
             <>
-              <div className="tiles acc-tiles">
+              <div className="tiles mt-3 [&>.tile:first-child:nth-last-child(3)]:col-span-full [.mod-wide_&]:grid-cols-4 [.mod-wide_&]:has-[>.tile:nth-child(3):last-child]:grid-cols-3 [.mod-wide_&>.tile:first-child:nth-last-child(3)]:col-auto">
                 <div className="tile">
                   <div className="l">Hisoblangan</div>
                   <div className="v num">{sum(t.total)}</div>
@@ -103,7 +103,7 @@ export function Month() {
                 </div>
                 )}
               </div>
-              <div className="btns acc-acts">
+              <div className="btns flex-wrap [.mod-wide_&]:!max-w-[640px]">
                 {draft ? (
                   <>
                     <button className="btn" onClick={approve}>
@@ -154,8 +154,8 @@ export function Month() {
                       ),
                     },
                     { h: "Oklad", f: (r) => sum(r.base), n: true },
-                    { h: "Bonus", f: (r) => (r.bonus ? <span className="ok-t">+{sum(r.bonus)}</span> : "—"), n: true },
-                    { h: "Ushlanma", f: (r) => (r.penalty ? <span className="bad-t">−{sum(r.penalty)}</span> : "—"), n: true },
+                    { h: "Bonus", f: (r) => (r.bonus ? <span className="text-ok">+{sum(r.bonus)}</span> : "—"), n: true },
+                    { h: "Ushlanma", f: (r) => (r.penalty ? <span className="text-danger">−{sum(r.penalty)}</span> : "—"), n: true },
                     { h: "Hisoblangan", f: (r) => sum(rowTotal(r)), n: true },
                     { h: "Avans", f: (r) => (r.advance ? sum(r.advance) : "—"), n: true },
                     { h: "To'lanadi", f: (r) => <b>{sum(rowDue(r))}</b>, n: true },
@@ -163,7 +163,7 @@ export function Month() {
                       h: "",
                       f: (r) =>
                         r.paid_at ? (
-                          <span className="ok-t">✓ to&apos;landi</span>
+                          <span className="text-ok">✓ to&apos;landi</span>
                         ) : m.state === "approved" ? (
                           <button
                             type="button"
@@ -251,7 +251,7 @@ function RowForm({ month, r, onClose, onSaved }: { month: string; r: PayRow; onC
       </List>
       <List style={{ marginTop: 14 }}>
         <Row t="Hisoblangan" val={<span className="num">{sum(rowTotal(preview))}</span>} />
-        <Row t="To'lanadi" strong val={<span className={`num ${rowDue(preview) < 0 ? "bad-t" : ""}`}>{sum(rowDue(preview))}</span>} />
+        <Row t="To'lanadi" strong val={<span className={`num ${rowDue(preview) < 0 ? "text-danger" : ""}`}>{sum(rowDue(preview))}</span>} />
       </List>
       <Sf>Hisoblangan = oklad + bonus − ushlanma; to&apos;lanadi = hisoblangan − avans.</Sf>
     </Sheet>

@@ -2,9 +2,9 @@
 // "Tez orada" (bosilmaydi). Kalit (`key`) backend'dagi xizmat kodi bilan bir xil bo'ladi.
 import type { CSSProperties } from "react";
 
-import s from "@/shared/ui/panel/panel.module.css";
+import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
-import g from "@/shared/ui/tiles/tiles.module.css";
+import g from "@/shared/ui/tiles/styles";
 
 export interface Carrier {
   key: "emu" | "yandex_go" | "bito" | "fargo";
@@ -41,7 +41,7 @@ function CarrierArt({ title }: { title: string }) {
 
 export function LogisticsView({ carriers }: { carriers: Carrier[] }) {
   return (
-    <>
+    <div data-panel="" className="contents">
       <div className={s.top}>
         <div className={s.wrap}>
           <div className={s.bar}>
@@ -85,6 +85,6 @@ export function LogisticsView({ carriers }: { carriers: Carrier[] }) {
           })}
         </nav>
       </main>
-    </>
+    </div>
   );
 }
