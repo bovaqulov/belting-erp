@@ -154,6 +154,8 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_BEAT_SCHEDULE = {
     # agent jadvallari: har daqiqa vaqti kelganlarini navbatga qo'yadi
     "jarvis-schedules-tick": {"task": "config.apps.jarvis.tasks.tick", "schedule": 60.0},
+    # marketplace: ulangan kanallar buyurtmalari har 5 daqiqada (FBS muddatlari qisqa — Uzum 2 soat)
+    "mp-orders-sync": {"task": "config.apps.erp.marketplace.tasks.sync_orders", "schedule": 300.0},
 }
 
 # ---------------------------------------------------------------- Telegram, Jarvis
@@ -168,6 +170,14 @@ JARVIS_PUBLIC_URL = os.getenv("JARVIS_PUBLIC_URL", "").rstrip("/")
 JARVIS_LLM = os.getenv("JARVIS_LLM", "claude")  # claude | echo
 JARVIS_COMPANY = os.getenv("JARVIS_COMPANY", "Belting rezina")
 JARVIS_MAGIC_LOGIN = env_bool("JARVIS_MAGIC_LOGIN", DEBUG)
+
+# ---------------------------------------------------------------- Marketplace kanallari (erp/marketplace)
+WB_TOKEN = os.getenv("WB_TOKEN", "").strip().strip("'\"")
+OZON_ID = (os.getenv("OZON_CLIENT_ID") or os.getenv("OZON_ID") or "").strip()
+OZON_TOKEN = (os.getenv("OZON_API_KEY") or os.getenv("OZON_TOKEN") or "").strip()
+UZUM_TOKEN = (os.getenv("UZUM_API_KEY") or os.getenv("UZUM_TOKEN") or "").strip()
+# kanalga yozuvchi amallar (bekor qilish, tasdiqlash, jo'natish, postavka) — standart yopiq, faqat o'qish
+MP_WRITE = env_bool("MP_WRITE")
 
 LOGGING = {
     "version": 1,

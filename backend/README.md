@@ -16,7 +16,8 @@ backend/
       memory/             xotira faktlari (firma/bo'lim/xodim), tasdiqlash; agent promptiga                       ✅
       knowledge/          bilimlar (matn, PDF), chatlardan ajratish (30 daq), graf (LLM, kesh, jamoalar, kecha 03:00) ✅
       reports/ audit/ system/                                                                                   ⏳ skelet
-      erp/{catalog,warehouse,workshop,picking,purchasing,sales,finance,crm,logistics,marketplace}/  (label: erp_<modul>) ⏳ skelet
+      erp/marketplace/    WB/Ozon/Uzum: FBS buyurtmalar, skaner bilan yig'ish, WB postavkalar, kartochka auditi          ✅ 1-bosqich
+      erp/{catalog,warehouse,workshop,picking,purchasing,sales,finance,crm,logistics}/  (label: erp_<modul>)            ⏳ skelet
       conveyor/ geomap/ analytics/                                                                        ⏳ skelet
   data/                   db.sqlite3 (demo baza), celerybeat-schedule (gitignore)
   scripts/                dev.sh (API + worker + beat), tunnel.sh (tunnel + webhook), check.sh (ruff + ty + pytest-testmon)

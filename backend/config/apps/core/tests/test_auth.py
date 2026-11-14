@@ -63,5 +63,5 @@ def test_login_start_poll(client, db, settings):
 
 
 def test_unknown_api_is_json(client, db):
-    r = client.get("/app/api/erp/me")
+    r = client.get("/app/api/erp/yoq")
     assert r.status_code == 404 and "detail" in r.json()

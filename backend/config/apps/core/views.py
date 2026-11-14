@@ -20,6 +20,13 @@ def me(request: HttpRequest, user: User) -> JsonResponse:
     return ok(user.me_dict(settings.JARVIS_COMPANY))
 
 
+@api(("GET",))
+def erp_me(request: HttpRequest, user: User) -> JsonResponse:
+    """ERP modullari (marketplace, ombor, moliya) uchun: {tg_id, name, roles[]}. Ega — admin huquqlari bilan."""
+    roles = [user.role, "admin"] if user.role == "owner" else [user.role]
+    return ok({"tg_id": user.tg_id, "name": user.name, "roles": roles, "warehouses": [], "firms": [], "kinds": []})
+
+
 @api(("POST",), auth=False)
 def login_start(request: HttpRequest, user: User | None) -> JsonResponse:
     bot = settings.TELEGRAM_BOT_USERNAME
