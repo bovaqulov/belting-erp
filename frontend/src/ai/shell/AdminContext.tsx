@@ -23,9 +23,10 @@ export const TABS: readonly (readonly [TabKey, string, string])[] = [
 /** Panel qismlari (2026-11-13): /app/jarvis — faqat AI (chat, agentlar, xotira, bilimlar; graf — Bilimlar ichida), /app/staff — xodimlar,
  *  /app/templates — hisobot shablonlari, /app/dev — texnik (audit, tizim). Bitta tabli qismda tab paneli ko'rsatilmaydi. */
 export type Area = "jarvis" | "staff" | "templates" | "dev";
-export const AREAS: Record<Area, { title: string; icon: string; tabs: readonly TabKey[] }> = {
+export const AREAS: Record<Area, { title: string; icon: string; tabs: readonly TabKey[]; home?: string }> = {
   jarvis: { title: "Jarvis", icon: "bot", tabs: ["chat", "agents", "memory", "kb"] },
-  staff: { title: "Xodimlar", icon: "users", tabs: ["users"] },
+  // HR — ERP ichidagi bo'lim (egasi qarori 2026-11-14): sarlavhadagi "Bo'limlar" ERP'ga qaytaradi
+  staff: { title: "HR · Xodimlar", icon: "users", tabs: ["users"], home: "/app/erp" },
   templates: { title: "Shablonlar", icon: "file-text", tabs: ["templates"] },
   dev: { title: "Development", icon: "terminal", tabs: ["audit", "system"] },
 };
@@ -54,6 +55,8 @@ export interface Me {
   can_lenta: boolean;
   can_geo?: boolean;
   report_depts?: string[];
+  /** ruxsat etilgan ERP modullari (backend staff.MODULE_DEPTS) */
+  modules?: string[];
 }
 
 export interface DeptChat {

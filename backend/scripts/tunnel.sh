@@ -56,5 +56,12 @@ if grep -q '^TELEGRAM_BOT_TOKEN=.' .env.local; then
     echo "webhook: qayta urinish ($i)"; sleep 5
   done
 fi
+# CRM: sotuvchilar Telegram'i (alohida Business bot)
+if grep -q '^BUSINESS_CONNECTION_BOT_TOKEN=.' .env.local; then
+  for i in {1..5}; do
+    uv run --quiet python manage.py crm_tg_webhook --url "$URL" && break
+    echo "crm webhook: qayta urinish ($i)"; sleep 5
+  done
+fi
 echo "Tayyor: $URL/app/  (to'xtatish — Ctrl+C)"
 [[ -n "$PID" ]] && wait $PID

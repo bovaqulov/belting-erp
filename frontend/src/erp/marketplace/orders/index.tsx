@@ -11,7 +11,7 @@ import { OrderSheet } from "@/erp/marketplace/order";
 import { Tbl } from "@/erp/kit/table";
 import { WbOrders } from "@/erp/marketplace/wb";
 
-import { SyncRow } from "./sync";
+import { usePoll } from "./sync";
 
 export function Orders({ ch }: { ch: OrderCh }) {
   return ch === "wb" ? <WbOrders /> : <ChannelBoard ch={ch} />;
@@ -38,6 +38,7 @@ function ChannelBoard({ ch }: { ch: Exclude<OrderCh, "wb"> }) {
   const [stage, setStage] = useState<BoardStage>("active");
   const [open, setOpen] = useState<Order | null>(null);
   const st = useLoad(() => api<Board>(`${P}/orders/${ch}/board?stage=${stage}`), [ch, stage]);
+  usePoll(() => void st.reload());
   const cnt = st.data?.counts ?? {};
   const label = (k: BoardStage) => {
     const n = k === "active" ? (cnt.new ?? 0) + (cnt.assembly ?? 0) : (cnt[k] ?? 0);
@@ -53,7 +54,6 @@ function ChannelBoard({ ch }: { ch: Exclude<OrderCh, "wb"> }) {
         ))}
       </div>
       <div style={{ height: 10 }} />
-      <SyncRow ch={ch} onDone={() => void st.reload()} />
       <div style={{ height: 14 }} />
       <Loaded st={st}>
         {(b) =>

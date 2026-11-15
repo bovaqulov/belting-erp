@@ -9,7 +9,7 @@ from typing import Any
 from django.utils import timezone
 
 from config.apps.core.models import LoginToken
-from config.apps.staff.models import Role, User
+from config.apps.staff.services import Role, User, apply_pending_heads
 
 ACTIVE = (Role.OWNER, Role.ADMIN, Role.EMPLOYEE)
 
@@ -29,6 +29,7 @@ def confirm_login(token: str, tg: dict[str, Any]) -> str:
             if created or user.role == Role.PENDING
             else "Kirish yopiq. Administratorga murojaat qiling."
         )
+    apply_pending_heads(user)
     t.user, t.confirmed_at = user, timezone.now()
     t.save(update_fields=["user", "confirmed_at"])
     return f"✅ Kirish tasdiqlandi, {user.name}. Brauzerga qayting."

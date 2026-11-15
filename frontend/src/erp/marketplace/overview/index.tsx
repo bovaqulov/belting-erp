@@ -1,4 +1,4 @@
-// Umumiy: kanallar (bog'langan kartochkalar / boshqariladigan, qoldiq jo'natish holati), bugungi ishlar (yig'ilmagan
+// Umumiy: kanallar (logotip, kartochkalar soni), bugungi ishlar (yig'ilmagan
 // buyurtmalar, javobsiz sharhlar, jo'natish xatolari) va kartochka auditi (muammo → ro'yxat → "Xato emas").
 import { useState } from "react";
 
@@ -8,7 +8,7 @@ import { num } from "@/erp/kit/fmt";
 import { Empty, List, Loaded, Row, Sf, Sh, Sheet, useLoad } from "@/erp/kit/ui";
 import { api, P, post } from "@/erp/marketplace/api";
 import { useMk } from "@/erp/marketplace/context";
-import { CHN, issueDetail, SEV_COLOR, sourcesText, type AuditSum, type Issue, type OrderCh, type Overview as O, type View } from "@/erp/marketplace/lib";
+import { CH_LOGO, CHN, issueDetail, SEV_COLOR, type AuditSum, type Issue, type OrderCh, type Overview as O, type View } from "@/erp/marketplace/lib";
 
 export function Overview({ onGo }: { onGo: (v: View) => void }) {
   const st = useLoad(() => api<O>(`${P}/overview`), []);
@@ -18,7 +18,6 @@ export function Overview({ onGo }: { onGo: (v: View) => void }) {
       {(o) => (
         <>
           <Channels o={o} onGo={(ch) => onGo({ home: false, ch, sec: "products" })} />
-          <Sf>Qoldiq manbasi — {sourcesText(o.sources)}. Omborda ERP inventarizatsiyasi o&apos;tkazilgach, manba o&apos;zi ERP&apos;ga o&apos;tadi.</Sf>
           <div className={WIDE_COLS}>
             <div>
               <Sh t="Bugun" />
@@ -40,15 +39,15 @@ function Channels({ o, onGo }: { o: O; onGo: (ch: OrderCh) => void }) {
     <div className="tiles mt-3 !grid-cols-3 [&_.l]:[overflow-wrap:anywhere] max-[420px]:[&_.tile]:p-2.5 max-[420px]:[&_.v]:text-[19px] [&_.v_small]:ml-0.5">
       {(Object.entries(o.channels) as [OrderCh, O["channels"][OrderCh]][]).map(([k, c]) => {
         const managed = c.n - c.off;
-        const full = c.linked >= managed;
         return (
-          <button key={k} type="button" className={`tile !flex w-full cursor-pointer flex-col border-0 text-left [font:inherit] ${full ? "ok" : ""}`} onClick={() => onGo(k)} aria-label={`${c.name}: ${c.linked} / ${managed} bog'langan`}>
-            <div className="l">{c.name}</div>
-            <div className="v num">
-              {num(c.linked, 0)}
-              <small> / {num(managed, 0)}</small>
+          <button key={k} type="button" className="tile !flex w-full cursor-pointer flex-col border-0 text-left [font:inherit]" onClick={() => onGo(k)} aria-label={`${c.name}: ${managed} kartochka`}>
+            <div className="l flex items-center gap-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element -- statik eksport, kichik ikonka */}
+              <img src={CH_LOGO[k]} alt="" width={16} height={16} className="size-4 flex-none rounded-[4px]" />
+              <span className="min-w-0 truncate">{CHN[k]}</span>
             </div>
-            <div className="l">bog&apos;langan · {c.push_stock ? "qoldiq avtomatik" : "qoldiq o'chiq"}</div>
+            <div className="v num">{num(managed, 0)}</div>
+            <div className="l">kartochka</div>
           </button>
         );
       })}

@@ -3,9 +3,14 @@
 import type { Metadata } from "next";
 
 import AccountingApp from "@/erp/finance";
+import { ModuleGate } from "@/erp/kit/gate";
 
 export const metadata: Metadata = { title: "Accounting" };
 
 export default function AccountingPage() {
-  return <AccountingApp />;
+  return (
+    <ModuleGate module="accounting">
+      <AccountingApp />
+    </ModuleGate>
+  );
 }

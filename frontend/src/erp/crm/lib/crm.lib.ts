@@ -13,12 +13,16 @@ export type Stage = {
   color?: string | null;
   probability?: number | null;
   guide?: string | null;
+  /** bosqich muddati (soat) — o'tsa mas'ulga eslatma */
+  sla_hours?: number | null;
 };
 export type Meta = {
   pipelines: { code: string; name: string }[];
   stages: Stage[];
   users: { tg_id: number; name: string }[];
   lost_reasons: string[];
+  /** bo'linmalar (Novobelt, Belting Rezina) */
+  divisions?: { code: string; name: string }[];
 };
 export type Num = number | string | null | undefined;
 export type Deal = {
@@ -41,6 +45,28 @@ export type Deal = {
   prob?: number | null;
   source?: string | null;
   lost_reason?: string | null;
+  pipeline?: string;
+  /** kontakt shaxs (mijoz — kompaniya) */
+  contact?: string | null;
+  division?: string | null;
+  /** 1C: mijoz buyurtmasi, ishlab chiqarish buyurtmasi, ishlab chiqarish */
+  buyer_order?: string | null;
+  prod_order?: string | null;
+  prod_no?: string | null;
+  repeat?: boolean;
+  /** tunnel: manba bitim */
+  parent_id?: number | null;
+  /** bosqich muddati (SLA) o'tganmi */
+  sla_late?: boolean;
+  sla_hours?: number | null;
+  /** to'lov sharti: full — 100% oldindan, half — 50/50 */
+  pay_terms?: "full" | "half";
+  paid_sum?: Num;
+  /** shartnoma imzosi: sent — yuborildi, signed — imzolandi */
+  sign_status?: "sent" | "signed" | null;
+  sign_sent_at?: string | null;
+  /** yuk xati va dalolatnoma imzolandi (Yutildi sharti) */
+  docs_done?: boolean;
 };
 export type BoardStage = Stage & { count: number; amount: Num; weighted?: Num; rotten?: number; deals: Deal[] };
 export type BoardResp = { counts: Record<string, number>; stages: BoardStage[] };
@@ -71,11 +97,12 @@ export type DealDetail = Deal & {
   counterparty_id?: number | null;
   probability?: Num;
   need?: string | null;
-  bx_id?: string | null;
   docs: Doc[];
   items?: DealItem[];
   activity: Activity[];
   stages?: StageHist[];
+  /** tunnel zanjiri: manba (parent) va undan ochilgan (child) bitimlar */
+  linked?: { id: number; title: string; stage: string; pipeline: string; rel: "parent" | "child" }[];
 };
 export type View = { id: number | string; name: string; owner_tg: number | null; query: Partial<Query> };
 export type Lead = {
@@ -91,11 +118,82 @@ export type Lead = {
   status: string;
   deal_id?: number | null;
   first_touch?: string | null;
+  junk_reason?: string | null;
+  /** kvalifikatsiya: tasma turi, o'lcham, hajm, STIR */
+  product?: string | null;
+  size?: string | null;
+  qty?: string | null;
+  inn?: string | null;
+  region?: string | null;
+  /** javob bermadi: urinishlar va keyingi qo'ng'iroq (1, 3, 7 kun) */
+  no_answer?: number;
+  next_call_at?: string | null;
+  /** Telegram'dan ochilgan lid — sotuvchining chati */
+  tg?: { chat_id: number; username: string | null; unread: number } | null;
 };
 export type GoalRow = { tg_id: number; name: string; plan: Num; sales: Num; pct: number | null; won_deals: number; won_amount: Num };
 export type Goals = { days: number; passed: number; can_edit: boolean; rows: GoalRow[] };
 export type ItemHit = { item_id: number; char_id?: number | null; name: string; char?: string | null; price?: Num; free?: Num; unit?: string | null };
 export type Customer = { id: number; name: string; inn?: string | null; phones?: string[]; owner_tg?: number | null };
+/** GET customers/table — qator */
+export type CustomerRow = Customer & {
+  bought_n: number;
+  bought_sum: string;
+  last_buy: string | null;
+  /** odatiy xarid oralig'i (kun) */
+  cycle: number | null;
+  next_buy: string | null;
+  /** keyingi xarid vaqti o'tgan va ochiq bitim yo'q */
+  overdue: boolean;
+  open_n: number;
+};
+export type CustomersResp = { rows: CustomerRow[]; total: number; overdue: number };
+/** GET reports — hisobot */
+export type ReportSeller = {
+  tg_id: number;
+  name: string;
+  leads: number;
+  /** lidga birinchi javob (daqiqa, mediana) */
+  response_min: number | null;
+  lead_conv: number | null;
+  deals: number;
+  won: number;
+  won_sum: string;
+  lost: number;
+  open_sum: string;
+  overdue_tasks: number;
+};
+export type Report = {
+  from: string;
+  to: string;
+  head: boolean;
+  kpi: {
+    leads: number;
+    unassigned: number;
+    response_min: number | null;
+    lead_conv: number | null;
+    deals: number;
+    won: number;
+    won_sum: string;
+    lost: number;
+    win_rate: number | null;
+    open_sum: string;
+  };
+  funnel: { stage: string; count: number }[];
+  sellers: ReportSeller[];
+  reasons: { reason: string; count: number; sum: string }[];
+  sources: { source: string; leads: number; converted: number }[];
+};
+export type Contact = { name: string; role: string; phone: string };
+/** GET customers/{id} — kartochka */
+export type CustomerCard = Customer & {
+  contacts: Contact[];
+  note: string;
+  created: string | null;
+  stats: { bought_n: number; bought_sum: string; last_buy: string | null; cycle: number | null; next_buy: string | null };
+  deals: { id: number; title: string; stage: string; pipeline: string; kind: StageKind; amount: string; created: string; owner_tg: number | null; repeat: boolean }[];
+  tg: { id: number; title: string; username: string | null; unread: number }[];
+};
 
 // ------------------------------------------------------------------ lug'atlar
 export const SRC: Record<string, string> = {
@@ -150,15 +248,25 @@ export const LSRC: Record<string, string> = {
   instagram: "Instagram",
   telegram: "Telegram",
   manual: "Qo'lda",
+  marketplace: "Marketplace",
+  recommendation: "Tavsiya",
   olx: "OLX",
 };
-export const JUNK_REASONS = ["Spam / adashib yozgan", "Bizning mahsulot emas", "Javob bermadi", "Takror", "Boshqa"];
+export const JUNK_REASONS = ["Shaxsiy chat (mijoz emas)", "Spam / adashib yozgan", "Bizning mahsulot emas", "Javob bermadi", "Takror", "Boshqa"];
+/** Lidlar kanbani: ochiq bosqichlar (yopish — «Bitim ochish» yoki «Yaroqsiz») */
+export const LEAD_STAGES: [string, string, string][] = [
+  ["new", "Yangi", "javob kutmoqda"],
+  ["work", "Ishda", "bog'lanildi"],
+  ["interested", "Qiziqish bildirdi", "bitim ochishga tayyor"],
+];
 
-export type Sec = "deals" | "leads" | "goals";
+export type Sec = "deals" | "leads" | "customers" | "goals" | "reports";
 export const SECS: [Sec, string][] = [
   ["deals", "Bitimlar"],
   ["leads", "Lidlar"],
+  ["customers", "Mijozlar"],
   ["goals", "Reja"],
+  ["reports", "Hisobot"],
 ];
 
 // ------------------------------------------------------------------ filtr va ko'rinishlar (Smart View)
@@ -302,7 +410,7 @@ export function tomorrow10(now = new Date()): string {
   return new Date(t.getTime() - t.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
 }
 
-/** Tarix: faolliklar + bosqichlar tarixi (Bitrix'dan ko'chirilgani ham), yangisi tepada */
+/** Tarix: faolliklar + bosqichlar tarixi (tunnel orqali o'tganlari ham), yangisi tepada */
 export function timeline(d: Pick<DealDetail, "activity" | "stages">): Activity[] {
   const st: Activity[] = (d.stages || []).map((h) => ({
     kind: "stage",

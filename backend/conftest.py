@@ -26,9 +26,10 @@ def depts(db):
 
 def _user(tg_id, role, *deps):
     from config.apps.staff.models import User
+    from config.apps.staff.services import set_departments
 
     u = User.objects.create_user(tg_id, f"U{tg_id}", role)
-    u.departments.set(deps)
+    set_departments(u, [d.key for d in deps])  # bo'lim agentlari → staff.Department (kalit bo'yicha)
     return u
 
 

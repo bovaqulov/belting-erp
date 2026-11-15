@@ -146,6 +146,11 @@ export default function Shell({ area = "jarvis" }: { area?: Area }) {
       setReadonly(false);
       setLimited(false);
       const panel = PANEL_ROLES.includes(m.user.role);
+      // HR (xodimlar) — faqat ega/admin va Rahbariyat (backend staff.MODULE_DEPTS "hr"); IT bu yerga kirmaydi
+      if (area === "staff" && !panel && !(m.modules ?? []).includes("hr")) {
+        setMode({ kind: "err", msg: "HR bo'limi faqat ega, adminlar va rahbariyat uchun." });
+        return;
+      }
       if (!panel && m.can_view) {
         setReadonly(true);
         reloadOverview().catch(() => {});

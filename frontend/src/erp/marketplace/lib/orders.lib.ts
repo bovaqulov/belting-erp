@@ -6,7 +6,7 @@ import type { OrderCh } from "./nav.lib";
 export type Stage = "new" | "assembly" | "transit" | "done" | "cancelled";
 export type BoardStage = "active" | Stage;
 
-export type Line = { key?: string; title?: string | null; vendor_code?: string | null; width_mm?: number | null; mode?: string | null; qty: number; codes?: string[] };
+export type Line = { key?: string; title?: string | null; vendor_code?: string | null; width_mm?: number | null; mode?: string | null; qty: number; codes?: string[]; photo?: string | null };
 export type Picked = { line: number; code: string; by?: number; ts?: string };
 
 export type Order = {
@@ -110,3 +110,11 @@ export function picking(rows: Pick<Order, "ext_id" | "lines" | "price_uzs">[]): 
     }
   return [...agg.values()].sort((x, y) => (x.title ?? "").localeCompare(y.title ?? ""));
 }
+
+/** QQS stavkasi (O'zbekiston, 2026): narxlar QQS bilan, QQS ichidan ajratiladi */
+export const VAT = 0.12;
+/** QQS bilan summadan: QQSsiz qism va QQS (yaxlitlanmagan) */
+export const splitVat = (gross: number): { net: number; vat: number } => {
+  const net = gross / (1 + VAT);
+  return { net, vat: gross - net };
+};

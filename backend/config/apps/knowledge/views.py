@@ -5,8 +5,8 @@ from __future__ import annotations
 from django.http import HttpRequest, JsonResponse
 
 from config.apps.core.http import ApiError, api, json_body, ok
-from config.apps.jarvis.models import Agent
-from config.apps.staff.models import User
+from config.apps.staff import services as staff
+from config.apps.staff.services import User
 
 from . import graph
 from .docs import pdf_text
@@ -32,7 +32,7 @@ def _doc_row(d: Doc) -> dict:
 
 def _clean_doc(dept: str, path: str, title: str, body: str) -> dict:
     dept = (dept or "umumiy").strip()
-    if dept != "umumiy" and not Agent.objects.filter(kind="dept", key=dept).exists():
+    if dept != "umumiy" and dept not in staff.department_keys():
         raise ApiError(400, f"Bo'lim topilmadi: {dept}")
     title, body = (title or "").strip(), (body or "").strip()
     if not title:

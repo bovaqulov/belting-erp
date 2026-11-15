@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 
 # vosita kaliti → MCP server (keyingi bosqich: erp, crm, onec … applari ro'yxatdan o'tkazadi)
 TOOL_REGISTRY: dict[str, Any] = {}
-CONTEXT_TOOLS = ("memory", "kb")  # system prompt orqali ulangan
 KIND_UZ = {"dept": "bo'lim agenti", "staff": "xodim agenti", "free": "mustaqil agent"}
 SCOPE_UZ = {"all": "butun firma", "team": "jamoa", "own": "faqat o'zi", "none": "yo'q"}
 MAX_TURNS = 6
@@ -47,24 +46,19 @@ def system_prompt(agent: Agent, user: User | None = None, query: str = "") -> st
     scoped = [f"{a}: {SCOPE_UZ[agent.scopes[a]]}" for a in SCOPE_AREAS if agent.scopes.get(a) in SCOPE_UZ]
     if scoped:
         lines.append("Ma'lumot doirang: " + "; ".join(scoped) + ". Doirangdan tashqari ma'lumot berma.")
-    from config.apps.knowledge.docs import relevant
-    from config.apps.memory.services import facts_for
-
     from .permissions import home_dept
+    from .services import CONTEXT_PROVIDERS
 
     dept = home_dept(agent)
-    if "memory" in agent.tools:
-        facts = facts_for(dept.key if dept else None, user.tg_id if user else None)
-        if facts:
-            lines.append("Firma xotirasi (ishonchli faktlar):\n" + "\n".join(f"- {f}" for f in facts))
-    if "kb" in agent.tools and query:
-        docs = relevant(query, [dept.key] if dept else [])
-        if docs:
-            lines.append("Bilimlar bazasidan mos hujjatlar:\n\n" + "\n\n".join(f"### {t}\n{b}" for t, b in docs))
+    for tool, provider in CONTEXT_PROVIDERS.items():  # memory, kb … — o'z applari ro'yxatdan o'tkazadi
+        if tool in agent.tools:
+            lines.append(provider(dept.key if dept else None, user.tg_id if user else None, query) or "")
     live = [t for t in agent.tools if t in TOOL_REGISTRY]
     if live:
         lines.append("Ulangan vositalaring: " + ", ".join(live) + ".")
-    if any(t not in TOOL_REGISTRY and t not in CONTEXT_TOOLS for t in agent.tools):
+    from .services import CONTEXT_PROVIDERS
+
+    if any(t not in TOOL_REGISTRY and t not in CONTEXT_PROVIDERS for t in agent.tools):
         lines.append(
             "Tizim vositalaring (CRM, 1C, ERP, qo'ng'iroqlar) hali ulanmagan: jonli firma ma'lumotini ko'ra olmaysan. "
             "Bunday savolda buni ochiq ayt, raqam o'ylab topma."

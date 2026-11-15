@@ -2,15 +2,15 @@
 // Yetkazib berishda | Yakunlanganlar | Bekor qilinganlar.
 import { useState } from "react";
 
-import { LINK_BTN } from "@/erp/kit/layout";
 import { toast } from "@/erp/kit/env";
 import { dt } from "@/erp/kit/fmt";
-import { Check, Empty, List, Loaded, Row, Sh, useLoad } from "@/erp/kit/ui";
+import { Check, Empty, Icon, List, Loaded, Row, Sh, useLoad } from "@/erp/kit/ui";
 import { api, P, post } from "@/erp/marketplace/api";
 import { useMk } from "@/erp/marketplace/context";
 import { ageCls, agoText, firstTitle, sold, WB_STG, type Board, type Order, type Stage, type Supply } from "@/erp/marketplace/lib";
 import { OrderSheet } from "@/erp/marketplace/order";
-import { SyncRow } from "@/erp/marketplace/orders/sync";
+import { usePoll } from "@/erp/marketplace/orders/sync";
+import { Thumb } from "@/erp/marketplace/thumb";
 import { Tbl } from "@/erp/kit/table";
 
 import { SupplyView } from "./supply";
@@ -36,6 +36,7 @@ export function WbOrders() {
   const [stage, setStage] = useState<Stage>("new");
   const [sup, setSup] = useState<string | null>(null);
   const st = useLoad(() => api<Board>(`${P}/orders/wb/board?stage=${stage}`), [stage]);
+  usePoll(() => void st.reload());
   if (stage === "assembly" && sup) return <SupplyView sid={sup} onBack={() => (setSup(null), void st.reload())} />;
   const cnt = st.data?.counts ?? {};
   return (
@@ -49,7 +50,6 @@ export function WbOrders() {
         ))}
       </div>
       <div style={{ height: 10 }} />
-      <SyncRow ch="wb" onDone={() => void st.reload()} />
       <Loaded st={st}>
         {(b) =>
           stage === "new" ? (
@@ -121,10 +121,13 @@ function NewOrders({ rows, onDone, reload }: { rows: Order[]; onDone: (sid: stri
             {
               h: "Tovar",
               f: (o) => (
-                <>
-                  {firstTitle(o)}
-                  <div className="t2 code mut">{o.article}</div>
-                </>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Thumb o={o} />
+                  <span className="min-w-0">
+                    {firstTitle(o)}
+                    <span className="t2 code mut block">{o.article}</span>
+                  </span>
+                </span>
               ),
             },
             { h: "Narx", f: sold, n: true },
@@ -168,6 +171,7 @@ function NewOrders({ rows, onDone, reload }: { rows: Order[]; onDone: (sid: stri
 function Supplies({ rows, onOpen }: { rows: Order[]; onOpen: (sid: string) => void }) {
   const { wide } = useMk();
   const st = useLoad(() => api<Supply[]>(`${P}/wb/supplies`), []);
+  usePoll(() => void st.reload());
   const newSupply = useNewSupply();
   const by: Record<string, number> = {};
   for (const o of rows) if (o.supply_id) by[o.supply_id] = (by[o.supply_id] ?? 0) + 1;
@@ -180,8 +184,8 @@ function Supplies({ rows, onOpen }: { rows: Order[]; onOpen: (sid: string) => vo
       <Sh
         t={`Postavkalar${st.data ? ` · ${st.data.length}` : ""}`}
         r={
-          <button type="button" className={LINK_BTN} onClick={() => void create()}>
-            + Bo&apos;sh yetkazma yaratish
+          <button type="button" className="b normal-case" title="Bo'sh postavka — buyurtmalarni keyin qo'shasiz" onClick={() => void create()}>
+            <Icon n="plus" /> Yangi postavka
           </button>
         }
       />
@@ -264,10 +268,13 @@ function Plain({ rows, reload }: { rows: Order[]; reload: () => void }) {
             {
               h: "Tovar",
               f: (o) => (
-                <>
-                  {firstTitle(o)}
-                  <div className="t2 code mut">{o.article}</div>
-                </>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Thumb o={o} />
+                  <span className="min-w-0">
+                    {firstTitle(o)}
+                    <span className="t2 code mut block">{o.article}</span>
+                  </span>
+                </span>
               ),
             },
             { h: "Holat", f: (o) => o.ext_status },
@@ -280,6 +287,7 @@ function Plain({ rows, reload }: { rows: Order[]; reload: () => void }) {
           {rows.map((o) => (
             <Row
               key={o.ext_id}
+              lead={<Thumb o={o} />}
               t={firstTitle(o)}
               tcls="wrap2"
               s={

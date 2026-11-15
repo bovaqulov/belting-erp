@@ -13,6 +13,7 @@ export type Zone = {
 };
 
 const C = "mt-0.5 truncate text-[12.5px] text-hint";
+const DIV: Record<string, string> = { novobelt: "Novobelt", belting: "Belting Rezina" };
 /** chirish darajasi: chap chiziq rangi (rot2 — qizil fon ham) */
 const ROT: Record<string, string> = { rot: "!border-l-warn bg-sec", rot2: "!border-l-danger bg-[color-mix(in_srgb,var(--danger)_7%,var(--sec))]" };
 
@@ -42,10 +43,33 @@ function Card({ d, nameOf, onOpen, onDrag }: { d: Deal; nameOf: (tg?: number | n
       }}
     >
       <div className="line-clamp-2 leading-[1.3] font-medium [overflow-wrap:anywhere]">{dtitle(d.title)}</div>
+      {d.repeat || d.sla_late ? (
+        <div className="flex flex-wrap gap-x-2 text-[11.5px]">
+          {d.sla_late ? (
+            <span className="font-semibold text-danger" title={`Bosqich muddati (${d.sla_hours} soat) o'tdi`}>
+              ⏱ muddat o&apos;tdi
+            </span>
+          ) : null}
+          {d.repeat ? <span className="text-hint">takroriy bitim</span> : null}
+        </div>
+      ) : null}
       <div className={C}>
+        {d.contact ? `${d.contact} · ` : ""}
         {d.customer || "Mijozsiz"}
         <Tags d={d} />
       </div>
+      {d.buyer_order || d.prod_order || d.prod_no || d.division ? (
+        <div className={`${C} flex flex-wrap gap-x-2`}>
+          {[d.buyer_order, d.prod_order, d.prod_no]
+            .filter((x, i, a) => x && a.indexOf(x) === i)
+            .map((x) => (
+              <span key={x} className="font-code tabular-nums">
+                № {x}
+              </span>
+            ))}
+          {d.division ? <span>{DIV[d.division] ?? d.division}</span> : null}
+        </div>
+      ) : null}
       <div className="mt-[7px] flex items-center gap-1.5 text-xs">
         <AvaView name={nameOf(d.owner_tg)} />
         <span className="text-[13px] font-semibold tabular-nums">{d.amount && Number(d.amount) ? short(d.amount) : ""}</span>

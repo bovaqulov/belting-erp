@@ -5,8 +5,9 @@
 import { useEffect, type ReactNode } from "react";
 
 import { Icon } from "./ui";
+import { FIRM_LOGO } from "@/shared/ui/brand";
 
-export type NavItem = { key: string; label: string; icon: string; on: boolean; onClick: () => void; extra?: ReactNode };
+export type NavItem = { key: string; label: string; icon: string; on: boolean; onClick: () => void; extra?: ReactNode; /** hali tayyor emas — xira */ dim?: boolean };
 export type NavGroup = { title?: string; items: NavItem[] };
 
 /** Demo rejimi belgisi (yopilmaydi): "Qayta tiklash" — boshlang'ich ma'lumotlar */
@@ -23,36 +24,46 @@ export const DemoStrip = ({ text, onReset }: { text: string; onReset: () => void
   </div>
 );
 
+export { FIRM_LOGO };
+const Firm = ({ cls = "" }: { cls?: string }) => <span className={`${FIRM_LOGO} ${cls}`} role="img" aria-label="Belting rezina" />;
+
 const UP = "grid size-11 flex-none cursor-pointer place-items-center rounded-[10px] border-0 bg-transparent p-0 text-link hover:bg-fill [&_svg.i]:size-[22px]";
 
 /** Telefon sarlavhasi: chapda qaytish (havola yoki ilova ichida — onUp), katta sarlavha va izoh */
-export const AppTop = ({ up, upLabel, title, sub, onUp }: { up: string; upLabel: string; title: string; sub?: string; onUp?: () => void }) => (
-  <div className="flex items-start gap-1 px-2 pt-2.5">
+/** up=null va onUp yo'q — qaytish tugmasi ko'rsatilmaydi */
+export const AppTop = ({ up, upLabel = "", title, sub, onUp, logo }: { up: string | null; upLabel?: string; title: string; sub?: string; onUp?: () => void; logo?: boolean }) => (
+  <div className={`flex items-start gap-1 pt-2.5 ${up || onUp ? "px-2" : "px-3"}`}>
     {onUp ? (
       <button type="button" className={UP} onClick={onUp} aria-label={upLabel} title={upLabel}>
         <Icon n="back" />
       </button>
-    ) : (
+    ) : up ? (
       <a className={UP} href={up} aria-label={upLabel} title={upLabel}>
         <Icon n="layout-grid" />
       </a>
-    )}
-    <div className="large min-w-0 pt-0.5 pl-1">
+    ) : null}
+    <div className="large min-w-0 flex-1 pt-0.5 pl-1">
       {title}
       {sub ? <small>{sub}</small> : null}
     </div>
+    {/* firma logosi — sarlavha qatorida o'ngda, ixcham */}
+    {logo ? (
+      <span className="flex-none self-center pt-1 pr-2">
+        <Firm />
+      </span>
+    ) : null}
   </div>
 );
 
 /** Bo'lim tablari (telefon): pastki chiziq bilan — filtr chiplaridan ajralib tursin */
-export function AppTabs<K extends string>({ items, cur, onPick, label }: { items: [K, string, ReactNode?][]; cur: K; onPick: (k: K) => void; label: string }) {
+export function AppTabs<K extends string>({ items, cur, onPick, label }: { items: [K, ReactNode, ReactNode?][]; cur: K; onPick: (k: K) => void; label: string }) {
   return (
     <nav className="mx-4 mt-1 flex gap-0.5 overflow-x-auto border-b border-sep [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={label}>
       {items.map(([k, t, extra]) => (
         <button
           key={k}
           type="button"
-          className={`-mb-px min-h-11 cursor-pointer border-0 border-b-2 bg-transparent px-2.5 pt-2.5 pb-[9px] text-[14.5px] whitespace-nowrap ${cur === k ? "border-link font-semibold text-fg" : "border-transparent font-medium text-hint"}`}
+          className={`-mb-px inline-flex min-h-11 cursor-pointer items-center border-0 border-b-2 bg-transparent px-2.5 pt-2.5 pb-[9px] text-[14.5px] whitespace-nowrap ${cur === k ? "border-link font-semibold text-fg" : "border-transparent font-medium text-hint"}`}
           aria-current={cur === k ? "page" : undefined}
           onClick={() => onPick(k)}
         >
@@ -75,18 +86,22 @@ const SIDE_BTN = "group/nav flex min-h-9 cursor-pointer items-center gap-2.5 rou
 
 export function AppLayout({
   brand,
+  logo,
   up = "/app",
   upLabel = "Bo'limlar",
   onUp,
   wide,
   nav,
   title,
+  titleAside,
   top,
   demo,
   cls = "",
   children,
 }: {
   brand: string;
+  /** chap menyuda brend ustida firma logosi */
+  logo?: boolean;
   /** null — chap menyuda qaytish havolasi yo'q */
   up?: string | null;
   upLabel?: string;
@@ -96,6 +111,8 @@ export function AppLayout({
   nav: NavGroup[];
   /** kompyuterdagi sarlavha */
   title: string;
+  /** kompyuterda sarlavha yonida (masalan kanal tanlovi) */
+  titleAside?: ReactNode;
   /** telefondagi tepa (AppTop + Seg/AppTabs) */
   top: ReactNode;
   demo?: ReactNode;
@@ -115,7 +132,10 @@ export function AppLayout({
           className="fixed top-0 bottom-0 left-0 z-20 flex w-[232px] flex-col gap-0.5 overflow-y-auto border-r border-sep bg-sec px-2 pt-4 pb-6"
           aria-label={`${brand} bo'limlari`}
         >
-          <div className="px-2.5 pt-0.5 text-xl font-bold">{brand}</div>
+          <div className={`flex items-center justify-between gap-2 px-2.5 pt-0.5 ${up || onUp ? "" : "mb-2"}`}>
+            <span className={`min-w-0 truncate font-bold ${logo ? "text-lg" : "text-xl"}`}>{brand}</span>
+            {logo ? <Firm cls="!h-[11px]" /> : null}
+          </div>
           {onUp ? (
             <button type="button" className={`${upCls} cursor-pointer`} onClick={onUp}>
               <Icon n="back" /> {upLabel}
@@ -132,7 +152,7 @@ export function AppLayout({
                 <button
                   key={x.key}
                   type="button"
-                  className={`${SIDE_BTN} ${x.on ? "bg-btn text-btn-fg [&_svg.i]:text-btn-fg" : "bg-transparent text-fg hover:bg-fill [&_svg.i]:text-hint"}`}
+                  className={`${SIDE_BTN} ${x.on ? "bg-btn text-btn-fg [&_svg.i]:text-btn-fg" : `bg-transparent hover:bg-fill [&_svg.i]:text-hint ${x.dim ? "text-hint" : "text-fg"}`}`}
                   aria-current={x.on ? "page" : undefined}
                   onClick={x.onClick}
                 >
@@ -147,7 +167,16 @@ export function AppLayout({
       ) : null}
       <main className={`min-w-0 ${MAIN} ${wide ? "max-w-[1400px] px-3 pb-10 [&_.btns]:max-w-[420px]" : "pb-[calc(40px+var(--safe-b,0px))]"}`}>
         {demo}
-        {wide ? <h1 className="mx-4 mt-[18px] mb-1 text-[26px] font-bold tracking-[-0.01em]">{title}</h1> : top}
+        {!wide ? (
+          top
+        ) : titleAside ? (
+          <div className="mx-4 mt-[18px] mb-1 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <h1 className="text-[26px] font-bold tracking-[-0.01em]">{title}</h1>
+            {titleAside}
+          </div>
+        ) : (
+          <h1 className="mx-4 mt-[18px] mb-1 text-[26px] font-bold tracking-[-0.01em]">{title}</h1>
+        )}
         {children}
       </main>
     </div>
@@ -158,5 +187,8 @@ export function AppLayout({
 export const NAV_CNT = "ml-auto text-xs tabular-nums opacity-85";
 /** e'tibor talab qiladigan son: qizil (tanlangan bo'limda — oq) */
 export const NAV_HOT = "text-danger group-aria-[current=page]/nav:text-inherit";
+/** son nishoni: e'tibor talab qiladi (qizil) yoki oddiy (kulrang, joriy matn rangidan) */
+export const PILL_HOT = "ml-auto min-w-5 rounded-full bg-danger px-1.5 text-center text-xs leading-5 font-semibold text-white tabular-nums";
+export const PILL = "ml-auto min-w-5 rounded-full bg-[color-mix(in_srgb,currentColor_16%,transparent)] px-1.5 text-center text-xs leading-5 tabular-nums";
 /** telefon tabidagi son */
 export const TAB_CNT = "ml-1 text-xs text-danger tabular-nums";

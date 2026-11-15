@@ -1,4 +1,7 @@
-"""Foydalanuvchi = xodim (Telegram orqali kiradi). Bo'limlari — jarvis.Agent(kind=dept): agentlar va xodimlar daraxti bitta."""
+"""Foydalanuvchi = xodim (Telegram orqali kiradi) va bo'limlar (Department).
+
+Bo'limlar daraxti shu yerda saqlanadi; jarvis bo'lim agentlari (kind=dept) unga `key` orqali ishora qiladi va
+saqlanganda `services.sync_departments` bilan shu jadvalni yangilaydi (jarvis → staff, teskarisi yo'q)."""
 
 from __future__ import annotations
 
@@ -8,6 +11,19 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 
 PANEL_ROLES = ("owner", "admin")
+
+# ERP modullariga kirish — bo'lim bo'yicha (egasi qarori 2026-11-14). Ega/admin va Rahbariyat (sees_all) — hammasi.
+# Kalit — frontend erp/home MODULES dagi key; qiymat — bo'lim (Department) kalitlari.
+MODULE_DEPTS: dict[str, tuple[str, ...]] = {
+    # CRM — faqat Sales (ishlab chiqarish va logistika — alohida tizim)
+    "crm": ("sotuv_b2b", "sotuv"),
+    "marketplace": ("sotuv_marketplace",),
+    "warehouse": ("ombor", "ishlab_chiqarish", "logistika"),
+    "manufacturing": ("ishlab_chiqarish",),
+    "logistics": ("logistika", "ombor"),
+    "accounting": ("buxgalteriya",),
+    "hr": (),  # xodimlar, taklif, rollar — faqat ega/admin va Rahbariyat
+}
 # agentlar huquqini IT bo'limi yoki Rahbariyat (sees_all bo'lim) belgilaydi
 AGENT_ADMIN_DEPTS = ("it",)
 
@@ -18,6 +34,25 @@ class Role(models.TextChoices):
     EMPLOYEE = "employee", "Xodim"
     PENDING = "pending", "Tasdiq kutmoqda"
     BLOCKED = "blocked", "Bloklangan"
+
+
+class Department(models.Model):
+    """Bo'lim. Kalit — jarvis bo'lim agentining kaliti bilan bir xil (agent bo'limga shu kalit bilan ishora qiladi)."""
+
+    key = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=120)
+    name_ru = models.CharField(max_length=120, blank=True)
+    icon = models.CharField(max_length=40, default="bot")
+    color = models.CharField(max_length=9, default="#3e88f7")
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
+    sees_all = models.BooleanField(default=False)  # Rahbariyat: hamma modul va ma'lumot
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.key})"
 
 
 class UserManager(BaseUserManager["User"]):
@@ -40,10 +75,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=200, blank=True)
     username = models.CharField(max_length=64, blank=True)
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.PENDING)
-    departments = models.ManyToManyField(
-        "jarvis.Agent", blank=True, related_name="members", limit_choices_to={"kind": "dept"}
-    )
+    departments = models.ManyToManyField(Department, blank=True, related_name="members")
     manager = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
+    # bo'lim boshlig'i: [{"dept_group": "sotuv_b2b", "perms": {...}}] — Xodimlar daraxti va «Rahbari» ro'yxati shundan
+    heads = models.JSONField(default=list, blank=True)
     lang = models.CharField(max_length=8, default="uz")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -72,6 +107,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     def in_lead_dept(self) -> bool:
         return self.departments.filter(sees_all=True).exists()
 
+    def modules(self) -> list[str]:
+        """Ruxsat etilgan ERP modullari (MODULE_DEPTS). Faol bo'lmagan rol — hech biri."""
+        if self.role not in (Role.OWNER, Role.ADMIN, Role.EMPLOYEE):
+            return []
+        if self.is_panel or self.in_lead_dept():
+            return list(MODULE_DEPTS)
+        mine = set(self.dept_keys())
+        return [m for m, deps in MODULE_DEPTS.items() if mine.intersection(deps)]
+
+    def can_module(self, module: str) -> bool:
+        return module in self.modules()
+
     def can_view(self) -> bool:
         """Panelni ko'rish: owner/admin, Rahbariyat, IT."""
         return self.is_panel or self.in_lead_dept() or self.departments.filter(key__in=AGENT_ADMIN_DEPTS).exists()
@@ -96,4 +143,40 @@ class User(AbstractBaseUser, PermissionsMixin):
             "can_lenta": False,  # lenta/geo — o'z applari ko'chganda
             "can_geo": False,
             "report_depts": [],
+            "modules": self.modules(),
         }
+
+
+class Invite(models.Model):
+    """Xodim taklif havolasi: t.me/<bot>?start=inv_<code> — bosgan odam shu bo'lim va rol bilan darhol faol bo'ladi."""
+
+    code = models.CharField(max_length=32, unique=True)
+    dept = models.CharField(max_length=64)  # Department.key
+    role = models.CharField(max_length=16, choices=Role.choices, default=Role.EMPLOYEE)
+    name = models.CharField(max_length=200, blank=True)  # izoh: kim uchun
+    created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="+")
+    uses = models.PositiveIntegerField(default=0)
+    max_uses = models.PositiveIntegerField(default=1)
+    expires = models.DateTimeField()
+    revoked = models.BooleanField(default=False)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created"]
+
+    def __str__(self) -> str:
+        return f"{self.dept} · {self.code}"
+
+
+class PendingHead(models.Model):
+    """Botga hali kirmagan @username — kirganda (taklif yoki login) shu bo'lim boshlig'i bo'ladi."""
+
+    username = models.CharField(max_length=64)
+    dept_group = models.CharField(max_length=64)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["username", "dept_group"], name="staff_pendinghead_uniq")]
+
+    def __str__(self) -> str:
+        return f"@{self.username} → {self.dept_group}"

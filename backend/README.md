@@ -9,15 +9,16 @@ Applar frontend `src/` bilan bir xil domenlarga bo'lingan.
 backend/
   config/                 settings.py, urls.py (/app/api/* — har app urls.py dan), celery.py, asgi.py, wsgi.py
     apps/
-      core/               kirish (Telegram initData, sessiya, login), JSON API yordamchilari, Telegram yuborish   ✅
-      staff/              xodimlar (foydalanuvchi modeli: tg_id, rol, bo'limlar = jarvis dept agentlari)          ✅ o'qish
+      core/               umumiy yadro: kirish, JSON API yordamchilari, Telegram yuborish, registry, check_boundaries ✅
+      staff/              xodimlar va bo'limlar (Department): rol, rahbar, boshliqlik; taklif (bot /start inv_<kod>) ✅
       jarvis/             Jarvis agentlari: daraxt, huquqlar, jadval (beat), topshiriq (Celery), chat (SSE)      ✅ to'liq
       bots/               Telegram bot (pyTelegramBotAPI, webhook): login tasdig'i                              ✅
       memory/             xotira faktlari (firma/bo'lim/xodim), tasdiqlash; agent promptiga                       ✅
       knowledge/          bilimlar (matn, PDF), chatlardan ajratish (30 daq), graf (LLM, kesh, jamoalar, kecha 03:00) ✅
       reports/ audit/ system/                                                                                   ⏳ skelet
       erp/marketplace/    WB/Ozon/Uzum: FBS buyurtmalar, skaner bilan yig'ish, WB postavkalar, kartochka auditi          ✅ 1-bosqich
-      erp/{catalog,warehouse,workshop,picking,purchasing,sales,finance,crm,logistics}/  (label: erp_<modul>)            ⏳ skelet
+      erp/crm/            bitimlar, kanban, mijozlar, lidlar, reja, huquqlar + sotuvchilar Telegram'i (Business bot)     ✅
+      erp/{catalog,warehouse,workshop,picking,purchasing,sales,finance,logistics}/  (label: erp_<modul>)            ⏳ skelet
       conveyor/ geomap/ analytics/                                                                        ⏳ skelet
   data/                   db.sqlite3 (demo baza), celerybeat-schedule (gitignore)
   scripts/                dev.sh (API + worker + beat), tunnel.sh (tunnel + webhook), check.sh (ruff + ty + pytest-testmon)
@@ -28,6 +29,24 @@ backend/
 App label — qisqa nom (`core`, `staff`, `jarvis`, `erp_catalog` …); import yo'li — `config.apps.<app>`.
 Yangi app: `config/apps/<nom>/` (apps.py: `name="config.apps.<nom>"`, `label`), `settings.DOMAIN_APPS` ga qo'shish,
 `urls.py` dagi `urlpatterns` avtomatik `/app/api/` ostiga ulanadi (oxirgi `/` ixtiyoriy — Next trailingSlash).
+
+## Applar chegaralari (kelajakda mikroservislarga ajratish uchun)
+
+Har app — alohida servis bo'la oladigan modul. `scripts/check.sh` buni `manage.py check_boundaries` bilan majburlaydi:
+
+- **Ochiq interfeys — `<app>/services.py`.** Boshqa app faqat shu modulni import qiladi; `models.py`, `views.py`,
+  `manage.py` … — ichki. Faqat tip uchun import — `if TYPE_CHECKING:` ichida (hisobga olinmaydi).
+- **`core` — umumiy yadro** (http, auth, telegram, llm): hamma ishlatadi, o'zi hech bir domen appini import qilmaydi.
+  Foydalanuvchi — `get_user_model()`; domen qo'shimchalari — `core/registry.py` (masalan CRM `/erp/me` ga `is_head`).
+- **Bog'liqlik yo'nalishi pastga:** `bots, erp/*, knowledge, memory → jarvis → staff → core`. Teskari ehtiyoj —
+  ro'yxatdan o'tish (hook) orqali: memory/knowledge o'z kontekstini `jarvis.services.register_context` ga
+  `apps.ready()` da qo'shadi, jarvis ularni bilmaydi.
+- **Boshqa app modeliga FK yo'q — ID saqlanadi** (CRM'dagi `owner_tg` kabi: xodim — `tg_id`, bo'lim — `Department.key`).
+  Mavjud `AUTH_USER_MODEL` FK'lari — `check_boundaries.LEGACY_FK`; yangisini qo'shmang.
+- **Applararo yozish/hodisa — Celery task yoki `services` funksiyasi** orqali (to'g'ridan-to'g'ri boshqa jadvalga
+  yozilmaydi). Yangi skelet domenlar (sex, ombor, moliya …) boshidanoq shunday yoziladi.
+- Bo'limlar — `staff.Department`; jarvis bo'lim agenti (kind=dept) unga bir xil `key` bilan ishora qiladi va
+  saqlanganda/o'chganda uni yangilaydi (`jarvis/signals.py`).
 
 ## Ishga tushirish
 
@@ -68,4 +87,4 @@ Frontend: `cd ../frontend && npm run dev` — `/app/api/*` → `JARVIS_BACKEND` 
 
 ## Tekshiruv
 
-`scripts/check.sh` (ruff format/check → ty → pytest --testmon). `NO_TESTS=1` — testsiz, `--all` — barcha testlar.
+`scripts/check.sh` (ruff format/check → ty → chegaralar → pytest --testmon). `NO_TESTS=1` — testsiz, `--all` — barcha testlar.

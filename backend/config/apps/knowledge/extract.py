@@ -9,9 +9,9 @@ from typing import Any
 from django.db import transaction
 
 from config.apps.core import llm
-from config.apps.jarvis.models import Agent, ChatMessage
-from config.apps.jarvis.permissions import home_dept
-from config.apps.memory.models import Fact
+from config.apps.jarvis.services import ChatLine, chat_lines_after
+from config.apps.memory.services import add_pending_fact, fact_exists
+from config.apps.staff.services import department_keys
 
 from .models import Doc, ExtractState
 
@@ -25,38 +25,30 @@ SYSTEM = (
 )
 
 
-def _transcripts(msgs: list[ChatMessage]) -> tuple[str, set[str]]:
+def _transcripts(msgs: list[ChatLine]) -> tuple[str, set[str]]:
     by: dict[str, list[str]] = defaultdict(list)
     keys: set[str] = set()
     for m in msgs:
-        agent = m.session.agent
-        dept = home_dept(agent)
-        k = dept.key if dept else agent.key
-        keys.add(k)
-        who = f"xodim {m.session.user.tg_id}" if m.role == "user" else f"agent {agent.name}"
-        by[k].append(f"{who}: {m.text[:800]}")
+        keys.add(m.dept)
+        who = f"xodim {m.user_tg}" if m.role == "user" else f"agent {m.agent_name}"
+        by[m.dept].append(f"{who}: {m.text[:800]}")
     text = "\n\n".join(f"## Bo'lim: {k}\n" + "\n".join(lines) for k, lines in by.items())
     return text[:MAX_CHARS], keys
 
 
 def extract_from_chats() -> dict[str, dict[str, Any]]:
     state, _ = ExtractState.objects.get_or_create(key="chat")
-    msgs = list(
-        ChatMessage.objects.filter(pk__gt=state.last_id)
-        .exclude(text="")
-        .select_related("session__agent__parent", "session__user")
-        .order_by("pk")[:400]
-    )
+    msgs = chat_lines_after(state.last_id, 400)
     if not msgs:
         return {}
     text, keys = _transcripts(msgs)
     data = llm.complete_json(SYSTEM, text)
-    depts = set(Agent.objects.filter(kind="dept").values_list("key", flat=True))
+    depts = department_keys()
     result: dict[str, dict[str, Any]] = defaultdict(lambda: {"add": 0})
     with transaction.atomic():
         for f in (data or {}).get("facts") or []:
             t = str(f.get("text") or "").strip()
-            if not t or Fact.objects.filter(text=t).exists():
+            if not t or fact_exists(t):
                 continue
             scope = f.get("scope") if f.get("scope") in ("firma", "bolim", "xodim") else "firma"
             key = (
@@ -64,7 +56,7 @@ def extract_from_chats() -> dict[str, dict[str, Any]]:
             )
             if scope == "bolim" and key not in depts:
                 scope, key = "firma", ""
-            Fact.objects.create(text=t[:2000], scope=scope, scope_key=key, status=Fact.Status.PENDING, source="chat")
+            add_pending_fact(t, scope, key, "chat")
             result[key or "umumiy"]["add"] += 1
         for d in (data or {}).get("docs") or []:
             title, body = str(d.get("title") or "").strip(), str(d.get("body") or "").strip()

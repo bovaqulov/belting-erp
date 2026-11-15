@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from config.apps.jarvis.models import Agent
-from config.apps.staff.models import Role, User
+from config.apps.staff.models import Department, Role, User
 
 
 class Command(BaseCommand):
@@ -12,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument("--name", default="")
         parser.add_argument("--username", default="")
         parser.add_argument("--role", default=Role.EMPLOYEE, choices=[r.value for r in Role])
-        parser.add_argument("--dept", action="append", default=[], help="bo'lim agenti kaliti (bir necha marta)")
+        parser.add_argument("--dept", action="append", default=[], help="bo'lim kaliti (bir necha marta)")
 
     def handle(self, *args, tg_id: int, name: str, username: str, role: str, dept: list[str], **opts):
         u, created = User.objects.get_or_create(tg_id=tg_id, defaults={"name": name, "role": role})
@@ -20,7 +19,7 @@ class Command(BaseCommand):
         u.username = username or u.username
         u.save()
         if dept:
-            found = list(Agent.objects.filter(key__in=dept, kind=Agent.Kind.DEPT))
+            found = list(Department.objects.filter(key__in=dept))
             missing = set(dept) - {a.key for a in found}
             if missing:
                 raise CommandError(f"Bo'lim topilmadi: {', '.join(sorted(missing))} (avval: manage.py seed_agents)")

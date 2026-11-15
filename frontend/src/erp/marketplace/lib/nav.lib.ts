@@ -1,4 +1,4 @@
-// Marketplace navigatsiyasi (egasi qarori 2026-11-12: har marketplace — o'z bo'limi): Umumiy + har kanalning bo'limlari.
+// Marketplace navigatsiyasi (egasi qarori 2026-11-14): avval bo'lim (chap menyu), keyin kanal (sahifa tepasidagi tablar).
 // Holat URL'da: ?ch=wb&sec=orders (Umumiy — parametrsiz). Sof funksiyalar — test qilinadi.
 export type Ch = "wb" | "ozon" | "uzum" | "site";
 export type Sec = "orders" | "products" | "price" | "stock" | "reviews";
@@ -23,6 +23,21 @@ export const SECS: Record<Ch, Sec[]> = {
   site: ["products", "price"],
 };
 export const CHS = Object.keys(SECS) as Ch[];
+/** Menyu tartibi */
+export const SEC_ORDER: Sec[] = ["orders", "products", "price", "stock", "reviews"];
+/** Frontendda tayyor bo'limlar; qolganlari menyuda "tez orada" */
+export const READY: Sec[] = ["orders"];
+/** Kanal logotipi (public/brand/mp/; remen.uz — oq fonda, qorong'i rejimda ko'rinsin) */
+export const CH_LOGO: Record<Ch, string> = { wb: "/app/brand/mp/wb.png", ozon: "/app/brand/mp/ozon.svg", uzum: "/app/brand/mp/uzum.svg", site: "/app/brand/mp/site.png" };
+
+/** Shu bo'lim bor kanallar (sahifa tepasidagi tablar) */
+export const chsOf = (sec: Sec): Ch[] => CHS.filter((c) => SECS[c].includes(sec));
+
+/** Bo'limga o'tish: joriy kanalda shu bo'lim bo'lsa — kanal saqlanadi, bo'lmasa — bo'lim bor birinchi kanal */
+export function goSec(v: View, sec: Sec): View {
+  const ch = !v.home && SECS[v.ch].includes(sec) ? v.ch : chsOf(sec)[0];
+  return { home: false, ch, sec };
+}
 
 const isCh = (v: string | null): v is Ch => !!v && v in SECS;
 

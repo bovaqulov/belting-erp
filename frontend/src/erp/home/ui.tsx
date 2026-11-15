@@ -24,9 +24,10 @@ export const MODULES: Module[] = [
   { key: "marketplace", title: "Marketplace", sub: "WB, Ozon, Uzum: buyurtmalar, tovarlar, narx, qoldiq", color: "#f0603a", href: "/app/erp/marketplace" },
   { key: "logistics", title: "Logistics", sub: "Yetkazish: EMU, Yandex Go, Bito, Fargo", color: "#12a4a0", href: "/app/erp/logistics" },
   { key: "accounting", title: "Accounting", sub: "Mahsulotlar, shartnomalar va maoshlar", color: "#2fa37a", href: "/app/erp/moliya" },
+  { key: "hr", title: "HR", sub: "Xodimlar: taklif qilish, tuzilma (iyerarxiya) va rollar", color: "#8b6cf0", href: "/app/staff" },
 ];
 
-export function ErpHomeView({ modules }: { modules: Module[] }) {
+export function ErpHomeView({ modules, loading = false }: { modules: Module[]; loading?: boolean }) {
   return (
     <div data-panel="" className="contents">
       <div className={s.top}>
@@ -76,6 +77,9 @@ export function ErpHomeView({ modules }: { modules: Module[] }) {
             );
           })}
         </nav>
+        {!loading && !modules.length ? (
+          <div className={s.empty}>Sizga hali ERP bo&apos;limi biriktirilmagan — administratorga murojaat qiling.</div>
+        ) : null}
       </main>
     </div>
   );

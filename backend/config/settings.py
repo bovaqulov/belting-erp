@@ -156,6 +156,8 @@ CELERY_BEAT_SCHEDULE = {
     "jarvis-schedules-tick": {"task": "config.apps.jarvis.tasks.tick", "schedule": 60.0},
     # marketplace: ulangan kanallar buyurtmalari har 5 daqiqada (FBS muddatlari qisqa — Uzum 2 soat)
     "mp-orders-sync": {"task": "config.apps.erp.marketplace.tasks.sync_orders", "schedule": 300.0},
+    # CRM robotlari: muddat kelgan buyurtma → «Muddati BUGUN», javobsiz lid va muddati o'tgan vazifa eslatmalari
+    "crm-robots": {"task": "config.apps.erp.crm.tasks.robots", "schedule": 300.0},
 }
 
 # ---------------------------------------------------------------- Telegram, Jarvis
@@ -179,10 +181,20 @@ UZUM_TOKEN = (os.getenv("UZUM_API_KEY") or os.getenv("UZUM_TOKEN") or "").strip(
 # kanalga yozuvchi amallar (bekor qilish, tasdiqlash, jo'natish, postavka) — standart yopiq, faqat o'qish
 MP_WRITE = env_bool("MP_WRITE")
 
+# CRM: sotuvchilar Telegram'i — alohida Telegram Business bot (Jarvis botidan mustaqil); webhook sirri — tokendan hosil
+BUSINESS_CONNECTION_BOT_TOKEN = os.getenv("BUSINESS_CONNECTION_BOT_TOKEN", "").strip()
+# sayt / marketplace formalaridan lid qabuli (POST /app/api/erp/crm/intake, sarlavha X-Intake-Token); bo'sh — yopiq
+CRM_INTAKE_TOKEN = os.getenv("CRM_INTAKE_TOKEN", "").strip()
+CRM_TG_WEBHOOK_SECRET = (
+    os.getenv("CRM_TG_WEBHOOK_SECRET") or hashlib.sha256(f"crm-tg:{SECRET_KEY}".encode()).hexdigest()[:48]
+)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
     "root": {"handlers": ["console"], "level": "INFO"},
+    # httpx INFO har so'rov URL'ini yozadi — Telegram Bot API'da URL ichida bot tokeni bor (logga tushmasin)
+    "loggers": {"httpx": {"level": "WARNING"}, "httpcore": {"level": "WARNING"}},
 }

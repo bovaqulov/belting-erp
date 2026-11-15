@@ -13,17 +13,17 @@ from typing import Any
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
 from config.apps.core.http import ApiError, api, json_body, ok
-from config.apps.staff.models import User
+from config.apps.staff.services import User
 
 from . import cards, orders, supplies
 from .channels import ChannelError
 
-ACTIVE_ROLES = ("owner", "admin", "employee")
-DENY = "Marketplace bo'limi faqat xodimlar uchun."
+DENY = "Marketplace faqat Sotuv (Marketplace) bo'limi va rahbariyat uchun."
 
 
 def _staff(u: User) -> bool:
-    return u.role in ACTIVE_ROLES
+    """Marketplace — Sotuv (Marketplace) bo'limi, rahbariyat, ega/admin (staff.MODULE_DEPTS)."""
+    return u.can_module("marketplace")
 
 
 def _admin(u: User) -> bool:

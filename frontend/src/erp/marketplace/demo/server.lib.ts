@@ -214,7 +214,7 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: B | u
     if (r[3] === "add") {
       if (closed) return fail(400, "WB postavkaga qo'shmadi: postavka topshirilgan");
       const ids = ((b.orders as unknown[]) ?? []).map(String);
-      for (const o of db.orders) if (o.channel === "wb" && ids.includes(o.ext_id) && o.stage === "new") {
+      for (const o of db.orders) if (o.channel === "wb" && ids.includes(o.ext_id) && (o.stage === "new" || o.stage === "assembly")) {
         o.supply_id = sid;
         setStage(o, "assembly");
       }

@@ -22,6 +22,15 @@ async function probe(): Promise<CrmMode> {
 /** Rejim — sahifa yuklanishiga bir marta */
 export const crmMode = (): Promise<CrmMode> => (modeP ??= probe());
 
+// Telegram (sotuvchilar yozishmalari) backendi CRM'ning qolganidan oldin tayyor — rejimi alohida tekshiriladi:
+// tg/chats 200/401/403 → haqiqiy (CRM qolgani demo bo'lsa ham), 404/5xx/tarmoq → demo.
+const TG_PREFIX = "/app/api/erp/crm/tg/";
+let tgModeP: Promise<CrmMode> | null = null;
+const tgMode = (): Promise<CrmMode> => (tgModeP ??= status(`${TG_PREFIX}chats`).then((s) => decideModeAll([s])));
+const modeFor = (path: string): Promise<CrmMode> => (path.startsWith(TG_PREFIX) ? tgMode() : crmMode());
+/** Telegram real vaqt (WebSocket) — faqat haqiqiy backend bilan (demo'da yo'q) */
+export const tgLive = (): Promise<boolean> => tgMode().then((m) => m === "real");
+
 const kv = (): KV | null => {
   try {
     return window.localStorage;
@@ -37,15 +46,21 @@ const DELAY = 150; // yuklanish holatlari demo'da ham ko'rinsin
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function api<T = unknown>(path: string, body?: unknown): Promise<T> {
-  if ((await crmMode()) === "real") return realApi<T>(path, body);
+  if ((await modeFor(path)) === "real") return realApi<T>(path, body);
   await sleep(DELAY);
   const method = body === undefined ? "GET" : "POST";
+  // demo: fayl yuklash (FormData) — faqat fayl ma'lumoti (nomi, turi, hajmi) va izoh
+  if (typeof FormData !== "undefined" && body instanceof FormData) {
+    const f = body.get("file");
+    body = { file: f instanceof File ? { name: f.name, type: f.type, size: f.size } : null, caption: body.get("caption") ?? "" };
+  }
   const res = handle(getDb(), method, path, body === undefined ? undefined : JSON.parse(JSON.stringify(body)), Date.now());
   if (res.status >= 400) {
     const detail = (res.body as { detail?: string }).detail ?? "Xato";
     throw new ApiError(detail, res.status, detail);
   }
-  if (method === "POST") store.save(getDb());
+  // tg xabarlarini ochish o'qilmaganlarni nolga tushiradi (backend kabi) — saqlanadi
+  if (method === "POST" || /\/tg\/chats\/\d+\/messages/.test(path)) store.save(getDb());
   return JSON.parse(JSON.stringify(res.body)) as T;
 }
 

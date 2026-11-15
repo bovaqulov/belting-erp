@@ -8,18 +8,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirm } from "@/erp/kit/env";
 import { useDialogs } from "@/erp/kit/modal";
 import { Shell, useLoad } from "@/erp/kit/ui";
-import { api, crmMode, demoReset } from "@/erp/crm/api";
+import { api, crmMode, demoReset, post } from "@/erp/crm/api";
 import { CrmCtx, type Crm } from "@/erp/crm/context";
 import { Deal } from "@/erp/crm/deal";
 import { Deals } from "@/erp/crm/deals";
 import { Goals } from "@/erp/crm/goals";
 import { Leads } from "@/erp/crm/leads";
-import { qs, type Me, type Meta, type Sec } from "@/erp/crm/lib";
+import type { Customer, Me, Meta, Sec } from "@/erp/crm/lib";
 import { NewDeal } from "@/erp/crm/new-deal";
 
 import { BootView, CrmLayout } from "./ui";
 
 import { MAIN } from "@/erp/crm/tw";
+import type { TgChat } from "@/erp/crm/telegram/tg.lib";
+import { CustomerPanel, Customers } from "@/erp/crm/customers";
+import { Reports } from "@/erp/crm/reports";
 
 export default function CrmApp() {
   return (
@@ -46,8 +49,14 @@ function Boot() {
   return <BootView err={st.err} net={st.net} onRetry={() => void st.reload()} />;
 }
 
+/** URL holati (tab, deal, customer): berilgan kalitlar yangilanadi (null — o'chiriladi), qolganlari saqlanadi */
 const url = (p: Record<string, string | number | null>) => {
-  const s = qs(p);
+  const u = new URLSearchParams(location.search);
+  for (const [k, v] of Object.entries(p)) {
+    if (v === null || v === "") u.delete(k);
+    else u.set(k, String(v));
+  }
+  const s = u.toString();
   history.replaceState(null, "", s ? `?${s}` : location.pathname);
 };
 
@@ -62,11 +71,22 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
   );
   const [sec, setSec] = useState<Sec>(() => {
     const t = new URLSearchParams(location.search).get("tab") ?? "";
-    return t === "leads" || t === "goals" ? t : "deals";
+    return t === "leads" || t === "goals" || t === "customers" || t === "reports" ? t : "deals";
   });
   const [dealId, setDealId] = useState<number | null>(() => Number(new URLSearchParams(location.search).get("deal")) || null);
-  const [newOpen, setNewOpen] = useState(false);
-  const [created, setCreated] = useState(0);
+  const [customerId, setCustomerId] = useState<number | null>(() => Number(new URLSearchParams(location.search).get("customer")) || null);
+  // yangi bitim oynasi: null — yopiq; tg — Telegram chatidan, customer — mijoz kartochkasidan
+  const [newFor, setNewFor] = useState<{ tg?: TgChat; customer?: Customer } | null>(null);
+  const newOpen = newFor !== null;
+  const newDeal = useCallback((o?: { tg?: TgChat; customer?: Customer }) => setNewFor(o ?? {}), []);
+  const openCustomer = useCallback((id: number) => {
+    setCustomerId(id);
+    url({ customer: id });
+  }, []);
+  const closeCustomer = useCallback(() => {
+    setCustomerId(null);
+    url({ customer: null });
+  }, []);
   const [unassigned, setUnassigned] = useState(0);
   const [tick, setTick] = useState(0);
   const dialogs = useDialogs();
@@ -85,8 +105,8 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
   }, [sec]);
 
   const crm: Crm = useMemo(
-    () => ({ me, meta, ...lookups, choose: dialogs.choose, ask: dialogs.ask, openDeal, refresh }),
-    [me, meta, lookups, dialogs.choose, dialogs.ask, openDeal, refresh],
+    () => ({ me, meta, ...lookups, choose: dialogs.choose, ask: dialogs.ask, openDeal, openCustomer, newDeal, refresh }),
+    [me, meta, lookups, dialogs.choose, dialogs.ask, openDeal, openCustomer, newDeal, refresh],
   );
 
   // ROP: taqsimlanmagan lidlar soni (bo'lim belgisi)
@@ -100,11 +120,13 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
   // Esc — bitim panelini yopish (oyna ochiq bo'lmasa)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dealId && !document.querySelector(".mdl")) closeDeal();
+      if (e.key !== "Escape" || document.querySelector(".mdl")) return;
+      if (dealId) closeDeal();
+      else if (customerId) closeCustomer();
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [dealId, closeDeal]);
+  }, [dealId, closeDeal, customerId, closeCustomer]);
 
   const goSec = (s: Sec) => {
     setSec(s);
@@ -115,10 +137,17 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
     <CrmCtx.Provider value={crm}>
       <CrmLayout
         demo={demo}
+        pipeName={meta.pipelines.length === 1 ? meta.pipelines[0].name : undefined}
         sec={sec}
         unassigned={unassigned}
         onSec={goSec}
-        onNewDeal={() => setNewOpen(true)}
+        onNewDeal={() => newDeal()}
+        me={me}
+        users={meta.users}
+        onDemoAs={async (tg) => {
+          await post("/app/api/erp/crm/demo/as", { tg_id: tg });
+          location.replace(location.pathname);
+        }}
         onDemoReset={async () => {
           if (!(await confirm("Demo ma'lumotlari boshlang'ich holatga qaytarilsinmi? Siz kiritgan o'zgarishlar o'chadi."))) return;
           demoReset();
@@ -129,19 +158,29 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
           <main className={MAIN}>
             <Leads tick={tick} onUnassigned={setUnassigned} />
           </main>
+        ) : sec === "customers" ? (
+          <main className={MAIN}>
+            <Customers tick={tick} />
+          </main>
+        ) : sec === "reports" ? (
+          <main className={MAIN}>
+            <Reports tick={tick} />
+          </main>
         ) : sec === "goals" ? (
           <main className={MAIN}>
             <Goals tick={tick} />
           </main>
         ) : (
-          <Deals tick={tick} paused={!!dealId || newOpen} created={created} />
+          <Deals tick={tick} paused={!!dealId || newOpen} />
         )}
+        {customerId ? <CustomerPanel key={customerId} id={customerId} tick={tick} onClose={closeCustomer} /> : null}
         {dealId ? <Deal key={dealId} id={dealId} onClose={closeDeal} /> : null}
         {newOpen ? (
           <NewDeal
-            onClose={() => setNewOpen(false)}
+            tg={newFor?.tg ?? null}
+            customer={newFor?.customer ?? null}
+            onClose={() => setNewFor(null)}
             onCreated={(id) => {
-              setCreated((c) => c + 1);
               refresh();
               openDeal(id);
             }}

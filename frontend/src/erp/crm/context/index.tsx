@@ -6,7 +6,8 @@ import { toast } from "@/erp/kit/env";
 import type { Opt } from "@/erp/kit/modal";
 
 import { post } from "@/erp/crm/api";
-import type { Me, Meta, Stage } from "@/erp/crm/lib";
+import type { Customer, Me, Meta, Stage } from "@/erp/crm/lib";
+import type { TgChat } from "@/erp/crm/telegram/tg.lib";
 
 export type Crm = {
   me: Me;
@@ -17,6 +18,10 @@ export type Crm = {
   choose: <V>(title: string, opts: Opt<V>[]) => Promise<V | null>;
   ask: (title: string, o?: { label?: string; placeholder?: string; multiline?: boolean; ok?: string }) => Promise<string | null>;
   openDeal: (id: number) => void;
+  /** mijoz kartochkasi */
+  openCustomer: (id: number) => void;
+  /** yangi bitim oynasi; Telegram chatidan ochilsa — mijoz shu chatdan (chat unga biriktiriladi); mijoz kartochkasidan — shu mijoz */
+  newDeal: (o?: { tg?: TgChat; customer?: Customer }) => void;
   /** joriy bo'limni (kanban/ro'yxat/lidlar) qayta yuklash */
   refresh: () => void;
 };
@@ -29,7 +34,8 @@ export function useCrm(): Crm {
   return c;
 }
 
-/** Bosqichga o'tkazish; "muvaffaqiyatsiz" bosqichda — rad etish sababi so'raladi. true — o'tdi. */
+/** Bosqichga o'tkazish; "muvaffaqiyatsiz" bosqichda — rad etish sababi, «Keyinroq» da — qayta bog'lanish sanasi so'raladi.
+ *  true — o'tdi. */
 export async function moveTo(crm: Crm, id: number, stage: string): Promise<boolean> {
   const st = crm.stg[stage];
   if (!st) return false;
@@ -41,8 +47,13 @@ export async function moveTo(crm: Crm, id: number, stage: string): Promise<boole
     );
     if (!reason) return false;
   }
+  let recall: string | null = null;
+  if (stage === "later") {
+    recall = await crm.ask("Qayta bog'lanish sanasi", { label: "Sana (kun.oy.yil)", placeholder: "15.12.2026", ok: "Saqlash" });
+    if (!recall) return false;
+  }
   try {
-    await post(`/app/api/erp/crm/deals/${id}/stage`, { stage, reason });
+    await post(`/app/api/erp/crm/deals/${id}/stage`, { stage, reason, recall });
     toast(`→ ${st.name}`);
     return true;
   } catch (e) {

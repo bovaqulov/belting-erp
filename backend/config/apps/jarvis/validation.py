@@ -12,7 +12,7 @@ from datetime import date
 from typing import Any
 
 from config.apps.core.http import ApiError
-from config.apps.staff.models import User
+from config.apps.staff import services as staff
 
 from .constants import (
     CHANNEL_MODES,
@@ -133,11 +133,11 @@ def clean_agent(data: dict[str, Any], agent: Agent | None) -> dict[str, Any]:
         depts, users = au.get("depts") or [], au.get("users") or []
         if not isinstance(depts, list) or not isinstance(users, list):
             raise _bad("«Kim foydalanadi» noto'g'ri.")
-        known = set(Agent.objects.filter(kind="dept", key__in=depts).values_list("key", flat=True))
+        known = staff.department_keys() & set(depts)
         if set(depts) - known:
             raise _bad(f"Bo'lim topilmadi: {', '.join(sorted(set(depts) - known))}.")
         ids = [int(x) for x in users]
-        found = set(User.objects.filter(tg_id__in=ids).values_list("tg_id", flat=True))
+        found = set(staff.users_by_tg(ids))
         if set(ids) - found:
             raise _bad("«Kim foydalanadi» da noma'lum xodim bor.")
         out["audience_depts"], out["audience_users"] = list(dict.fromkeys(depts)), list(dict.fromkeys(ids))
@@ -167,7 +167,7 @@ def clean_agent(data: dict[str, Any], agent: Agent | None) -> dict[str, Any]:
         out["channels"] = clean
     if present("owner_tg") or kind == "staff":
         tg = data.get("owner_tg", agent.owner.tg_id if agent and agent.owner else None)
-        owner = User.objects.filter(tg_id=int(tg)).first() if tg else None
+        owner = staff.user_by_tg(int(tg)) if tg else None
         if tg and owner is None:
             raise _bad("Biriktiriladigan xodim topilmadi.")
         if kind == "staff" and owner is None:

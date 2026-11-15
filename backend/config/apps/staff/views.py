@@ -1,11 +1,14 @@
-"""Xodimlar (o'qish): /app/api/users — frontend UsersResp shakli; /app/api/heads — taklif havolalari (hozircha bo'sh)."""
+"""Xodimlar: /app/api/users (ro'yxat, tahrir — rol, bo'lim, rahbar, boshliqlik), /app/api/heads (taklif havolalari,
+botga kirmagan boshliqlar), /app/api/invites (yaratish, bekor qilish). Qoidalar — manage.py."""
 
 from django.http import HttpRequest, JsonResponse
 
-from config.apps.core.http import api, ok
-from config.apps.jarvis.models import Agent
+from config.apps.core.http import ApiError, api, json_body, ok
 
-from .models import User
+from . import manage as M
+from .models import Department, Invite, PendingHead, User
+
+ADMIN_ONLY = "Xodimlarni faqat ega va adminlar boshqaradi."
 
 
 @api(("GET",), check=lambda u: u.can_view(), deny="Xodimlar ro'yxati faqat rahbariyat, IT va adminlar uchun.")
@@ -18,7 +21,7 @@ def users(request: HttpRequest, user: User) -> JsonResponse:
             "role": u.role,
             "departments": [d.key for d in u.departments.all()],
             "manager_id": u.manager.tg_id if u.manager else None,
-            "heads": [],
+            "heads": u.heads or [],
             "phone": None,
             "prefs": None,
             "profile": None,
@@ -35,11 +38,46 @@ def users(request: HttpRequest, user: User) -> JsonResponse:
             "sees_all": d.sees_all,
             "parent": d.parent.key if d.parent else None,
         }
-        for d in Agent.objects.filter(kind=Agent.Kind.DEPT).select_related("parent")
+        for d in Department.objects.select_related("parent")
     ]
-    return ok({"users": rows, "pending_heads": [], "perm_names": {}, "pref_opts": None, "depts": depts})
+    pend = [{"id": p.pk, "username": p.username, "dept_group": p.dept_group} for p in PendingHead.objects.all()]
+    return ok({"users": rows, "pending_heads": pend, "perm_names": {}, "pref_opts": None, "depts": depts})
 
 
-@api(("GET",), check=lambda u: u.can_view())
+@api(("POST",), check=lambda u: u.is_panel, deny=ADMIN_ONLY)
+def user_edit(request: HttpRequest, user: User, tg_id: int) -> JsonResponse:
+    target = User.objects.filter(tg_id=tg_id).first()
+    if target is None:
+        raise ApiError(404, "Xodim topilmadi")
+    M.update_user(user, target, json_body(request))
+    return ok()
+
+
+@api(("GET", "POST"), check=lambda u: u.can_view())
 def heads(request: HttpRequest, user: User) -> JsonResponse:
-    return ok({"invites": []})
+    """GET — taklif havolalari (frontend faollarini o'zi ajratadi); POST {dept, username} — boshliq tayinlash."""
+    if request.method == "POST":
+        if not user.is_panel:
+            raise ApiError(403, ADMIN_ONLY)
+        M.add_pending_head(json_body(request))
+        return ok()
+    return ok({"invites": [M.invite_json(i) for i in Invite.objects.select_related("created_by")[:100]]})
+
+
+@api(("DELETE", "POST"), check=lambda u: u.is_panel, deny=ADMIN_ONLY)
+def head_del(request: HttpRequest, user: User, pk: int) -> JsonResponse:
+    if not PendingHead.objects.filter(pk=pk).delete()[0]:
+        raise ApiError(404, "Topilmadi")
+    return ok()
+
+
+@api(("POST",), check=lambda u: u.is_panel, deny=ADMIN_ONLY)
+def invites(request: HttpRequest, user: User) -> JsonResponse:
+    """POST {dept, role, name, max_uses, days} → taklif (link bilan)."""
+    return ok(M.create_invite(user, json_body(request)))
+
+
+@api(("POST",), check=lambda u: u.is_panel, deny=ADMIN_ONLY)
+def invite_revoke(request: HttpRequest, user: User, code: str) -> JsonResponse:
+    M.revoke_invite(code)
+    return ok()

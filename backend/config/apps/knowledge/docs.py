@@ -27,6 +27,12 @@ def relevant(query: str, dept_keys: list[str], limit: int = 3, body_chars: int =
     return [(t, b) for _, t, b in scored[:limit]]
 
 
+def prompt_context(dept_key: str | None, tg_id: int | None, query: str) -> str | None:
+    """jarvis system prompt bo'lagi («kb» vositasi): savolga mos hujjatlar."""
+    docs = relevant(query, [dept_key] if dept_key else []) if query else []
+    return "Bilimlar bazasidan mos hujjatlar:\n\n" + "\n\n".join(f"### {t}\n{b}" for t, b in docs) if docs else None
+
+
 def pdf_text(data: bytes) -> str:
     from pypdf import PdfReader
 

@@ -104,6 +104,16 @@ describe("demo marketplace backend", () => {
     expect(post(db, `${P}/wb/supplies/${id}/add`, { orders: [] }).status).toBe(400);
   });
 
+  it("WB postavka: buyurtmani boshqa postavkaga o'tkazish", () => {
+    const db = fresh();
+    const news = get<Board>(db, `${P}/orders/wb/board?stage=new`).orders.slice(0, 2);
+    const a = (post(db, `${P}/wb/supplies`, { name: "A" }).body as { id: string }).id;
+    const b = (post(db, `${P}/wb/supplies`, { name: "B" }).body as { id: string }).id;
+    post(db, `${P}/wb/supplies/${a}/add`, { orders: news.map((x) => x.ext_id) });
+    post(db, `${P}/wb/supplies/${b}/add`, { orders: [news[0].ext_id] });
+    expect(get<SupplyDetail>(db, `${P}/wb/supplies/${a}`).orders.map((o) => o.ext_id)).toEqual([news[1].ext_id]);
+    expect(get<SupplyDetail>(db, `${P}/wb/supplies/${b}`).orders.map((o) => o.ext_id)).toEqual([news[0].ext_id]);
+  });
   it("audit: ro'yxat va 'Xato emas'", () => {
     const db = fresh();
     const rs = get<{ id: number }[]>(db, `${P}/audit?code=photo_none&ch=wb`);

@@ -1,17 +1,18 @@
-// CRM ildizi (faqat ko'rinish): sarlavha (bo'limlar, "Mobil", "+ Bitim"), demo rejim belgisi, ishga tushish ekrani.
+// CRM ildizi (faqat ko'rinish): sarlavha (bo'limlar, "+ Bitim"), demo rejim belgisi, ishga tushish ekrani.
 import type { ReactNode } from "react";
 
 import { Empty, ErrHint, Icon, Skeleton } from "@/erp/kit/ui";
-import { SECS, type Sec } from "@/erp/crm/lib";
+import { SECS, type Me, type Meta, type Sec } from "@/erp/crm/lib";
+import { FIRM_LOGO } from "@/shared/ui/brand";
 import { HDR, HROW, MAIN, ROOT, SCROLL_X, SP } from "@/erp/crm/tw";
 
 export const Header = ({ children }: { children?: ReactNode }) => (
   <header className={HDR}>
     <div className={HROW}>
       <div className="mr-1.5 flex items-baseline gap-2 text-xl font-bold whitespace-nowrap max-md:mr-0 max-md:text-lg">
-        CRM{" "}
-        <a className="text-[13px] font-normal text-hint max-md:hidden" href="/app/erp">
-          Belting ERP
+        CRM
+        <a href="/app/erp" className="self-center max-md:hidden" title="Belting ERP" aria-label="Belting ERP">
+          <span className={`${FIRM_LOGO} h-4`} />
         </a>
       </div>
       {children}
@@ -44,13 +45,27 @@ export const BootView = ({ err, net, onRetry }: { err: string; net: boolean; onR
 );
 
 /** Demo rejimi belgisi (yopilmaydi): ma'lumot faqat shu brauzerda; "Qayta tiklash" — boshlang'ich ma'lumotlar */
-export const DemoStrip = ({ onReset }: { onReset: () => void }) => (
+export const DemoStrip = ({ onReset, me, users, onAs }: { onReset: () => void; me: Me; users: Meta["users"]; onAs: (tg: number) => void }) => (
   <div
     className="flex min-h-9 flex-none items-center gap-2 border-b border-sep bg-[color-mix(in_srgb,var(--st-work)_14%,var(--sec))] px-5 py-1 text-[13px] text-fg max-md:gap-1.5 max-md:px-3"
     role="status"
   >
     <span className="font-bold whitespace-nowrap text-st-work">Demo rejim</span>
     <span className="min-w-0 flex-1 truncate text-sub max-md:text-xs max-md:leading-tight max-md:whitespace-normal">ma&apos;lumotlar faqat shu brauzerda saqlanadi</span>
+    <select
+      className="sel h-7 max-w-[46vw] flex-none py-0 text-[13px] coarse:h-11"
+      aria-label="Demo: kim sifatida"
+      title="Demo: kim sifatida ishlash"
+      value={me.tg_id}
+      onChange={(e) => onAs(Number(e.target.value))}
+    >
+      {users.map((u) => (
+        <option key={u.tg_id} value={u.tg_id}>
+          {u.name}
+          {u.tg_id === me.tg_id ? (me.is_head ? " · rahbar" : " · sotuvchi") : ""}
+        </option>
+      ))}
+    </select>
     <button type="button" className="b h-7 flex-none px-2.5 text-[13px]" onClick={onReset}>
       <Icon n="refresh" /> Qayta tiklash
     </button>
@@ -60,24 +75,33 @@ export const DemoStrip = ({ onReset }: { onReset: () => void }) => (
 /** Sahifa karkasi: demo belgisi, sarlavha, bo'lim mazmuni; ustida — panel va oynalar */
 export function CrmLayout({
   demo,
+  pipeName,
   sec,
   unassigned,
   onSec,
   onNewDeal,
   onDemoReset,
+  me,
+  users,
+  onDemoAs,
   children,
 }: {
   demo: boolean;
+  /** voronka nomi (sarlavhada) — CRM'da faqat Sales */
+  pipeName?: string;
   sec: Sec;
   unassigned: number;
   onSec: (s: Sec) => void;
   onNewDeal: () => void;
   onDemoReset: () => void;
+  me: Me;
+  users: Meta["users"];
+  onDemoAs: (tg: number) => void;
   children: ReactNode;
 }) {
   return (
     <div className={ROOT}>
-      {demo ? <DemoStrip onReset={onDemoReset} /> : null}
+      {demo ? <DemoStrip onReset={onDemoReset} me={me} users={users} onAs={onDemoAs} /> : null}
       <Header>
         <nav className={`flex min-w-0 gap-1 ${SCROLL_X}`} aria-label="Bo'limlar">
           {SECS.map(([k, t]) => (
@@ -87,10 +111,12 @@ export function CrmLayout({
             </button>
           ))}
         </nav>
+        {pipeName ? (
+          <span className="ml-1 rounded-lg border border-sep px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap text-sub max-md:hidden" title="Voronka">
+            {pipeName}
+          </span>
+        ) : null}
         <span className={SP} />
-        <a className="b max-md:hidden" href="/app/erp/savdo?mobile=1" title="Telefon ko'rinishi">
-          Mobil
-        </a>
         {sec === "deals" ? (
           <button type="button" className="b pri" onClick={onNewDeal}>
             <Icon n="plus" /> Bitim

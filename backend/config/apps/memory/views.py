@@ -3,7 +3,8 @@
 from django.http import HttpRequest, JsonResponse
 
 from config.apps.core.http import ApiError, api, ok
-from config.apps.staff.models import User
+from config.apps.staff import services as staff
+from config.apps.staff.services import User
 
 from .models import Fact
 
@@ -14,7 +15,7 @@ DENY = "Xotirani IT bo'limi, Rahbariyat va adminlar boshqaradi."
 def memory(request: HttpRequest, user: User) -> JsonResponse:
     facts = list(Fact.objects.all()[:1000])
     ids = {int(f.scope_key) for f in facts if f.scope == Fact.Scope.STAFF and f.scope_key.isdigit()}
-    names = dict(User.objects.filter(tg_id__in=ids).values_list("tg_id", "name"))
+    names = staff.user_names(ids)
     return ok(
         {
             "memory": [

@@ -114,6 +114,24 @@ function Marketplace() {
   );
 }
 
+/** HR — xodim kartochkasi (ID badge) va jamoa: avatar, ism qatorlari, yonida xodimlar. */
+function Hr() {
+  return (
+    <svg viewBox={VB} aria-hidden="true">
+      <rect x="22" y="16" width="70" height="76" rx="8" fill="currentColor" opacity=".7" />
+      <rect className={s.paper} x="47" y="10" width="20" height="10" rx="3" />
+      <circle className={s.paper} cx="57" cy="42" r="12" />
+      <path className={s.paper} d="M37 76 a20 16 0 0 1 40 0 Z" />
+      <rect x="34" y="80" width="46" height="5" rx="2.5" fill="currentColor" opacity=".45" />
+      <circle cx="116" cy="34" r="10" fill="currentColor" />
+      <path d="M98 66 a18 15 0 0 1 36 0 Z" fill="currentColor" />
+      <circle cx="132" cy="58" r="8" fill="currentColor" opacity=".45" />
+      <path d="M118 88 a14 12 0 0 1 28 0 Z" fill="currentColor" opacity=".45" />
+      <rect x="100" y="76" width="16" height="4" rx="2" fill="currentColor" opacity=".35" />
+    </svg>
+  );
+}
+
 export const ERP_ART: Record<string, () => React.JSX.Element> = {
   crm: Crm,
   warehouse: Warehouse,
@@ -121,4 +139,5 @@ export const ERP_ART: Record<string, () => React.JSX.Element> = {
   accounting: Accounting,
   logistics: Logistics,
   marketplace: Marketplace,
+  hr: Hr,
 };

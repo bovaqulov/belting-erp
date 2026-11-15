@@ -14,6 +14,9 @@ import { Activity } from "./activity";
 import { Items, openPdf } from "./items";
 import { DealBodyView, DrawerFrame, DrawerLoading } from "./ui";
 
+// yon panel qobig'i — mijoz kartochkasi ham ishlatadi
+export { DrawerFrame, DrawerLoading } from "./ui";
+
 export function Deal({ id, onClose }: { id: number; onClose: () => void }) {
   const crm = useCrm();
   const st = useLoad(() => api<DealDetail>(`/app/api/erp/crm/deals/${id}`), [id]);
@@ -105,6 +108,9 @@ function Body({
       pipe={pipe}
       pipelines={meta.pipelines}
       users={meta.users}
+      divisions={meta.divisions ?? []}
+      stg={crm.stg}
+      isHead={!!crm.me.is_head}
       opn={opn}
       cur={cur}
       isOpen={isOpen}
@@ -125,6 +131,21 @@ function Body({
       onClose={onClose}
       onSave={(f, v) => void save(f, v)}
       onPipe={(p) => void changePipe(p)}
+      onOpenDeal={crm.openDeal}
+      onOpenCustomer={crm.openCustomer}
+      onPayment={async () => {
+        const v = await crm.ask("To'lov summasi (so'm)", { label: "Summa", placeholder: "Masalan: 5 000 000", ok: "Qo'shish" });
+        if (!v) return;
+        const amount = dnum(v);
+        if (!amount) return toast("Summa noto'g'ri", "bad");
+        try {
+          const r = await post<{ stage: string }>(`/app/api/erp/crm/deals/${d.id}/payment`, { amount, via: "bank" });
+          toast(r.stage === "production" && d.stage !== "production" ? "To'lov qo'shildi — buyurtma ishlab chiqarishga berildi" : "To'lov qo'shildi");
+          changed();
+        } catch (e) {
+          toast((e as Error).message, "bad");
+        }
+      }}
       onMove={(code) => void move(code)}
       onFinish={() => void finish()}
       onAmount={setAmount}

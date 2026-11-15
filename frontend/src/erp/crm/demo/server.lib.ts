@@ -3,7 +3,7 @@
 // handle() sof: tarmoq yo'q, vaqt `now` bilan beriladi.
 import { days, itemAmount, type Deal, type DealItem } from "@/erp/crm/lib";
 
-import type { Db, DbAct, DbDeal, DbLead } from "./seed.lib";
+import { HEAD_TG, type Db, type DbAct, type DbCustomer, type DbDeal, type DbLead, type DbTgChat, type DbTgMsg } from "./seed.lib";
 
 export type Res = { status: number; body: unknown };
 type B = Record<string, unknown>;
@@ -64,12 +64,29 @@ export function row(db: Db, d: DbDeal, now: number): Deal {
     prob: d.probability ?? st?.probability ?? null,
     source: d.source,
     lost_reason: d.lost_reason,
+    pipeline: "main",
+    sla_hours: open ? (st?.sla_hours ?? null) : null,
+    sla_late: !!(open && st?.sla_hours && now - new Date(d.stage_since).getTime() > st.sla_hours * 36e5),
+    pay_terms: d.pay_terms ?? "full",
+    paid_sum: String(d.paid_sum ?? 0),
+    sign_status: d.sign_status ?? null,
+    docs_done: !!d.docs_done,
   };
 }
+
+// ------------------------------------------------------------------ ko'rish huquqi
+// Sotuv bo'limi rahbari (is_head) — hamma bitim, mijoz va lidni ko'radi, lidlarni taqsimlaydi.
+// Sotuvchi — faqat o'ziga biriktirilgan bitim/lidlarni va o'z mijozlarini (o'zi mas'ul yoki unda o'z bitimi bor) ko'radi.
+export const seesOwner = (db: Db, owner: number | null | undefined): boolean => db.me.is_head || owner === db.me.tg_id;
+export const seesDeal = (db: Db, d: DbDeal): boolean => seesOwner(db, d.owner_tg);
+export const seesCustomer = (db: Db, c: DbCustomer): boolean =>
+  seesOwner(db, c.owner_tg) || db.deals.some((d) => d.counterparty_id === c.id && d.owner_tg === db.me.tg_id);
+const findDeal = (db: Db, id: number): DbDeal | undefined => db.deals.find((d) => d.id === id && seesDeal(db, d));
 
 // ------------------------------------------------------------------ filtrlar
 type F = URLSearchParams;
 function matches(db: Db, d: DbDeal, r: Deal, q: F, now: number): boolean {
+  if (!seesDeal(db, d)) return false;
   const text = q.get("q")?.trim();
   if (text) {
     const t = text.toLowerCase();
@@ -193,7 +210,6 @@ function detail(db: Db, d: DbDeal, now: number) {
     counterparty_id: d.counterparty_id,
     probability: d.probability,
     need: d.need,
-    bx_id: d.bx_id,
     docs: db.docs.filter((x) => x.deal_id === d.id).map((x) => ({ ...x, total: String(x.total) })),
     items: d.items.map((x) => ({ ...x })),
     activity: db.activity
@@ -211,6 +227,12 @@ export function moveStage(db: Db, d: DbDeal, code: string, reason: string | null
   if (!st) return "Bunday bosqich yo'q";
   if (st.kind === "lost" && !reason) return "Rad etish sababini tanlang";
   if (d.stage === code) return null;
+  // backend sales.check_move bilan bir xil
+  const paid = d.paid_sum ?? 0;
+  const need = d.pay_terms === "half" ? d.amount / 2 : d.amount;
+  if (code === "production" && d.amount && paid < need) return `Oldindan to'lov tushmagan: kerak ${need} so'm, tushgan ${paid}.`;
+  if (code === "shipping" && d.amount && paid < d.amount) return `Qolgan to'lov tushmagan: ${d.amount - paid} so'm. Jo'natishdan oldin to'liq to'lov olinadi.`;
+  if (code === "won" && !d.docs_done) return "Yuk xati va dalolatnoma imzolanmagan — bitim kartochkasida «Hujjatlar imzolandi» ni belgilang.";
   const ts = iso(now);
   db.history.push({ deal_id: d.id, ts, actor: db.me.tg_id, from_stage: d.stage, to_stage: code, src: "web", reason: st.kind === "lost" ? reason : null });
   d.stage = code;
@@ -218,6 +240,9 @@ export function moveStage(db: Db, d: DbDeal, code: string, reason: string | null
   d.updated = ts;
   d.closed = st.kind === "open" ? null : ts;
   d.lost_reason = st.kind === "lost" ? reason : null;
+  if (code === "offer")
+    for (const n of [2, 5])
+      db.activity.push({ id: nextId(db), deal_id: d.id, kind: "task", ts, actor: null, text: `Taklif bo'yicha mijozga qayta yozing (${n}-kun)`, data: null, due: iso(now + n * 864e5), done_at: null, assignee: d.owner_tg });
   return null;
 }
 
@@ -234,7 +259,7 @@ function newDeal(db: Db, b: B, now: number): DbDeal {
     id: nextId(db),
     title: s(b.title).trim() || "Yangi bitim",
     counterparty_id: nOrNull(b.counterparty_id),
-    owner_tg: nOrNull(b.owner_tg) ?? db.me.tg_id,
+    owner_tg: db.me.is_head ? (nOrNull(b.owner_tg) ?? db.me.tg_id) : db.me.tg_id,
     amount: n(b.amount),
     stage: first.code,
     stage_since: ts,
@@ -247,7 +272,6 @@ function newDeal(db: Db, b: B, now: number): DbDeal {
     lost_reason: null,
     probability: null,
     need: s(b.need) || null,
-    bx_id: null,
     items: [],
   };
   db.deals.push(d);
@@ -256,14 +280,19 @@ function newDeal(db: Db, b: B, now: number): DbDeal {
 }
 
 const DEAL_FIELDS = ["title", "amount", "close_date", "probability", "owner_tg", "source", "need"] as const;
-function patchDeal(d: DbDeal, b: B, now: number) {
+function patchDeal(db: Db, d: DbDeal, b: B, now: number) {
+  if (b.pay_terms === "full" || b.pay_terms === "half") d.pay_terms = b.pay_terms;
+  if ("sign_status" in b) d.sign_status = (s(b.sign_status) || null) as DbDeal["sign_status"];
+  if ("docs_done" in b) d.docs_done = !!b.docs_done;
   for (const k of DEAL_FIELDS) {
     if (!(k in b)) continue;
     const v = b[k];
     if (k === "title") d.title = s(v).trim() || d.title;
     else if (k === "amount") d.amount = n(v);
     else if (k === "probability") d.probability = nOrNull(v);
-    else if (k === "owner_tg") d.owner_tg = nOrNull(v);
+    else if (k === "owner_tg") {
+      if (db.me.is_head) d.owner_tg = nOrNull(v);
+    }
     else if (k === "close_date") d.close_date = s(v) || null;
     else if (k === "source") d.source = s(v) || null;
     else d.need = s(v) || null;
@@ -315,14 +344,17 @@ function bulk(db: Db, b: B, now: number): Res {
   const errors: { id: number; error: string }[] = [];
   let done = 0;
   for (const id of ids) {
-    const d = db.deals.find((x) => x.id === id);
+    const d = findDeal(db, id);
     if (!d) {
       errors.push({ id, error: "Bitim topilmadi" });
       continue;
     }
     let e: string | null = null;
     if (action === "stage") e = moveStage(db, d, s(b.value), s(b.reason) || null, now);
-    else if (action === "owner") d.owner_tg = n(b.value);
+    else if (action === "owner") {
+      if (db.me.is_head) d.owner_tg = n(b.value);
+      else e = "Mas'ulni faqat sotuv bo'limi rahbari o'zgartiradi";
+    }
     else if (action === "task") addAct(db, { deal_id: d.id, kind: "task", text: s(b.value), due: s(b.due) || iso(now + 864e5), assignee: d.owner_tg ?? db.me.tg_id }, now);
     else if (action === "tag_add") d.tags = [...new Set([...d.tags, s(b.value).trim()])].filter(Boolean);
     else if (action === "tag_del") d.tags = d.tags.filter((t) => t !== s(b.value).trim());
@@ -340,10 +372,11 @@ function bulk(db: Db, b: B, now: number): Res {
 // ------------------------------------------------------------------ lidlar
 function leads(db: Db, q: F) {
   // Jarvis bilan bir xil: holat berilmasa — faqat ochiq lidlar (new, work)
-  const st = (q.get("status") || "new,work").split(",").filter(Boolean);
-  const owner = q.get("owner") || "";
+  const st = (q.get("status") || "new,work,interested").split(",").filter(Boolean);
+  const owner = db.me.is_head ? q.get("owner") || "" : "";
   const t = lc(q.get("q")).trim();
   return db.leads
+    .filter((l) => seesOwner(db, l.owner_tg))
     .filter((l) => st.includes(l.status) && (!owner || (owner === "none" ? !l.owner_tg : s(l.owner_tg) === owner)))
     .filter((l) => !t || [l.name, l.company, l.phone, l.title, l.note].map(lc).join(" ").includes(t))
     .sort((a, b) => b.created.localeCompare(a.created))
@@ -356,12 +389,18 @@ function newLead(db: Db, b: B, now: number): Res {
   const key = phoneKey(full);
   const note = s(b.note).trim() || null;
   if (key.length === 9) {
-    const dup = db.leads.find((l) => ["new", "work"].includes(l.status) && phoneKey(l.phone) === key);
+    const dup = db.leads.find((l) => ["new", "work", "interested"].includes(l.status) && phoneKey(l.phone) === key);
     if (dup) {
       if (note) dup.note = dup.note ? `${dup.note}\n${note}` : note;
       return ok({ ...dup, duplicate: true });
     }
   }
+  // taqsimlash: sotuvchi o'zi kiritdi — o'zi; rahbar — tanlangan, qoida (mahsulot / hudud) yoki navbat
+  const ruled = () => {
+    const hay = { product: [b.product, b.size, b.note].map(lc).join(" "), region: [b.region, b.company, b.note].map(lc).join(" ") };
+    return (db.routing ?? []).find((r) => r.keywords.split(",").map((w) => w.trim().toLowerCase()).some((w) => w && hay[r.kind].includes(w)))?.seller_tg ?? null;
+  };
+  const owner = db.me.is_head ? (nOrNull(b.owner_tg) ?? ruled()) : db.me.tg_id;
   const l: DbLead = {
     id: nextId(db),
     created: iso(now),
@@ -371,8 +410,8 @@ function newLead(db: Db, b: B, now: number): Res {
     note,
     phone: full,
     source: s(b.source) || "manual",
-    owner_tg: nOrNull(b.owner_tg),
-    status: b.owner_tg ? "work" : "new",
+    owner_tg: owner,
+    status: owner ? "work" : "new",
     deal_id: null,
     first_touch: null,
   };
@@ -381,6 +420,8 @@ function newLead(db: Db, b: B, now: number): Res {
 }
 
 function convertLead(db: Db, l: DbLead, now: number): Res {
+  const miss = [!s(l.product).trim() && "tasma turi", !s(l.company || l.name).trim() && "kompaniya"].filter(Boolean);
+  if (miss.length) return fail(400, `Kvalifikatsiya to'liq emas: ${miss.join(", ")} kiritilmagan.`);
   if (l.status === "converted") return fail(400, "Lid allaqachon bitimga aylangan");
   if (l.status === "junk") return fail(400, "Yaroqsiz lidni bitimga aylantirib bo'lmaydi");
   const key = phoneKey(l.phone);
@@ -427,6 +468,162 @@ function goals(db: Db, month: string, now: number) {
   };
 }
 
+// ------------------------------------------------------------------ Telegram (backend: erp/crm/views.py bilan bir xil)
+// yozishmalar shaxsiy — har kim faqat o'z chatlarini ko'radi (rahbar ham)
+const tgChats = (db: Db) => db.tg_chats.filter((c) => c.seller_tg === db.me.tg_id);
+const tgLast = (db: Db, c: DbTgChat): DbTgMsg | undefined => db.tg_msgs.filter((m) => m.chat === c.id).at(-1);
+const KINDS: Record<string, string> = { photo: "Rasm", document: "Fayl", voice: "Ovozli xabar", video: "Video", sticker: "Stiker" };
+function tgChat(db: Db, c: DbTgChat) {
+  const m = tgLast(db, c);
+  return {
+    id: c.id,
+    title: c.title,
+    username: c.username,
+    seller_tg: c.seller_tg,
+    seller: db.users.find((u) => u.tg_id === c.seller_tg)?.name ?? "",
+    last_at: m?.date ?? null,
+    last_text: m ? (m.text || KINDS[m.kind] || "").slice(0, 300) : "",
+    last_out: !!m?.out,
+    unread: c.unread,
+    can_send: c.seller_tg === db.me.tg_id && c.can_reply,
+    customer: c.customer_id ? (cu => (cu ? { id: cu.id, name: cu.name } : null))(db.customers.find((x) => x.id === c.customer_id)) : null,
+  };
+}
+function tgList(db: Db, q: F) {
+  const t = lc(q.get("q")).trim().replace(/^@/, "");
+  const own = db.tg_chats.filter((c) => c.seller_tg === db.me.tg_id);
+  return {
+    bot: "belting_crm_bot",
+    head: db.me.is_head,
+    connection: own.length ? { enabled: true, can_reply: own.every((c) => c.can_reply) } : null,
+    chats: tgChats(db)
+      .map((c) => tgChat(db, c))
+      .filter((c) => !t || [c.title, c.username, c.seller].map(lc).join(" ").includes(t))
+      .sort((a, b) => (b.last_at ?? "").localeCompare(a.last_at ?? "")),
+  };
+}
+
+// ------------------------------------------------------------------ mijozlar (backend erp/crm/customers.py bilan bir xil)
+const BOUGHT = ["shipping", "won"];
+const dayOf = (s: string) => s.slice(0, 10);
+const addDays = (d: string, n: number) => new Date(new Date(d + "T00:00:00Z").getTime() + n * 864e5).toISOString().slice(0, 10);
+function cycleOf(dates: string[]): number | null {
+  if (!dates.length) return null;
+  const ds = [...dates].sort();
+  const gaps = ds.slice(1).map((d, i) => Math.round((new Date(d).getTime() - new Date(ds[i]).getTime()) / 864e5)).filter((g) => g > 0).sort((a, b) => a - b);
+  if (!gaps.length) return 90;
+  const m = gaps.length % 2 ? gaps[(gaps.length - 1) / 2] : (gaps[gaps.length / 2 - 1] + gaps[gaps.length / 2]) / 2;
+  return Math.max(14, Math.floor(m));
+}
+function custStats(db: Db, c: DbCustomer) {
+  const bought = db.deals.filter((d) => d.counterparty_id === c.id && BOUGHT.includes(d.stage));
+  const dates = bought.map((d) => dayOf(d.closed ?? d.stage_since));
+  const cycle = cycleOf(dates);
+  const last = dates.length ? [...dates].sort().at(-1)! : null;
+  return { bought_n: bought.length, bought_sum: String(bought.reduce((a, d) => a + d.amount, 0)), last_buy: last, cycle, next_buy: last && cycle ? addDays(last, cycle) : null };
+}
+function custTable(db: Db, q: F, now: number) {
+  const t = lc(q.get("q")).trim();
+  const today = iso(now).slice(0, 10);
+  const rows = db.customers
+    .filter((c) => seesCustomer(db, c))
+    .filter((c) => !t || [c.name, c.inn, ...c.phones, ...(c.contacts ?? []).map((x) => x.name)].map(lc).join(" ").includes(t))
+    .map((c) => {
+      const s = custStats(db, c);
+      const open_n = db.deals.filter((d) => d.counterparty_id === c.id && stageOf(db, d.stage)?.kind === "open" && stageOf(db, d.stage)?.pipeline === "main" && !BOUGHT.includes(d.stage)).length;
+      return { id: c.id, name: c.name, inn: c.inn, phones: [...c.phones], owner_tg: c.owner_tg, ...s, overdue: !!(s.next_buy && s.next_buy < today && !open_n), open_n };
+    });
+  const sort = q.get("sort") || "next";
+  if (sort === "name") rows.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sort === "sum") rows.sort((a, b) => n(b.bought_sum) - n(a.bought_sum));
+  else if (sort === "last") rows.sort((a, b) => s(b.last_buy).localeCompare(s(a.last_buy)));
+  else rows.sort((a, b) => (a.next_buy ? (b.next_buy ? a.next_buy.localeCompare(b.next_buy) : -1) : b.next_buy ? 1 : a.name.localeCompare(b.name)));
+  return { rows: rows.slice(0, 100), total: rows.length, overdue: rows.filter((r) => r.overdue).length };
+}
+function custCard(db: Db, c: DbCustomer) {
+  return {
+    id: c.id,
+    name: c.name,
+    inn: c.inn,
+    phones: [...c.phones],
+    owner_tg: c.owner_tg,
+    contacts: (c.contacts ?? []).map((x) => ({ ...x })),
+    note: c.note ?? "",
+    created: null,
+    stats: custStats(db, c),
+    deals: db.deals
+      .filter((d) => d.counterparty_id === c.id && seesDeal(db, d))
+      .sort((a, b) => b.created.localeCompare(a.created))
+      .map((d) => ({ id: d.id, title: d.title, stage: d.stage, pipeline: stageOf(db, d.stage)?.pipeline ?? "main", kind: stageOf(db, d.stage)?.kind ?? "open", amount: String(d.amount), created: d.created, owner_tg: d.owner_tg, repeat: false })),
+    tg: db.tg_chats.filter((x) => x.customer_id === c.id && x.seller_tg === db.me.tg_id).map((x) => ({ id: x.id, title: x.title, username: x.username, unread: x.unread })),
+  };
+}
+
+// ------------------------------------------------------------------ hisobot (backend erp/crm/reports.py bilan bir xil)
+const FUNNEL = ["new", "offer", "contract", "payment", "production", "ready", "shipping", "won"];
+function report(db: Db, q: F, now: number) {
+  const today = iso(now).slice(0, 10);
+  const from = q.get("from") || today.slice(0, 8) + "01";
+  const to = q.get("to") || today;
+  const inP = (x: string | null | undefined) => !!x && x.slice(0, 10) >= from && x.slice(0, 10) <= to;
+  const mine = (o: number | null | undefined) => db.me.is_head || o === db.me.tg_id;
+  const leadsP = db.leads.filter((l) => mine(l.owner_tg) && inP(l.created));
+  const main = db.deals.filter((d) => mine(d.owner_tg) && stageOf(db, d.stage)?.pipeline === "main");
+  const created = main.filter((d) => inP(d.created));
+  const bought = main.filter((d) => BOUGHT.includes(d.stage) && inP(d.closed ?? d.stage_since));
+  const lost = main.filter((d) => stageOf(db, d.stage)?.kind === "lost" && inP(d.closed));
+  const open = main.filter((d) => stageOf(db, d.stage)?.kind === "open" && !BOUGHT.includes(d.stage));
+  const reached = new Map(created.map((d) => [d.id, Math.max(0, FUNNEL.indexOf(d.stage))]));
+  for (const h of db.history) if (reached.has(h.deal_id) && FUNNEL.includes(h.to_stage)) reached.set(h.deal_id, Math.max(reached.get(h.deal_id)!, FUNNEL.indexOf(h.to_stage)));
+  const med = (xs: number[]) => (xs.length ? (([...xs].sort((a, b) => a - b)[Math.floor((xs.length - 1) / 2)] + [...xs].sort((a, b) => a - b)[Math.ceil((xs.length - 1) / 2)]) / 2) : null);
+  const resp = (ls: DbLead[]) => ls.filter((l) => l.first_touch).map((l) => (new Date(l.first_touch!).getTime() - new Date(l.created).getTime()) / 6e4).filter((m) => m >= 0);
+  const sum = (ds: DbDeal[]) => String(ds.reduce((a, d) => a + d.amount, 0));
+  const conv = (ls: DbLead[]) => ls.filter((l) => l.status === "converted").length;
+  const who = db.users.filter((u) => db.me.is_head || u.tg_id === db.me.tg_id);
+  const round = (x: number | null) => (x === null ? null : Math.round(x));
+  const reasons = new Map<string, DbDeal[]>();
+  for (const d of lost) reasons.set(d.lost_reason || "Sababsiz", [...(reasons.get(d.lost_reason || "Sababsiz") ?? []), d]);
+  const sources = new Map<string, DbLead[]>();
+  for (const l of leadsP) sources.set(l.source || "—", [...(sources.get(l.source || "—") ?? []), l]);
+  return {
+    from,
+    to,
+    head: db.me.is_head,
+    kpi: {
+      leads: leadsP.length,
+      unassigned: db.me.is_head ? leadsP.filter((l) => !l.owner_tg).length : 0,
+      response_min: round(med(resp(leadsP))),
+      lead_conv: leadsP.length ? Math.round((conv(leadsP) / leadsP.length) * 100) : null,
+      deals: created.length,
+      won: bought.length,
+      won_sum: sum(bought),
+      lost: lost.length,
+      win_rate: bought.length + lost.length ? Math.round((bought.length / (bought.length + lost.length)) * 100) : null,
+      open_sum: sum(open),
+    },
+    funnel: FUNNEL.map((stage, i) => ({ stage, count: [...reached.values()].filter((r) => r >= i).length })),
+    sellers: who.map((u) => {
+      const ls = leadsP.filter((l) => l.owner_tg === u.tg_id);
+      const won = bought.filter((d) => d.owner_tg === u.tg_id);
+      return {
+        tg_id: u.tg_id,
+        name: u.name,
+        leads: ls.length,
+        response_min: round(med(resp(ls))),
+        lead_conv: ls.length ? Math.round((conv(ls) / ls.length) * 100) : null,
+        deals: created.filter((d) => d.owner_tg === u.tg_id).length,
+        won: won.length,
+        won_sum: sum(won),
+        lost: lost.filter((d) => d.owner_tg === u.tg_id).length,
+        open_sum: sum(open.filter((d) => d.owner_tg === u.tg_id)),
+        overdue_tasks: db.activity.filter((a) => a.kind === "task" && !a.done_at && a.due && new Date(a.due).getTime() < now && a.assignee === u.tg_id).length,
+      };
+    }),
+    reasons: [...reasons].sort((a, b) => b[1].length - a[1].length).map(([reason, ds]) => ({ reason, count: ds.length, sum: sum(ds) })),
+    sources: [...sources].sort((a, b) => b[1].length - a[1].length).map(([source, ls]) => ({ source, leads: ls.length, converted: conv(ls) })),
+  };
+}
+
 // ------------------------------------------------------------------ marshrutlar
 export function handle(db: Db, method: "GET" | "POST", path: string, body: unknown, now: number): Res {
   const u = new URL(path, "http://demo.local");
@@ -441,11 +638,11 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     if (p === "/app/api/erp/me") return ok({ ...db.me });
     if (p === `${C}/meta`) return ok({ pipelines: db.pipelines, stages: db.stages, users: db.users, lost_reasons: db.lost_reasons });
     if (p === `${C}/views`) return ok(db.views.filter((v) => v.owner_tg === null || v.owner_tg === db.me.tg_id));
-    if (p === `${C}/tags`) return ok([...new Set(db.deals.flatMap((d) => d.tags))].sort());
+    if (p === `${C}/tags`) return ok([...new Set(db.deals.filter((d) => seesDeal(db, d)).flatMap((d) => d.tags))].sort());
     if (p === `${C}/board`) return ok(board(db, q, now));
     if (p === `${C}/deals`) return ok(list(db, q, now));
     if ((x = m(/^\/app\/api\/erp\/crm\/deals\/(\d+)$/))) {
-      const d = db.deals.find((y) => y.id === Number(x![1]));
+      const d = findDeal(db, Number(x[1]));
       return d ? ok(detail(db, d, now)) : fail(404, "Bitim topilmadi");
     }
     if (m(/^\/app\/api\/erp\/crm\/docs\/\d+\/pdf$/)) return fail(501, "PDF demo rejimda mavjud emas");
@@ -458,17 +655,39 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
       const dg = digits(t);
       return ok(
         db.customers
+          .filter((c) => seesCustomer(db, c))
           .filter((c) => t && (lc(c.name).includes(t) || s(c.inn).includes(t) || (dg.length >= 4 && c.phones.some((ph) => ph.includes(dg)))))
           .slice(0, 20)
           .map((c) => ({ ...c, phones: [...c.phones] })),
       );
     }
     if (p === `${C}/leads`) return ok(leads(db, q));
+    if (p === `${C}/customers/table`) return ok(custTable(db, q, now));
+    if (p === `${C}/reports`) return ok(report(db, q, now));
+    if (p === `${C}/routing`) return ok({ rules: (db.routing ?? []).map((r) => ({ ...r })) });
+    if ((x = m(/^\/app\/api\/erp\/crm\/customers\/(\d+)$/))) {
+      const c = db.customers.find((y) => y.id === Number(x![1]) && seesCustomer(db, y));
+      return c ? ok(custCard(db, c)) : fail(404, "Mijoz topilmadi");
+    }
     if (p === `${C}/goals`) return ok(goals(db, q.get("month") || "", now));
+    if (p === `${C}/tg/chats`) return ok(tgList(db, q));
+    if ((x = m(/^\/app\/api\/erp\/crm\/tg\/chats\/(\d+)\/messages$/))) {
+      const c = tgChats(db).find((y) => y.id === Number(x![1]));
+      if (!c) return fail(404, "Chat topilmadi");
+      if (c.seller_tg === db.me.tg_id) c.unread = 0; // demo: GET ham holatni o'zgartiradi (backend kabi)
+      return ok({ chat: tgChat(db, c), messages: db.tg_msgs.filter((y) => y.chat === c.id).slice(-50), more: false });
+    }
     return fail(404, "Not Found");
   }
 
   // POST
+  // demo: kim sifatida ishlash (rahbar yoki sotuvchi) — huquqlarni sinash uchun; rahbar — seed'dagi HEAD_TG
+  if (p === `${C}/demo/as`) {
+    const u = db.users.find((y) => y.tg_id === n(b.tg_id));
+    if (!u) return fail(404, "Foydalanuvchi topilmadi");
+    db.me = { tg_id: u.tg_id, name: u.name, is_head: u.tg_id === HEAD_TG };
+    return ok({ ...db.me });
+  }
   if (p === `${C}/views`) {
     const name = s(b.name).trim();
     if (!name) return fail(400, "Nomini yozing");
@@ -487,29 +706,69 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
   if (p === `${C}/deals/bulk`) return bulk(db, b, now);
   if (p === `${C}/deals`) {
     if (!b.counterparty_id) return fail(400, "Mijozni tanlang");
+    const c = db.customers.find((y) => y.id === n(b.counterparty_id));
+    if (!c || !seesCustomer(db, c)) return fail(404, "Mijoz topilmadi");
+    const tgc = b.tg_chat_id ? tgChats(db).find((y) => y.id === n(b.tg_chat_id)) : null;
+    if (b.tg_chat_id && !tgc) return fail(404, "Chat topilmadi");
+    if (tgc) tgc.customer_id = c.id;
     return ok(detail(db, newDeal(db, b, now), now));
   }
-  if ((x = m(/^\/app\/api\/erp\/crm\/deals\/(\d+)(?:\/(stage|items|doc))?$/))) {
-    const d = db.deals.find((y) => y.id === Number(x![1]));
+  if ((x = m(/^\/app\/api\/erp\/crm\/deals\/(\d+)\/payment$/))) {
+    const d = findDeal(db, Number(x[1]));
     if (!d) return fail(404, "Bitim topilmadi");
+    const amount = n(b.amount);
+    if (amount <= 0) return fail(400, "To'lov summasi musbat bo'lsin.");
+    d.paid_sum = (d.paid_sum ?? 0) + amount;
+    addAct(db, { deal_id: d.id, kind: "payment", text: `To'lov: ${amount} so'm (${s(b.via) || "bank"})`, due: null, assignee: null }, now);
+    const need = d.pay_terms === "half" ? d.amount / 2 : d.amount;
+    if (["new", "offer", "later", "contract", "payment"].includes(d.stage) && d.paid_sum >= need) moveStage(db, d, "production", null, now);
+    return ok(detail(db, d, now));
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/deals\/(\d+)(?:\/(stage|items|doc))?$/))) {
+    const d = findDeal(db, Number(x[1]));
+    if (!d) return fail(404, "Bitim topilmadi");
+    if (x[2] === "stage" && s(b.stage) === "later") {
+      // «Keyinroq» — qayta bog'lanish sanasi majburiy (kun.oy.yil yoki yil-oy-kun)
+      const m2 = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s(b.recall).trim());
+      const day = m2 ? `${m2[3]}-${m2[2].padStart(2, "0")}-${m2[1].padStart(2, "0")}` : /^\d{4}-\d{2}-\d{2}/.test(s(b.recall)) ? s(b.recall).slice(0, 10) : "";
+      if (!day) return fail(400, "Qayta bog'lanish sanasini kiriting (masalan, 15.12.2026).");
+      if (day < iso(now).slice(0, 10)) return fail(400, "Qayta bog'lanish sanasi o'tib ketgan — bugun yoki keyingi kunni tanlang.");
+      const e = moveStage(db, d, "later", null, now);
+      if (e) return fail(400, e);
+      addAct(db, { deal_id: d.id, kind: "task", text: "Mijoz bilan qayta bog'lanish (keyinroq degan)", due: `${day}T05:00:00.000Z`, assignee: d.owner_tg }, now);
+      return ok(detail(db, d, now));
+    }
     if (x[2] === "stage") {
       const e = moveStage(db, d, s(b.stage), s(b.reason) || null, now);
       return e ? fail(400, e) : ok(detail(db, d, now));
     }
     if (x[2] === "items") return ok(saveItems(d, b, now));
     if (x[2] === "doc") return makeDoc(db, d, s(b.kind), now);
-    patchDeal(d, b, now);
+    if ("owner_tg" in b && !db.me.is_head && nOrNull(b.owner_tg) !== d.owner_tg) return fail(403, "Mas'ulni faqat sotuv bo'limi rahbari o'zgartiradi");
+    patchDeal(db, d, b, now);
     return ok(detail(db, d, now));
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/customers\/(\d+)$/))) {
+    const c = db.customers.find((y) => y.id === Number(x![1]) && seesCustomer(db, y));
+    if (!c) return fail(404, "Mijoz topilmadi");
+    if ("owner_tg" in b && nOrNull(b.owner_tg) !== c.owner_tg && !db.me.is_head) return fail(403, "Mijoz mas'ulini faqat sotuv bo'limi rahbari o'zgartiradi");
+    if ("name" in b && s(b.name).trim()) c.name = s(b.name).trim();
+    if ("inn" in b) c.inn = digits(b.inn) || null;
+    if (Array.isArray(b.phones)) c.phones = (b.phones as unknown[]).map(digits).filter(Boolean).map((p) => (p.length === 9 ? "998" + p : p));
+    if (Array.isArray(b.contacts)) c.contacts = (b.contacts as B[]).map((y) => ({ name: s(y.name).trim(), role: s(y.role).trim(), phone: ((p) => (p.length === 9 ? "998" + p : p))(digits(y.phone)) })).filter((y) => y.name || y.phone);
+    if ("note" in b) c.note = s(b.note);
+    if ("owner_tg" in b) c.owner_tg = nOrNull(b.owner_tg);
+    return ok(custCard(db, c));
   }
   if (p === `${C}/customers`) {
     const name = s(b.name).trim();
     if (!name) return fail(400, "Mijoz nomini yozing");
-    const c = { id: nextId(db), name, inn: null, phones: Array.isArray(b.phones) ? (b.phones as unknown[]).map(s) : [], owner_tg: nOrNull(b.owner_tg) ?? db.me.tg_id };
+    const c = { id: nextId(db), name, inn: null, phones: Array.isArray(b.phones) ? (b.phones as unknown[]).map(s) : [], owner_tg: db.me.is_head ? (nOrNull(b.owner_tg) ?? db.me.tg_id) : db.me.tg_id };
     db.customers.push(c);
     return ok(c);
   }
   if (p === `${C}/activity`) {
-    const d = db.deals.find((y) => y.id === n(b.deal_id));
+    const d = findDeal(db, n(b.deal_id));
     if (!d) return fail(404, "Bitim topilmadi");
     const kind = s(b.kind) || "comment";
     if (!s(b.text).trim()) return fail(400, "Matn bo'sh");
@@ -518,7 +777,7 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     return ok(a);
   }
   if ((x = m(/^\/app\/api\/erp\/crm\/tasks\/(\d+)\/done$/))) {
-    const a = db.activity.find((y) => y.id === Number(x![1]) && y.kind === "task");
+    const a = db.activity.find((y) => y.id === Number(x![1]) && y.kind === "task" && (y.assignee === db.me.tg_id || !!findDeal(db, y.deal_id)));
     if (!a) return fail(404, "Vazifa topilmadi");
     a.done_at = a.done_at ?? iso(now);
     const res = s(b.result).trim();
@@ -526,12 +785,44 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     return ok(a);
   }
   if (p === `${C}/leads`) return newLead(db, b, now);
-  if ((x = m(/^\/app\/api\/erp\/crm\/leads\/(\d+)\/(assign|convert|junk)$/))) {
-    const l = db.leads.find((y) => y.id === Number(x![1]));
+  if ((x = m(/^\/app\/api\/erp\/crm\/leads\/(\d+)\/(assign|convert|junk|status|edit|noanswer)$/))) {
+    const l = db.leads.find((y) => y.id === Number(x![1]) && seesOwner(db, y.owner_tg));
     if (!l) return fail(404, "Lid topilmadi");
     if (x[2] === "assign") {
+      if (!db.me.is_head) return fail(403, "Lidlarni faqat sotuv bo'limi rahbari taqsimlaydi");
       l.owner_tg = n(b.owner_tg) || null;
       if (l.status === "new" && l.owner_tg) l.status = "work";
+      return ok({ ...l });
+    }
+    if (x[2] === "edit") {
+      for (const k of ["name", "company", "product", "size", "qty", "note", "source"] as const) if (k in b) (l as Record<string, unknown>)[k] = s(b[k]).trim() || null;
+      if ("inn" in b) {
+        const inn = digits(b.inn);
+        if (inn && ![9, 14].includes(inn.length)) return fail(400, "STIR 9 xonali (yuridik) yoki JSHSHIR 14 xonali bo'lsin.");
+        l.inn = inn || null;
+      }
+      return ok({ ...l });
+    }
+    if (x[2] === "noanswer") {
+      const days = [1, 3, 7];
+      l.no_answer = (l.no_answer ?? 0) + 1;
+      l.first_touch = l.first_touch ?? iso(now);
+      if (l.no_answer > days.length) {
+        l.status = "junk";
+        l.junk_reason = "Javob bermadi (3 marta qayta qo'ng'iroq)";
+        l.next_call_at = null;
+      } else {
+        l.next_call_at = iso(now + days[l.no_answer - 1] * 864e5);
+        if (l.status === "new") l.status = "work";
+      }
+      return ok({ ...l });
+    }
+    if (x[2] === "status") {
+      const ns = s(b.status);
+      if (!["new", "work", "interested"].includes(ns)) return fail(400, "Bosqich noto'g'ri: yangi, ishda yoki qiziqish bildirdi.");
+      if (!["new", "work", "interested"].includes(l.status)) return fail(400, "Yopilgan lidni qayta ochib bo'lmaydi.");
+      l.status = ns;
+      if (ns !== "new") l.first_touch = l.first_touch ?? iso(now);
       return ok({ ...l });
     }
     if (x[2] === "junk") {
@@ -540,6 +831,44 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
       return ok({ ...l });
     }
     return convertLead(db, l, now);
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/tg\/chats\/(\d+)\/send-file$/))) {
+    // demo: fayl Telegram'ga bormaydi — xabar turi va nomi saqlanadi (ko'rsatish uchun fayl yo'q)
+    const c = tgChats(db).find((y) => y.id === Number(x![1]));
+    if (!c) return fail(404, "Chat topilmadi");
+    if (!c.can_reply) return fail(403, "Bot javob yoza olmaydi: Telegram Business'da «Xabarlarga javob berish» ni yoqing.");
+    const f = (b.file ?? null) as { name?: string; type?: string; size?: number } | null;
+    if (!f) return fail(400, "Faylni tanlang.");
+    const t = s(f.type);
+    const kind = t.startsWith("image/") ? "photo" : t === "video/mp4" ? "video" : t.startsWith("audio/") ? "audio" : "document";
+    const msg: DbTgMsg = { id: nextId(db), chat: c.id, out: true, kind, text: s(b.caption).trim(), date: iso(now), edited: false, deleted: false, via_crm: true, media: { name: s(f.name), mime: t, size: n(f.size) } };
+    db.tg_msgs.push(msg);
+    c.unread = 0;
+    return ok(msg);
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/tg\/chats\/(\d+)\/send$/))) {
+    const c = tgChats(db).find((y) => y.id === Number(x![1]));
+    if (!c) return fail(404, "Chat topilmadi");
+    if (c.seller_tg !== db.me.tg_id) return fail(403, "Javobni faqat chat egasi — sotuvchining o'zi yozadi.");
+    if (!c.can_reply) return fail(403, "Bot javob yoza olmaydi: Telegram → Sozlamalar → Telegram Business → Chat-botlar → «Xabarlarga javob berish» ni yoqing.");
+    const text = s(b.text).trim();
+    const loc = b.latitude !== undefined ? { lat: n(b.latitude), lon: n(b.longitude) } : null;
+    if (!text && !loc) return fail(400, "Xabar bo'sh.");
+    const rm = b.reply_to ? db.tg_msgs.find((y) => y.chat === c.id && y.id === n(b.reply_to)) : null;
+    if (b.reply_to && !rm) return fail(400, "Javob beriladigan xabar topilmadi.");
+    const reply = rm ? { text: (rm.text || KINDS[rm.kind] || "").slice(0, 200), kind: rm.kind, out: rm.out, ref: rm.id } : null;
+    const msg: DbTgMsg = { id: nextId(db), chat: c.id, out: true, kind: loc ? "location" : "text", text, date: iso(now), edited: false, deleted: false, via_crm: true, media: loc, reply };
+    db.tg_msgs.push(msg);
+    c.unread = 0;
+    return ok(msg);
+  }
+  if (p === `${C}/routing`) {
+    if (!db.me.is_head) return fail(403, "Taqsimlash qoidalarini sotuv bo'limi rahbari belgilaydi");
+    const rows = Array.isArray(b.rules) ? (b.rules as B[]) : [];
+    const bad = rows.findIndex((r) => !["product", "region"].includes(s(r.kind)) || !s(r.keywords).trim() || !n(r.seller_tg));
+    if (bad >= 0) return fail(400, `${bad + 1}-qoida to'liq emas: turi, kalit so'zlar va sotuvchi kerak.`);
+    db.routing = rows.map((r) => ({ kind: s(r.kind) as "product" | "region", keywords: s(r.keywords).trim(), seller_tg: n(r.seller_tg) }));
+    return ok({ rules: db.routing });
   }
   if (p === `${C}/goals`) {
     const tg = n(b.owner_tg);

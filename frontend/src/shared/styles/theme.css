@@ -38,6 +38,20 @@
 
   --animate-sk: sk 1.2s infinite;
   --animate-spin-slow: spin 0.8s linear infinite;
+  --animate-typing: typing 1.2s ease-in-out infinite;
+  /* "yozmoqda" nuqtalari: to'lqin bo'lib sakraydi va yorishadi */
+  @keyframes typing {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.35;
+    }
+    30% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
   @keyframes blink {
     0%,
     80%,

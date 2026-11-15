@@ -4,6 +4,7 @@ import { Component, useEffect, useState, type ReactNode } from "react";
 
 import s from "@/shared/ui/panel/styles";
 import { Icon } from "@/shared/ui/panel/ui";
+import { FIRM_LOGO } from "@/shared/ui/brand";
 
 import type { Me, ToastKind } from "./AdminContext";
 
@@ -62,7 +63,7 @@ export function ShellView({
   onLogout,
   onCloseSheet,
 }: {
-  area: { title: string; icon: string };
+  area: { title: string; icon: string; home?: string };
   me: Me | null;
   mode: Mode;
   readonly: boolean;
@@ -92,11 +93,11 @@ export function ShellView({
             </div>
             <div className={s.ttl}>
               <h1>{A.title}</h1>
-              <p>{me ? `${me.company} · ${me.user.name}` : "…"}</p>
+              <span className={`${FIRM_LOGO} mt-1`} role="img" aria-label={me?.company || "Belting rezina"} title={me?.user.name} />
             </div>
             <div className={s.sp} />
             {/* bo'lim tanlash ekrani (/app) */}
-            <a className={s["icon-btn"]} href="/app" title="Bo'limlar" aria-label="Bo'limlar">
+            <a className={s["icon-btn"]} href={A.home ?? "/app"} title="Bo'limlar" aria-label="Bo'limlar">
               <Icon name="layout-grid" />
             </a>
             <button key={spin} className={cx(s["icon-btn"], spin > 0 && s.spin)} title="Yangilash" aria-label="Yangilash" onClick={onRefresh}>

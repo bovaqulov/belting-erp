@@ -2,7 +2,7 @@
 // Printer sozlamasida qog'oz 58×40 va masshtab 100% bo'lsin. Matn faqat esc() orqali — HTML in'ektsiya yo'q.
 import { toast } from "@/erp/kit/env";
 import { num } from "@/erp/kit/fmt";
-import type { PickRow } from "@/erp/marketplace/lib";
+import { splitVat, VAT, type PickRow } from "@/erp/marketplace/lib";
 
 export const esc = (v: unknown): string =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -28,24 +28,29 @@ export function printWin(title: string, body: string, label = false): void {
 
 /** Tanlanma ro'yxati: omborda bir yurishda olish uchun — tovar bo'yicha, belgilash ustuni bilan */
 export function pickingHtml(name: string, n: number, rows: PickRow[]): string {
-  const price = (p: PickRow) => {
+  /** dona narxi (bir nechta buyurtmada farq qilsa — oraliq); net — QQSsiz */
+  const price = (p: PickRow, net = false) => {
     if (!p.prices.length) return "—";
-    const lo = Math.min(...p.prices),
-      hi = Math.max(...p.prices);
+    const f = (x: number) => (net ? splitVat(x).net : x);
+    const lo = f(Math.min(...p.prices)),
+      hi = f(Math.max(...p.prices));
     return Math.round(lo) === Math.round(hi) ? num(lo, 0) : `${num(lo, 0)}–${num(hi, 0)}`;
   };
   const tr = rows
     .map(
       (p, i) =>
         `<tr><td>${i + 1}</td><td>${esc(p.title)}${p.mode === "sleeve" ? " <b>(rukavdan kesiladi)</b>" : ""}</td><td>${esc(p.vendor_code)}</td>` +
-        `<td>${p.width_mm ? `${num(p.width_mm)} mm` : ""}</td><td><b>${p.qty}</b></td><td class="n">${price(p)}</td>` +
+        `<td>${p.width_mm ? `${num(p.width_mm)} mm` : ""}</td><td><b>${p.qty}</b></td><td class="n">${price(p)}</td><td class="n">${price(p, true)}</td>` +
         `<td class="n"><b>${p.sum ? num(p.sum, 0) : "—"}</b></td><td style="font-size:10px">${p.orders.map(esc).join(", ")}</td><td></td></tr>`,
     )
     .join("");
   const qty = rows.reduce((a, p) => a + p.qty, 0);
   const sum = rows.reduce((a, p) => a + p.sum, 0);
+  const vat = splitVat(sum);
   return `<h2>Tanlanma ro'yxati · ${esc(name)} · ${n} buyurtma</h2>
-    <table><tr><th>#</th><th>Tovar</th><th>Artikul</th><th>Kenglik</th><th>Soni</th><th>Narx, so'm</th><th>Jami, so'm</th><th>Buyurtmalar</th><th>✓</th></tr>
-    ${tr}<tr><td></td><td colspan="3"><b>Jami</b></td><td><b>${qty}</b></td><td></td><td class="n"><b>${num(sum, 0)}</b></td><td colspan="2"></td></tr></table>
-    <p style="font-size:11px;color:#666">Narx — xaridor to'lagan narx (kanal so'mga o'girgan, chegirmalardan keyin).</p>`;
+    <table><tr><th>#</th><th>Tovar</th><th>Artikul</th><th>Kenglik</th><th>Soni</th><th>Narx, so'm</th><th>QQSsiz narx, so'm</th><th>Jami, so'm</th><th>Buyurtmalar</th><th>✓</th></tr>
+    ${tr}<tr><td></td><td colspan="3"><b>Jami (QQS bilan)</b></td><td><b>${qty}</b></td><td colspan="2"></td><td class="n"><b>${num(sum, 0)}</b></td><td colspan="2"></td></tr>
+    <tr><td></td><td colspan="6">shu jumladan QQS ${VAT * 100}%</td><td class="n">${num(vat.vat, 0)}</td><td colspan="2"></td></tr>
+    <tr><td></td><td colspan="6"><b>QQSsiz jami</b></td><td class="n"><b>${num(vat.net, 0)}</b></td><td colspan="2"></td></tr></table>
+    <p style="font-size:11px;color:#666">Narx — xaridor to'lagan narx (kanal so'mga o'girgan, chegirmalardan keyin), QQS bilan. QQSsiz = jami ÷ ${num(1 + VAT, 2)}.</p>`;
 }

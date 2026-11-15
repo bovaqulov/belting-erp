@@ -13,7 +13,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 
 from config.apps.core import llm
-from config.apps.memory.models import Fact
+from config.apps.memory.services import active_fact_texts
 
 from .models import Doc, GraphEdge, GraphMeta, GraphNode, GraphSource
 
@@ -41,7 +41,7 @@ def _sources() -> list[tuple[str, str, str, str]]:
         (f"doc:{d.pk}", d.dept, d.title, f"{d.title}\n{d.path}\n\n{d.body[:8000]}")
         for d in Doc.objects.filter(status=Doc.Status.ACTIVE)
     ]
-    facts = list(Fact.objects.filter(status=Fact.Status.ACTIVE).order_by("pk").values_list("text", flat=True))
+    facts = active_fact_texts()
     for i in range(0, len(facts), FACTS_PER_SOURCE):
         part = facts[i : i + FACTS_PER_SOURCE]
         out.append((f"facts:{i // FACTS_PER_SOURCE}", MEMORY, "Xotira", "\n".join(f"- {x}" for x in part)))

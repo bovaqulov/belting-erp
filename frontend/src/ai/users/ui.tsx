@@ -50,6 +50,9 @@ export function UsersView({
   onOpen,
   onAgent,
   onHeadForm,
+  onInvite,
+  onCopyInvite,
+  canAdmin,
   onApprove,
   onReject,
   onRevoke,
@@ -66,6 +69,11 @@ export function UsersView({
   onOpen: (id: number) => void;
   onAgent: (ag: Agent) => void;
   onHeadForm: () => void;
+  /** xodim taklif qilish oynasi */
+  onInvite: () => void;
+  onCopyInvite: (link: string) => void;
+  /** ega/admin — taklif va boshliq tayinlash tugmalari */
+  canAdmin: boolean;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
   onRevoke: (code: string) => void;
@@ -274,9 +282,16 @@ export function UsersView({
             <Icon name="list" /> Ro&apos;yxat
           </button>
         </div>
-        <button className={s.fab} title="Boshliq tayinlash" aria-label="Boshliq tayinlash" onClick={onHeadForm}>
-          <Icon name="plus" />
-        </button>
+        {canAdmin && (
+          <>
+            <button className={s.fab} title="Xodim taklif qilish" aria-label="Xodim taklif qilish" onClick={onInvite}>
+              <Icon name="user-plus" />
+            </button>
+            <button className={s.fab} title="Boshliq tayinlash" aria-label="Boshliq tayinlash" onClick={onHeadForm}>
+              <Icon name="crown" />
+            </button>
+          </>
+        )}
       </div>
 
       {pending.length > 0 && (
@@ -350,6 +365,11 @@ export function UsersView({
                       {i.expires.slice(0, 10)} gacha
                     </div>
                   </div>
+                  {i.link && (
+                    <button className={s.lnk} disabled={busy} onClick={() => onCopyInvite(i.link!)}>
+                      Nusxa
+                    </button>
+                  )}
                   <button className={cx(s.lnk, s.danger, s.irev)} disabled={busy} onClick={() => onRevoke(i.code)}>
                     Bekor
                   </button>

@@ -72,6 +72,9 @@ export interface Invite {
   max_uses: number;
   expires: string;
   revoked?: boolean | number | null;
+  /** t.me/<bot>?start=inv_<kod> */
+  link?: string;
+  role?: string;
 }
 
 export interface PrefOpts {

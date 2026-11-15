@@ -32,7 +32,7 @@ describe("erp fmt", () => {
     expect(ago(null)).toBe("");
   });
   it("iso: mahalliy sana", () => expect(iso(new Date(2026, 10, 5, 23, 30))).toBe("2026-11-05"));
-  it("dtitle: Bitrix ruscha qoliplari", () => {
+  it("dtitle: ruscha qoliplar", () => {
     expect(dtitle("Сделка #123")).toBe("Bitim #123");
     expect(dtitle("Входящий звонок от X")).toBe("Kiruvchi qo'ng'iroq от X");
     expect(dtitle(null)).toBe("");

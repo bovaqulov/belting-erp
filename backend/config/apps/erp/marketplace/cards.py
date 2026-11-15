@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from . import channels as C
 from .channels import ChannelError
-from .models import Card, Issue
+from .models import ACTIVE, Card, Issue, Order
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def _fetch_wb() -> list[dict]:
                     "title": c.get("title") or "",
                     "codes": [str(s) for z in sizes for s in z.get("skus") or []],
                     "photos": len(c.get("photos") or []),
-                    "ext": {"chrtId": sizes[0].get("chrtID"), "imtID": c.get("imtID")},
+                    "ext": {"chrtId": sizes[0].get("chrtID"), "imtID": c.get("imtID"), "photo": _wb_photo(c)},
                 }
             )
         cursor = j.get("cursor") or {}
@@ -78,15 +78,21 @@ def _fetch_ozon() -> list[dict]:
     for i in range(0, len(ids), 500):
         j = C.ozon("/v3/product/info/list", {"product_id": ids[i : i + 500]})
         for p in j.get("items") or (j.get("result") or {}).get("items") or []:
-            imgs = p.get("images") or []
+            prim = p.get("primary_image") or []
+            prim = prim if isinstance(prim, list) else [prim]
+            imgs = [x for x in [*prim, *(p.get("images") or [])] if x]
             rows.append(
                 {
                     "ext_id": str(p["id"]),
                     "vendor_code": p.get("offer_id") or "",
                     "title": p.get("name") or "",
                     "codes": [str(b) for b in p.get("barcodes") or [] if b],
-                    "photos": len(imgs) + (1 if p.get("primary_image") and p.get("primary_image") not in imgs else 0),
-                    "ext": {"offer_id": p.get("offer_id"), "sku": ((p.get("sources") or [{}])[0]).get("sku")},
+                    "photos": len(dict.fromkeys(imgs)),
+                    "ext": {
+                        "offer_id": p.get("offer_id"),
+                        "sku": ((p.get("sources") or [{}])[0]).get("sku"),
+                        "photo": imgs[0] if imgs else None,
+                    },
                     "active": not p.get("is_archived"),
                 }
             )
@@ -109,7 +115,11 @@ def _fetch_uzum() -> list[dict]:
                     "title": f"{pr.get('title') or ''} {s.get('skuTitle') or ''}".strip(),
                     "codes": [str(s["barcode"])] if s.get("barcode") else [],
                     "photos": None,
-                    "ext": {"productId": pr.get("productId"), "shopId": shop},
+                    "ext": {
+                        "productId": pr.get("productId"),
+                        "shopId": shop,
+                        "photo": pr.get("previewImg") or pr.get("image"),
+                    },
                 }
                 for pr in prods
                 for s in pr.get("skuList") or []
@@ -117,6 +127,12 @@ def _fetch_uzum() -> list[dict]:
             if len(prods) < 100:
                 break
     return rows
+
+
+def _wb_photo(c: dict) -> str | None:
+    """Kichik kvadrat rasm (ro'yxat uchun)."""
+    ph = (c.get("photos") or [{}])[0]
+    return ph.get("square") or ph.get("tm") or ph.get("c246x328") or ph.get("big")
 
 
 FETCH = {"wb": _fetch_wb, "ozon": _fetch_ozon, "uzum": _fetch_uzum}
@@ -137,6 +153,8 @@ def refresh_cards(ch: str) -> int:
             c.ext = {**(c.ext or {}), **r["ext"]}
             c.active = r.get("active", True)
             c.save()
+        # faol buyurtmalar qatorlari (nom, shtrixkod, rasm) yangi kartochkadan qayta hisoblansin
+        Order.objects.filter(channel=ch, stage__in=ACTIVE).update(lines=None)
     return len(rows)
 
 

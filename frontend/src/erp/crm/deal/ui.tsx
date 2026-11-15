@@ -63,6 +63,9 @@ export function DealBodyView({
   pipe,
   pipelines,
   users,
+  divisions,
+  stg,
+  isHead,
   opn,
   cur,
   isOpen,
@@ -79,12 +82,20 @@ export function DealBodyView({
   onAmount,
   onAmountBlur,
   onPdf,
+  onOpenDeal,
+  onOpenCustomer,
+  onPayment,
 }: {
   d: DealDetail;
   st: Stage | undefined;
   pipe: string;
   pipelines: Meta["pipelines"];
   users: Meta["users"];
+  divisions: { code: string; name: string }[];
+  /** bosqich nomlari (bog'langan bitimlar uchun) */
+  stg: Record<string, Stage>;
+  /** sotuv bo'limi rahbari — mas'ulni o'zgartira oladi */
+  isHead: boolean;
   /** joriy voronkaning ochiq bosqichlari */
   opn: Stage[];
   cur: number;
@@ -103,6 +114,10 @@ export function DealBodyView({
   onAmount: (v: string) => void;
   onAmountBlur: () => void;
   onPdf: (docId: number) => void;
+  onOpenDeal: (id: number) => void;
+  onOpenCustomer: (id: number) => void;
+  /** to'lov qo'shish (summa so'raladi) */
+  onPayment: () => void;
 }) {
   return (
     <>
@@ -127,13 +142,15 @@ export function DealBodyView({
           </button>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <select className="sel !h-7 !text-[13px] coarse:!h-11" aria-label="Voronka" value={pipe} onChange={(e) => onPipe(e.target.value)}>
-            {pipelines.map((p) => (
-              <option key={p.code} value={p.code}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          {pipelines.length > 1 ? (
+            <select className="sel !h-7 !text-[13px] coarse:!h-11" aria-label="Voronka" value={pipe} onChange={(e) => onPipe(e.target.value)}>
+              {pipelines.map((p) => (
+                <option key={p.code} value={p.code}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
           {!isOpen && st ? (
             <span className={PILL}>
               <i style={{ background: st.color || "#888" }} />
@@ -175,14 +192,58 @@ export function DealBodyView({
       <div className="grid min-h-0 flex-1 grid-cols-[380px_minmax(0,1fr)] overflow-hidden max-[900px]:grid-cols-1 max-[900px]:overflow-y-auto">
         <div className="min-w-0 overflow-y-auto border-r border-sep px-[22px] pt-4 pb-[30px] max-[900px]:overflow-visible max-[900px]:border-r-0 max-[900px]:pb-0 max-md:px-3 max-md:pt-3">
           <div className={BOX}>
+            <h4 className={BOX_H}>Shartnoma va to&apos;lov</h4>
+            <label className={FR}>
+              <span>To&apos;lov sharti</span>
+              <select defaultValue={d.pay_terms ?? "full"} onChange={(e) => onSave("pay_terms", e.target.value)}>
+                <option value="full">100% oldindan</option>
+                <option value="half">50/50</option>
+              </select>
+            </label>
+            <div className={FR}>
+              <span>To&apos;langan</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="tabular-nums">
+                  <b>{num(d.paid_sum ?? 0, 0)}</b>
+                  <span className="text-hint"> / {num(d.amount ?? 0, 0)} so&apos;m</span>
+                </span>
+                <span className={SP} />
+                <button type="button" className="b h-7 flex-none px-2 text-[13px] coarse:h-11" onClick={onPayment}>
+                  <Icon n="plus" /> To&apos;lov
+                </button>
+              </div>
+            </div>
+            {Number(d.amount) ? (
+              <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-fill" aria-hidden="true">
+                <div className="h-full rounded-full bg-ok" style={{ width: `${Math.min(100, (Number(d.paid_sum ?? 0) / Number(d.amount)) * 100)}%` }} />
+              </div>
+            ) : null}
+            <label className={FR}>
+              <span>Shartnoma imzosi</span>
+              <select defaultValue={d.sign_status ?? ""} onChange={(e) => onSave("sign_status", e.target.value)}>
+                <option value="">— yuborilmagan</option>
+                <option value="sent">Yuborildi (Didox)</option>
+                <option value="signed">Imzolandi</option>
+              </select>
+            </label>
+            {d.sign_status === "sent" && d.sign_sent_at ? <div className={`${SMALL} -mt-1 mb-1 text-right`}>yuborilgan: {dt(d.sign_sent_at)}</div> : null}
+            <label className={FR}>
+              <span>Yuk xati va dalolatnoma</span>
+              <span className="flex items-center gap-2">
+                <input type="checkbox" className="ck" defaultChecked={!!d.docs_done} onChange={(e) => onSave("docs_done", e.target.checked)} />
+                <span className={SMALL}>imzolandi — «Yutildi» sharti</span>
+              </span>
+            </label>
+          </div>
+          <div className={BOX}>
             <h4 className={BOX_H}>Bitim haqida</h4>
             <div className={FR}>
               <span>Mijoz</span>
               <div>
                 {d.counterparty_id ? (
-                  <a href={`/app/erp/savdo?customer=${d.counterparty_id}`} target="_blank" rel="noreferrer">
+                  <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left text-link hover:underline" onClick={() => onOpenCustomer(d.counterparty_id!)}>
                     {d.customer || "—"}
-                  </a>
+                  </button>
                 ) : (
                   "—"
                 )}
@@ -213,7 +274,7 @@ export function DealBodyView({
             </label>
             <label className={FR}>
               <span>Mas&apos;ul</span>
-              <select defaultValue={d.owner_tg != null ? String(d.owner_tg) : ""} onChange={(e) => onSave("owner_tg", e.target.value || null)}>
+              <select disabled={!isHead} title={isHead ? undefined : "Mas'ulni sotuv bo'limi rahbari o'zgartiradi"} defaultValue={d.owner_tg != null ? String(d.owner_tg) : ""} onChange={(e) => onSave("owner_tg", e.target.value || null)}>
                 <option value="">—</option>
                 {users.map((u) => (
                   <option key={u.tg_id} value={u.tg_id}>
@@ -232,6 +293,37 @@ export function DealBodyView({
                 ))}
                 {d.source && !(d.source in SRC) ? <option value={d.source}>{d.source}</option> : null}
               </select>
+            </label>
+            <label className={FR}>
+              <span>Kontakt</span>
+              <input defaultValue={d.contact || ""} placeholder="Ism, lavozim" onBlur={(e) => e.target.value !== (d.contact || "") && onSave("contact", e.target.value)} />
+            </label>
+            <label className={FR}>
+              <span>Bo&apos;linma</span>
+              <select defaultValue={d.division || ""} onChange={(e) => onSave("division", e.target.value)}>
+                <option value="">—</option>
+                {divisions.map((x) => (
+                  <option key={x.code} value={x.code}>
+                    {x.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(
+              [
+                ["buyer_order", "Mijoz buyurtmasi №"],
+                ["prod_order", "Ishlab chiq. buyurtmasi №"],
+                ["prod_no", "Ishlab chiqarish №"],
+              ] as const
+            ).map(([k, label]) => (
+              <label key={k} className={FR}>
+                <span>{label}</span>
+                <input className="code" defaultValue={d[k] || ""} placeholder="H-0H-000000" onBlur={(e) => e.target.value.trim() !== (d[k] || "") && onSave(k, e.target.value.trim())} />
+              </label>
+            ))}
+            <label className={FR}>
+              <span>Takroriy bitim</span>
+              <input type="checkbox" className="ck" defaultChecked={!!d.repeat} onChange={(e) => onSave("repeat", e.target.checked)} />
             </label>
             <label className={`${FR} ${FR_TOP}`}>
               <span>Ehtiyoj</span>
@@ -261,13 +353,23 @@ export function DealBodyView({
                 <div>{dt(d.closed)}</div>
               </div>
             ) : null}
-            {d.bx_id ? (
-              <div className={FR}>
-                <span>Bitrix</span>
-                <div className="code">#{d.bx_id}</div>
-              </div>
-            ) : null}
           </div>
+          {d.linked?.length ? (
+            <div className={BOX}>
+              <h4 className={BOX_H}>Bog&apos;langan bitimlar</h4>
+              {d.linked.map((x) => (
+                <button key={x.id} type="button" className={`${DLR} ${DLR_TAP} w-full cursor-pointer border-0 bg-transparent text-left`} onClick={() => onOpenDeal(x.id)}>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">
+                      {x.rel === "parent" ? "← " : "→ "}
+                      {pipelines.find((p) => p.code === x.pipeline)?.name ?? x.pipeline} · #{x.id}
+                    </span>
+                    <span className={SMALL}>{stg[x.stage]?.name ?? x.stage}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className={BOX}>
             <h4 className={BOX_H}>
               Hujjatlar <span>{d.docs.length || ""}</span>

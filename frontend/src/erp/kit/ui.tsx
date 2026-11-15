@@ -111,7 +111,8 @@ export const Check = ({ on }: { on: boolean }) => (
 /** Segment: yopishqoq (brauzerda tepa panel bo'lsa — uning ostida), tugmalar guruhi */
 const SEG =
   "sticky top-0 z-15 mx-4 my-2 flex gap-0.5 overflow-x-auto rounded-[10px] [background:linear-gradient(var(--fill),var(--fill)),var(--page)] p-0.5 shadow-[0_0_0_8px_var(--page)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:root:has(#topbar:not(.hidden))_&]:top-[52px]";
-const SEG_BTN = "flex-[1_0_auto] cursor-pointer whitespace-nowrap rounded-lg border-0 bg-transparent px-3 py-[7px] text-[13.5px] font-medium text-fg transition-colors coarse:min-h-10";
+/** tanlangani — asosiy rang (qorong'i rejimda ham aniq ko'rinsin), qolganlari — ikkinchi darajali matn */
+const SEG_BTN = "flex-[1_0_auto] cursor-pointer whitespace-nowrap rounded-lg border-0 px-3 py-[7px] text-[13.5px] font-medium transition-colors coarse:min-h-10";
 
 /** Pastdan chiqadigan oyna (kompyuter karkasida — markazda): fon va quti */
 export const sheetBg = (on: boolean) => `fixed inset-0 z-60 bg-black/45 transition-opacity duration-200 ${on ? "opacity-100" : "opacity-0"}`;
@@ -134,7 +135,7 @@ export function Seg<K extends string>({ items, cur, onPick }: { items: [K, strin
           data-k={k}
           type="button"
           aria-pressed={k === cur}
-          className={`${SEG_BTN} ${k === cur ? "bg-sec font-semibold shadow-[0_1px_3px_rgba(0,0,0,.18)]" : ""}`}
+          className={`${SEG_BTN} ${k === cur ? "bg-btn font-semibold text-btn-fg shadow-[0_1px_3px_rgba(0,0,0,.18)]" : "bg-transparent text-sub"}`}
           onClick={() => {
             hap.tap();
             onPick(k);
@@ -214,8 +215,9 @@ export function Sheet({
       <div className={sheetBox(on)} role="dialog" aria-modal="true" aria-label={title}>
         <div className={SHEET_GRAB} />
         <div className={SHEET_HD}>
+          {/* "Saqlash" bo'lsa — "Bekor", bo'lmasa — "Yopish" (oynadagi "bekor qilish" amallari bilan adashmasin) */}
           <button className={SHEET_X} onClick={close}>
-            Bekor
+            {done ? "Bekor" : "Yopish"}
           </button>
           <h2 className={SHEET_H2}>{title}</h2>
           {done ? (

@@ -1,15 +1,24 @@
-"""Kirish va joriy foydalanuvchi: /app/api/me, login (start/poll/magic), logout."""
+"""Kirish va joriy foydalanuvchi: /app/api/me, login (start/poll/magic), logout.
+
+`/app/api/erp/me` ga domen applari o'z maydonlarini `registry.register_me_field` orqali qo'shadi (masalan CRM —
+`is_head`); core ularni import qilmaydi."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.contrib.auth import login, logout
+from django.contrib.auth import get_user_model, login, logout
 from django.core import signing
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.utils import timezone
 
-from config.apps.staff.models import User
-
 from .http import ApiError, api, ok
 from .models import LoginToken
+from .registry import me_fields
+
+if TYPE_CHECKING:
+    from config.apps.staff.models import User
 
 MAGIC_SALT = "core.magic-login"
 MAGIC_MAX_AGE = 600
@@ -22,9 +31,21 @@ def me(request: HttpRequest, user: User) -> JsonResponse:
 
 @api(("GET",))
 def erp_me(request: HttpRequest, user: User) -> JsonResponse:
-    """ERP modullari (marketplace, ombor, moliya) uchun: {tg_id, name, roles[]}. Ega — admin huquqlari bilan."""
+    """ERP modullari (marketplace, ombor, moliya, CRM) uchun: {tg_id, name, roles[], is_head}. Ega — admin huquqlari bilan."""
     roles = [user.role, "admin"] if user.role == "owner" else [user.role]
-    return ok({"tg_id": user.tg_id, "name": user.name, "roles": roles, "warehouses": [], "firms": [], "kinds": []})
+    data = {
+        "tg_id": user.tg_id,
+        "name": user.name,
+        "roles": roles,
+        "is_head": False,
+        "modules": user.modules(),
+        "warehouses": [],
+        "firms": [],
+        "kinds": [],
+    }
+    for name, fn in me_fields.items():  # domen applari qo'shgan maydonlar (CRM: is_head)
+        data[name] = fn(user)
+    return ok(data)
 
 
 @api(("POST",), auth=False)
@@ -62,7 +83,7 @@ def login_magic(request: HttpRequest, user: User | None) -> HttpResponseRedirect
         tg_id = signing.TimestampSigner(salt=MAGIC_SALT).unsign(request.GET.get("t", ""), max_age=MAGIC_MAX_AGE)
     except signing.BadSignature as e:
         raise ApiError(410, "Havola eskirgan yoki noto'g'ri — yangisini oling.") from e
-    u = User.objects.filter(tg_id=int(tg_id), role__in=("owner", "admin", "employee")).first()
+    u = get_user_model().objects.filter(tg_id=int(tg_id), role__in=("owner", "admin", "employee")).first()
     if u is None:
         raise ApiError(403, "Foydalanuvchi topilmadi yoki faol emas.")
     login(request, u)

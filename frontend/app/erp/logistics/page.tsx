@@ -2,9 +2,14 @@
 import type { Metadata } from "next";
 
 import LogisticsApp from "@/erp/logistics";
+import { ModuleGate } from "@/erp/kit/gate";
 
 export const metadata: Metadata = { title: "Logistika" };
 
 export default function LogisticsPage() {
-  return <LogisticsApp />;
+  return (
+    <ModuleGate module="logistics">
+      <LogisticsApp />
+    </ModuleGate>
+  );
 }

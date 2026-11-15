@@ -97,10 +97,10 @@ describe("crm.lib", () => {
         { kind: "comment", ts: "2026-11-02T00:00:00Z", text: "a" },
         { kind: "stage", ts: "2026-11-05T00:00:00Z" },
       ],
-      stages: [{ ts: "2026-11-03T00:00:00Z", from_stage: "new", to_stage: "work", src: "bitrix" }],
+      stages: [{ ts: "2026-11-03T00:00:00Z", from_stage: "new", to_stage: "work", src: "tunnel" }],
     });
     expect(tl.map((a) => a.kind)).toEqual(["stage", "comment"]);
-    expect(tl[0].data).toMatchObject({ from: "new", to: "work", src: "bitrix" });
+    expect(tl[0].data).toMatchObject({ from: "new", to: "work", src: "tunnel" });
   });
   it("leadWait / waitText", () => {
     expect(leadWait({ id: 1, created: "2026-11-13T11:15:00Z", status: "new" }, NOW)).toBe(45);

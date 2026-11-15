@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ageCls, agoText, leftText, parseView, picking, sold, switchCh, viewQs, viewTitle } from ".";
+import { ageCls, agoText, chsOf, goSec, leftText, parseView, picking, sold, splitVat, switchCh, viewQs, viewTitle } from ".";
 
 describe("navigatsiya", () => {
   it("URL → ko'rinish: bo'sh/noto'g'ri — Umumiy; bo'lim kanalda yo'q — birinchisi", () => {
@@ -17,6 +17,15 @@ describe("navigatsiya", () => {
     expect(switchCh({ home: false, ch: "wb", sec: "price" }, "site")).toEqual({ home: false, ch: "site", sec: "price" });
     expect(switchCh({ home: false, ch: "wb", sec: "reviews" }, "ozon")).toEqual({ home: false, ch: "ozon", sec: "orders" });
     expect(switchCh({ home: true }, "uzum")).toEqual({ home: false, ch: "uzum", sec: "orders" });
+  });
+  it("bo'lim → kanallar; bo'limga o'tishda kanal saqlanadi (bo'lsa)", () => {
+    expect(chsOf("orders")).toEqual(["wb", "ozon", "uzum"]);
+    expect(chsOf("reviews")).toEqual(["wb"]);
+    expect(chsOf("price")).toEqual(["wb", "ozon", "uzum", "site"]);
+    expect(goSec({ home: false, ch: "uzum", sec: "orders" }, "stock")).toEqual({ home: false, ch: "uzum", sec: "stock" });
+    expect(goSec({ home: false, ch: "uzum", sec: "orders" }, "reviews")).toEqual({ home: false, ch: "wb", sec: "reviews" });
+    expect(goSec({ home: false, ch: "site", sec: "price" }, "orders")).toEqual({ home: false, ch: "wb", sec: "orders" });
+    expect(goSec({ home: true }, "products")).toEqual({ home: false, ch: "wb", sec: "products" });
   });
   it("sarlavha", () => {
     expect(viewTitle({ home: true })).toBe("Umumiy");
@@ -53,5 +62,14 @@ describe("tanlanma ro'yxati", () => {
       ["8M-1040-30", 3, ["1", "2"], 1220000],
     ]);
     expect(rows[1].prices).toEqual([400000, 410000]);
+  });
+});
+
+describe("QQS", () => {
+  it("12% QQS summa ichidan ajratiladi", () => {
+    const r = splitVat(1_120_000);
+    expect(Math.round(r.net)).toBe(1_000_000);
+    expect(Math.round(r.vat)).toBe(120_000);
+    expect(Math.round(splitVat(1_040_475).net)).toBe(928_996);
   });
 });

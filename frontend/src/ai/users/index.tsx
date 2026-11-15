@@ -10,6 +10,7 @@ import { useAdmin } from "@/ai/shell/AdminContext";
 import { ApproveSheet } from "@/ai/users/approve";
 import { EditorSheet } from "@/ai/users/editor";
 import { HeadFormSheet } from "@/ai/users/head-form";
+import { InviteSheet } from "@/ai/users/invite";
 
 import { activeInvites, headScopes, type HeadsResp, type Invite, type UsersCtx, type UsersResp } from "./users.lib";
 import { UsersStatus, UsersView } from "./ui";
@@ -95,6 +96,14 @@ export default function Users() {
       onOpen={(id) => byId[id] && openSheet(<EditorSheet ctx={ctx} id={id} />)}
       onAgent={(ag) => openSheet(<AgentSheet agent={ag} />)}
       onHeadForm={() => openSheet(<HeadFormSheet ctx={ctx} />)}
+      onInvite={() => openSheet(<InviteSheet ctx={ctx} />)}
+      onCopyInvite={(link) =>
+        void navigator.clipboard.writeText(link).then(
+          () => toast("Havola nusxalandi"),
+          () => toast("Nusxalab bo'lmadi", "err"),
+        )
+      }
+      canAdmin={!!me?.can_admin}
       onApprove={(id) => openSheet(<ApproveSheet ctx={ctx} id={id} />)}
       onReject={(id) => void reject(id)}
       onRevoke={(code) => void revoke(code)}

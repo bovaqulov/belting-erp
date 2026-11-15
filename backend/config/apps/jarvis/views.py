@@ -9,7 +9,8 @@ from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
 
 from config.apps.core.http import ApiError, api, json_body, ok
-from config.apps.staff.models import Role, User
+from config.apps.staff import services as staff
+from config.apps.staff.services import User
 
 from .models import Agent, AgentRun, AgentSchedule, AgentTask
 from .permissions import can_manage, can_use
@@ -22,18 +23,17 @@ MANAGE_DENY = "Agentlarni faqat IT bo'limi, Rahbariyat va adminlar boshqaradi."
 
 
 def _agents_qs():
-    return (
-        Agent.objects.select_related("parent", "owner")
-        .prefetch_related(
-            Prefetch("schedules", queryset=AgentSchedule.objects.order_by("time", "id")),
-            Prefetch("tasks", queryset=AgentTask.objects.select_related("created_by").order_by("-created_at")),
-        )
-        .annotate(n_members=Count("members", distinct=True))
+    return Agent.objects.select_related("parent", "owner").prefetch_related(
+        Prefetch("schedules", queryset=AgentSchedule.objects.order_by("time", "id")),
+        Prefetch("tasks", queryset=AgentTask.objects.select_related("created_by").order_by("-created_at")),
     )
 
 
-def _members(a: Agent) -> int:
-    return getattr(a, "n_members", 0)  # _agents_qs annotate
+def _members(a: Agent, counts: dict[str, int] | None = None) -> int:
+    """Bo'lim agenti a'zolari — staff.Department(key) bo'yicha; boshqa agentlarda 0."""
+    if a.kind != Agent.Kind.DEPT:
+        return 0
+    return (counts if counts is not None else staff.member_counts()).get(a.key, 0)
 
 
 def _get(key: str) -> Agent:
@@ -52,12 +52,13 @@ def overview(request: HttpRequest, user: User) -> JsonResponse:
         .values("agent__key")
         .annotate(n=Count("id"))
     )
-    data = [agent_dict(a, _members(a)) for a in agents]  # type: ignore[attr-defined]
+    counts = staff.member_counts()
+    data = [agent_dict(a, _members(a, counts)) for a in agents]
     return ok(
         {
             "departments": [d for d in data if d["kind"] == "dept"],
             "agents": data,
-            "pending_users": User.objects.filter(role=Role.PENDING).count(),
+            "pending_users": staff.pending_count(),
             "pending_memory": 0,
             "stats_week": [{"dept": s["agent__key"], "requests": s["n"]} for s in stats],
         }
@@ -67,7 +68,8 @@ def overview(request: HttpRequest, user: User) -> JsonResponse:
 @api(("GET", "POST"), check=lambda u: u.can_view(), deny=VIEW_DENY)
 def agents(request: HttpRequest, user: User) -> JsonResponse:
     if request.method == "GET":
-        return ok({"agents": [agent_dict(a, _members(a)) for a in _agents_qs()]})  # type: ignore[attr-defined]
+        counts = staff.member_counts()
+        return ok({"agents": [agent_dict(a, _members(a, counts)) for a in _agents_qs()]})
     if not can_manage(user):
         raise ApiError(403, MANAGE_DENY)
     fields = clean_agent(json_body(request), None)
@@ -81,7 +83,7 @@ def agents(request: HttpRequest, user: User) -> JsonResponse:
 def agent(request: HttpRequest, user: User, key: str) -> JsonResponse:
     a = _get(key)
     if request.method == "GET":
-        return ok(agent_dict(a, _members(a)))  # type: ignore[attr-defined]
+        return ok(agent_dict(a, _members(a)))
     if not can_manage(user):
         raise ApiError(403, MANAGE_DENY)
     if request.method == "DELETE":

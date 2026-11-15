@@ -17,7 +17,7 @@ const c = {
   tool: "inline-flex items-center gap-1 rounded-md bg-[rgba(127,127,127,.14)] px-2 py-0.5 text-xs text-sub [&_svg]:size-3",
   /** "yozmoqda" uch nuqtasi */
   typing:
-    "inline-flex gap-1 py-1 [&_i]:size-1.5 [&_i]:animate-[blink_1.2s_ease-in-out_infinite] [&_i]:rounded-full [&_i]:bg-hint [&_i:nth-child(2)]:[animation-delay:.2s] [&_i:nth-child(3)]:[animation-delay:.4s] reduce:[&_i]:animate-none reduce:[&_i]:opacity-60",
+    "inline-flex h-5 items-center gap-1 px-0.5 [&_i]:size-1.5 [&_i]:animate-typing [&_i]:rounded-full [&_i]:bg-hint [&_i:nth-child(2)]:[animation-delay:.15s] [&_i:nth-child(3)]:[animation-delay:.3s] reduce:[&_i]:animate-none reduce:[&_i]:opacity-60",
   empty:
     "flex flex-1 flex-col items-center justify-center gap-2.5 px-4 py-8 text-center [&_h2]:mt-1.5 [&_h2]:mb-0 [&_h2]:text-lg [&_h2]:font-semibold [&_p]:m-0 [&_p]:max-w-[360px] [&_p]:text-sm [&_p]:text-sub",
   sugg: `mt-2 flex flex-wrap justify-center gap-2 [&_button]:min-h-9 [&_button]:cursor-pointer [&_button]:rounded-2xl [&_button]:border-0 [&_button]:bg-sec [&_button]:px-3.5 [&_button]:py-2 [&_button]:text-sm [&_button]:text-fg [&_button:active]:opacity-70 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-focus`,

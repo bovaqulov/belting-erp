@@ -2,9 +2,14 @@
 import type { Metadata } from "next";
 
 import MarketplaceApp from "@/erp/marketplace";
+import { ModuleGate } from "@/erp/kit/gate";
 
 export const metadata: Metadata = { title: "Marketplace" };
 
 export default function MarketplacePage() {
-  return <MarketplaceApp />;
+  return (
+    <ModuleGate module="marketplace">
+      <MarketplaceApp />
+    </ModuleGate>
+  );
 }

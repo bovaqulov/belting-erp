@@ -10,7 +10,7 @@ import hashlib
 import hmac
 import json
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qsl
 
 from django.conf import settings
@@ -47,8 +47,9 @@ def verify_init_data(init_data: str, bot_token: str, max_age: int = INIT_DATA_MA
 
 def resolve_user(request: HttpRequest) -> User | None:
     """So'rov egasi: avval initData (Telegram), keyin sessiya. Faqat faol rol (owner/admin/employee)."""
-    from config.apps.staff.models import User
+    from django.contrib.auth import get_user_model
 
+    User = cast("type[User]", get_user_model())  # core domen applarini import qilmaydi
     raw = request.headers.get("X-Init-Data", "")
     if raw:
         tg = verify_init_data(raw, settings.TELEGRAM_BOT_TOKEN)

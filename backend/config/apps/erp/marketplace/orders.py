@@ -147,6 +147,7 @@ def fill_lines(o: Order) -> list[dict]:
                 "vendor_code": (c and c.vendor_code) or None,
                 "width_mm": float(c.width_mm) if c and c.width_mm else None,
                 "mode": (c and c.mode) or None,
+                "photo": ((c.ext or {}).get("photo") if c else None),
             }
         )
     return out

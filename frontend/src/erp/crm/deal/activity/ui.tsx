@@ -116,7 +116,7 @@ function Ev({
 }) {
   const [icn, col] = ACTI[a.kind] || ["file", "#8e8e93"];
   const sn = (c?: string) => (c ? stg[c]?.name || c : "");
-  const bx = a.data?.src === "bitrix" ? <span className={SUM}> · Bitrix</span> : null;
+  const auto = a.data?.src === "tunnel" || a.data?.src === "robot" ? <span className={SUM}> · avtomatik</span> : null;
   let txt: ReactNode = a.text;
   if (a.kind === "stage" && a.data?.from)
     txt = (
@@ -124,14 +124,14 @@ function Ev({
         {sn(a.data.from)} → <b>{sn(a.data.to)}</b>
         {a.data.reason ? ` (${a.data.reason})` : ""}
         {a.data.auto ? <span className={SUM}> · avtomatik</span> : null}
-        {bx}
+        {auto}
       </>
     );
   else if (a.kind === "stage" && a.data?.to)
     txt = (
       <>
         Bitim ochildi: <b>{sn(a.data.to)}</b>
-        {bx}
+        {auto}
       </>
     );
   const task = a.kind === "task";

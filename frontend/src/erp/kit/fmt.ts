@@ -66,7 +66,7 @@ export function ago(s: string | null | undefined, now = Date.now()): string {
 /** Mahalliy sana YYYY-MM-DD */
 export const iso = (d: Date = new Date()): string => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 
-// Bitrix avtomatik yozgan ruscha qoliplar (bitim/lid nomlari) — ekranda o'zbekcha; bazadagi asl nom o'zgarmaydi
+// eski tizimdan qolgan ruscha qoliplar (bitim/lid nomlari) — ekranda o'zbekcha; bazadagi asl nom o'zgarmaydi
 const TITLE_UZ: [RegExp, string][] = [
   [/^Сделка\s*#/, "Bitim #"],
   [/^Лид\s*#/, "Lid #"],

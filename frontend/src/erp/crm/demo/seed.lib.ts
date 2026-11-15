@@ -3,10 +3,15 @@
 // Tasodif — doimiy urug'li PRNG: bir xil `now` → bir xil ma'lumot (testlar uchun).
 import type { DealItem, ItemHit, Lead, Meta, Stage, View } from "@/erp/crm/lib";
 
-export const DB_VERSION = 2;
+export const DB_VERSION = 6;
 
 export type DbStage = Stage & { rot_days?: number | null };
 export type DbDeal = {
+  /** shartnoma va to'lov (backend Deal bilan bir xil) */
+  pay_terms?: "full" | "half";
+  paid_sum?: number;
+  sign_status?: "sent" | "signed" | null;
+  docs_done?: boolean;
   id: number;
   title: string;
   counterparty_id: number | null;
@@ -23,10 +28,17 @@ export type DbDeal = {
   lost_reason: string | null;
   probability: number | null;
   need: string | null;
-  bx_id: string | null;
   items: DealItem[];
 };
-export type DbCustomer = { id: number; name: string; inn: string | null; phones: string[]; owner_tg: number | null };
+export type DbCustomer = {
+  id: number;
+  name: string;
+  inn: string | null;
+  phones: string[];
+  owner_tg: number | null;
+  contacts?: { name: string; role: string; phone: string }[];
+  note?: string;
+};
 export type DbHist = { deal_id: number; ts: string; actor: number | null; from_stage: string | null; to_stage: string; src: string; reason?: string | null };
 export type DbAct = {
   id: number;
@@ -44,6 +56,21 @@ export type DbDoc = { id: number; deal_id: number; number: string; kind: string;
 export type DbLead = Lead & { junk_reason?: string | null };
 export type DbGoal = { owner_tg: number; month: string; amount: number };
 export type DbShip = { owner_tg: number; month: string; amount: number };
+/** Telegram (sotuvchi ↔ mijoz chatlari, demo) */
+export type DbTgChat = { id: number; seller_tg: number; title: string; username: string | null; unread: number; can_reply: boolean; customer_id?: number | null };
+export type DbTgMsg = {
+  id: number;
+  chat: number;
+  out: boolean;
+  kind: string;
+  text: string;
+  date: string;
+  edited: boolean;
+  deleted: boolean;
+  via_crm: boolean;
+  media?: { name?: string; mime?: string; size?: number; lat?: number; lon?: number } | null;
+  reply?: { text: string; kind: string; out: boolean; ref: number | null } | null;
+};
 export type Db = {
   v: number;
   seq: number;
@@ -62,9 +89,15 @@ export type Db = {
   goals: DbGoal[];
   shipments: DbShip[];
   views: View[];
+  tg_chats: DbTgChat[];
+  tg_msgs: DbTgMsg[];
+  /** lid taqsimlash qoidalari (backend RoutingRule) */
+  routing?: { kind: "product" | "region"; keywords: string; seller_tg: number }[];
 };
 
 const ME = 1001;
+/** sotuv bo'limi rahbari (demo) */
+export const HEAD_TG = ME;
 const SELLERS = [
   { tg_id: ME, name: "Rustam Aliyev" },
   { tg_id: 1002, name: "Akmal Karimov" },
@@ -73,18 +106,29 @@ const SELLERS = [
   { tg_id: 1005, name: "Jasur Toshmatov" },
 ];
 
+// backend erp/crm migratsiyalari bilan bir xil: CRM — faqat Sales voronkasi
+const S = (code: string, pipeline: string, name: string, kind: DbStage["kind"], color: string, probability: number | null, rot_days: number | null, sla_hours: number | null = null, guide = ""): DbStage => ({
+  code,
+  pipeline,
+  name,
+  kind,
+  color,
+  probability,
+  rot_days,
+  sla_hours,
+  ...(guide ? { guide } : {}),
+});
 const STAGES: DbStage[] = [
-  { code: "new", name: "Yangi so'rov", pipeline: "main", kind: "open", color: "#3e88f7", probability: 10, rot_days: 3, guide: "24 soat ichida qo'ng'iroq qiling: qaysi remen, o'lcham, miqdor, muddat." },
-  { code: "qual", name: "Ehtiyoj aniqlandi", pipeline: "main", kind: "open", color: "#3ab5c9", probability: 25, rot_days: 7, guide: "Tovarlarni qo'shing va tijorat taklifini yuboring." },
-  { code: "offer", name: "Taklif yuborildi", pipeline: "main", kind: "open", color: "#a65ff0", probability: 45, rot_days: 10, guide: "Taklif bo'yicha javobni oling, e'tirozlarni yozib qo'ying." },
-  { code: "agree", name: "Kelishuv", pipeline: "main", kind: "open", color: "#e8538f", probability: 70, rot_days: 14, guide: "Narx va muddat kelishilgach — buyurtma tuzing." },
-  { code: "pay", name: "To'lov kutilmoqda", pipeline: "main", kind: "open", color: "#f09a37", probability: 90, rot_days: 7, guide: "To'lovni kuzating; tushgach jo'natishga o'tkazing." },
-  { code: "won", name: "Yutildi", pipeline: "main", kind: "won", color: "#4ac158", probability: 100 },
-  { code: "lost", name: "Yutqazildi", pipeline: "main", kind: "lost", color: "#eb4d3d", probability: 0 },
-  { code: "dl_new", name: "Muzokara", pipeline: "dealer", kind: "open", color: "#5e5ce6", probability: 30, rot_days: 14 },
-  { code: "dl_contract", name: "Shartnoma", pipeline: "dealer", kind: "open", color: "#e6b422", probability: 75, rot_days: 21 },
-  { code: "dl_won", name: "Diler bo'ldi", pipeline: "dealer", kind: "won", color: "#4ac158", probability: 100 },
-  { code: "dl_lost", name: "Rad etdi", pipeline: "dealer", kind: "lost", color: "#eb4d3d", probability: 0 },
+  S("new", "main", "Yangi", "open", "#3e88f7", 10, 3, 24, "Ehtiyojni aniqlang va 24 soat ichida narx va muddat ko'rsatilgan tijorat taklifini yuboring."),
+  S("offer", "main", "Taklif yuborildi", "open", "#3ab5c9", 40, 7, 168, "2 va 5 kundan keyin mijozga qayta yozing (vazifalar avtomatik)."),
+  S("later", "main", "Keyinroq", "open", "#8fd3f4", 20, null, null, "Mijoz keyinroq dedi — qayta bog'lanish sanasiga vazifa qo'ying."),
+  S("contract", "main", "Shartnoma va hisob-faktura", "open", "#2fd3a5", 70, 3, 24, "Shartnoma va hisob-fakturani birga yuboring (Didox); 1 kun ichida imzolanishini kuzating."),
+  S("payment", "main", "To'lov kutilmoqda", "open", "#f5a623", 85, 5, 72, "To'lov sharti — 100% yoki 50/50."),
+  S("production", "main", "Ishlab chiqarishda", "open", "#a65ff0", 90, null, null, "Tayyor bo'lgach «Tayyor» ga o'tkazing — mijozga xabar avtomatik."),
+  S("ready", "main", "Tayyor", "open", "#5bd0d6", 95, 3, 72, "50/50 bo'lsa — qolgan 50% ni jo'natishdan oldin oling."),
+  S("shipping", "main", "Jo'natildi / hujjatlar", "open", "#e8538f", 98, 5, 72, "Yuk xati va dalolatnoma (Didox) imzolangach — «Yutildi»."),
+  S("won", "main", "Yutildi", "won", "#4ac158", 100, null),
+  S("lost", "main", "Yo'qotildi", "lost", "#eb4d3d", 0, null),
 ];
 
 const CUSTOMERS: [string, string][] = [
@@ -155,8 +199,7 @@ export function seed(now: number = Date.now()): Db {
     seq: 0,
     me: { tg_id: ME, name: "Rustam Aliyev", is_head: true },
     pipelines: [
-      { code: "main", name: "Asosiy savdo" },
-      { code: "dealer", name: "Dilerlar" },
+      { code: "main", name: "Sales" },
     ],
     stages: STAGES.map((s) => ({ ...s })),
     users: SELLERS.map((u) => ({ ...u })),
@@ -171,26 +214,26 @@ export function seed(now: number = Date.now()): Db {
     goals: [],
     shipments: [],
     views: [{ id: 1, name: "Katta zavod bitimlari", owner_tg: null, query: { tag: "zavod", amount_min: 20000000 } }],
+    tg_chats: [],
+    tg_msgs: [],
   };
 
   const act = (deal_id: number, kind: string, ts: string, actor: number | null, text: string, extra: Partial<DbAct> = {}) =>
     db.activity.push({ id: id(), deal_id, kind, ts, actor, text, data: null, due: null, done_at: null, assignee: null, ...extra });
 
-  type Plan = { stage: string; createdAgo: number; idleAgo?: number; closedAgo?: number; lost?: string; bitrix?: boolean };
+  type Plan = { stage: string; createdAgo: number; idleAgo?: number; closedAgo?: number; lost?: string };
   const plans: Plan[] = [];
-  const mainOpen = ["new", "new", "new", "qual", "qual", "qual", "offer", "offer", "offer", "offer", "agree", "agree", "agree", "pay", "pay"];
+  const mainOpen = ["new", "new", "new", "new", "offer", "offer", "offer", "offer", "later", "contract", "contract", "payment", "production", "ready", "shipping"];
   for (const s of mainOpen) plans.push({ stage: s, createdAgo: int(2, 60) });
   // 300+ kun tegilmagan ochiq bitimlar (banner)
-  plans.push({ stage: "offer", createdAgo: 420, idleAgo: 330, bitrix: true }, { stage: "qual", createdAgo: 390, idleAgo: 310, bitrix: true }, { stage: "new", createdAgo: 365, idleAgo: 352 });
+  plans.push({ stage: "offer", createdAgo: 420, idleAgo: 330 }, { stage: "later", createdAgo: 390, idleAgo: 310 }, { stage: "new", createdAgo: 365, idleAgo: 352 });
   // yopilganlar: shu oy va oldingi oylar (reja uchun)
   for (const c of [2, 5, 8, 11, 34, 47]) plans.push({ stage: "won", createdAgo: c + int(10, 40), closedAgo: c });
-  plans.push({ stage: "lost", createdAgo: 50, closedAgo: 9, lost: "Qimmat" }, { stage: "lost", createdAgo: 80, closedAgo: 40, lost: "Raqobatchidan oldi", bitrix: true });
-  plans.push({ stage: "dl_new", createdAgo: 25 }, { stage: "dl_contract", createdAgo: 70 }, { stage: "dl_won", createdAgo: 120, closedAgo: 60 });
+  plans.push({ stage: "lost", createdAgo: 50, closedAgo: 9, lost: "Qimmat" }, { stage: "lost", createdAgo: 80, closedAgo: 40, lost: "Raqobatchidan oldi" });
 
   const TAGS = ["zavod", "ulgurji", "takroriy", "tender"];
   const NEEDS = ["Konveyer liniyasi uchun almashtirish", "Rejali ta'mirga zaxira", "Yangi sex ishga tushyapti", "Avariya — tez kerak", "Yillik ehtiyoj, bo'lib olish"];
   const SOURCES = ["call", "telegram", "existing", "recommendation", "site", "instagram", "expo"];
-  let bx = 45200;
 
   plans.forEach((pl, i) => {
     const st = STAGES.find((s) => s.code === pl.stage)!;
@@ -211,7 +254,7 @@ export function seed(now: number = Date.now()): Db {
       ? Math.round(items.reduce((a, x) => a + Number(x.qty) * Number(x.price) * (1 - Number(x.discount || 0) / 100), 0))
       : int(3, 90) * 1000000;
     const short = prod.name.replace(/^(Ремень|Лента|Рукав)\s+\S+\s+/, "");
-    const title = pl.bitrix ? `Сделка #${++bx}` : `${short} — ${qty} ${prod.unit === "m" ? "m" : "dona"}`;
+    const title = `${short} — ${qty} ${prod.unit === "m" ? "m" : "dona"}`;
     const createdAgo = pl.createdAgo;
     const sinceAgo = pl.closedAgo ?? (pl.idleAgo ?? Math.max(0, createdAgo - int(1, Math.max(1, createdAgo))));
     const touchedAgo = pl.idleAgo ?? Math.max(0, Math.min(sinceAgo, int(0, 12)));
@@ -234,11 +277,10 @@ export function seed(now: number = Date.now()): Db {
       lost_reason: pl.lost ?? null,
       probability: null,
       need: r() < 0.7 ? pick(NEEDS) : null,
-      bx_id: pl.bitrix ? String(bx) : null,
       items,
     };
     db.deals.push(deal);
-    const src = pl.bitrix ? "bitrix" : "web";
+    const src = "web";
     db.history.push({ deal_id: dId, ts: deal.created, actor: owner, from_stage: null, to_stage: first.code, src });
     if (st.code !== first.code) db.history.push({ deal_id: dId, ts: deal.stage_since, actor: owner, from_stage: first.code, to_stage: st.code, src, reason: pl.lost ?? null });
     act(dId, "comment", ago(Math.max(touchedAgo, createdAgo - 1)), owner, pick(["Mijoz o'lchamlarni yubordi", "Narx so'radi, chegirma kutyapti", "Texnik bilan gaplashib aniqlaydi", "Oldingi partiyadan mamnun"]));
@@ -248,9 +290,9 @@ export function seed(now: number = Date.now()): Db {
       act(dId, "task", ago(touchedAgo), ME, pick(["Taklifni qayta yuborish", "To'lov holatini aniqlash", "Namuna jo'natish", "Qayta qo'ng'iroq qilish"]), { due: ago(-due + 0.3), assignee: owner });
     }
     const docTotal = Math.round(items.reduce((a, x) => a + Number(x.qty) * Number(x.price) * (1 - Number(x.discount || 0) / 100), 0));
-    if (items.length && ["offer", "agree", "pay", "won"].includes(st.code))
+    if (items.length && ["offer", "contract", "payment", "production", "ready", "shipping", "won"].includes(st.code))
       db.docs.push({ id: id(), deal_id: dId, number: `BR-TT-26-${p5(120 + dId)}`, kind: "quote", date: dateOnly(Math.max(0, sinceAgo)), status: "posted", state: null, total: docTotal });
-    if (items.length && ["pay", "won"].includes(st.code))
+    if (items.length && ["production", "ready", "shipping", "won"].includes(st.code))
       db.docs.push({ id: id(), deal_id: dId, number: `BR-BU-26-${p5(30 + dId)}`, kind: "order", date: dateOnly(Math.max(0, sinceAgo)), status: "posted", state: st.code === "won" ? "shipped" : "confirmed", total: docTotal });
   });
 
@@ -292,6 +334,26 @@ export function seed(now: number = Date.now()): Db {
       db.shipments.push({ owner_tg: u.tg_id, month: mon(back), amount: Math.round((back ? [140, 131, 72, 95, 58] : [61, 54, 22, 47, 39])[i] * 1e6) });
     }
   });
+
+  // Telegram: sotuvchilar yozishmalari (Business bot orqali); Jasur — ulanmagan, Nodira — javob huquqisiz
+  const TG: [number, string, string | null, boolean, [number, boolean, string, string?][]][] = [
+    [ME, "Bobur Xasanov", "bobur_h", true, [[180, false, "Assalomu alaykum, SPB 1650 remen bormi?"], [170, true, "Va alaykum assalom, bor. Necha dona kerak?"], [25, false, "25 dona. Narxi qancha bo'ladi?"], [9, false, "", "photo"], [8, false, "Mana shu eski remenimiz rasmi"]]],
+    [ME, "Sardor (Chinoz Un)", null, true, [[60 * 26, false, "Tijorat taklifini yuboring iltimos"], [60 * 25, true, "Yubordim, pochtangizni tekshiring"], [60 * 24, false, "Oldim, rahmat. Rahbarga ko'rsataman"]]],
+    [ME, "Gulnora", "gulnora_qq", true, [[60 * 72, false, "Konveyer lentasi 800 mm bor ekanmi?"], [60 * 71, true, "Ha, omborda 120 m bor"], [60 * 70, true, "", "document"]]],
+    [1002, "Otabek", "otabek_94", true, [[35, false, "To'lovni qildim, chekni tashladim"], [34, false, "", "photo"], [20, true, "Rahmat, buxgalteriyaga berdim"]]],
+    [1002, "Navoiy Konveyer — Rahim", null, true, [[60 * 30, true, "Ertaga yetkazib beramiz"], [60 * 29, false, "Kelishdik 👍"]]],
+    [1003, "Qarshi Shakar — ta'minot", "qarshi_shakar", true, [[90, false, "EP-400/3 110 m tayyormi?"], [80, false, "Javob bering iltimos"]]],
+    [1004, "Farg'ona Tekstil", null, false, [[60 * 5, false, "Narxlarni qayta ko'rib chiqsangiz bo'ladimi?"], [60 * 4, true, "Ertalab menejer bilan gaplashaman"]]],
+  ];
+  for (const [seller, title, username, can_reply, ms] of TG) {
+    const chat = id();
+    let unread = 0;
+    for (const [min, out, text, kind] of ms) {
+      db.tg_msgs.push({ id: id(), chat, out, kind: kind ?? "text", text, date: new Date(now - min * 6e4).toISOString(), edited: false, deleted: false, via_crm: false });
+      unread = out ? 0 : unread + 1;
+    }
+    db.tg_chats.push({ id: chat, seller_tg: seller, title, username, unread, can_reply });
+  }
 
   db.seq = seq;
   return db;

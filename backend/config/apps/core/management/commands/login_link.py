@@ -1,7 +1,7 @@
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
 from config.apps.core.views import magic_link
-from config.apps.staff.models import User
 
 
 class Command(BaseCommand):
@@ -12,6 +12,6 @@ class Command(BaseCommand):
         parser.add_argument("--base", default="", help="masalan https://xxx.trycloudflare.com")
 
     def handle(self, *args, tg_id: int, base: str, **opts):
-        if not User.objects.filter(tg_id=tg_id).exists():
+        if not get_user_model().objects.filter(tg_id=tg_id).exists():
             raise CommandError(f"{tg_id} topilmadi — avval: manage.py add_user {tg_id} --name ... --role owner")
         self.stdout.write(magic_link(tg_id, base.rstrip("/")))

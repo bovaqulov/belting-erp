@@ -10,6 +10,7 @@ import pytest
 from config.apps.erp.marketplace import orders as O
 from config.apps.erp.marketplace.models import Card, Issue, Log, Order
 from config.apps.staff.models import User
+from config.apps.staff.services import set_departments
 
 pytestmark = pytest.mark.django_db
 P = "/app/api/erp/mk"
@@ -55,7 +56,12 @@ def fake(monkeypatch, settings):
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(7, "Omborchi", "employee")
+    from config.apps.jarvis.models import Agent
+
+    mp = Agent.objects.create(key="sotuv_marketplace", kind="dept", name="Sotuv — Marketplace", persona="p" * 25)
+    u = User.objects.create_user(7, "Omborchi", "employee")
+    set_departments(u, [mp.key])
+    return u
 
 
 @pytest.fixture
@@ -132,11 +138,28 @@ def test_auth_required(client, fake):
     assert client.get(f"{P}/overview").status_code in (401, 403)
 
 
+def test_modul_huquqi(client, user):
+    """Marketplace — faqat shu bo'lim (yoki ega/admin, rahbariyat); boshqa bo'lim xodimi — 403."""
+    from config.apps.jarvis.models import Agent
+
+    other = User.objects.create_user(9, "Omborchi2", "employee")
+    set_departments(other, [Agent.objects.create(key="ombor", kind="dept", name="Ombor", persona="p" * 25).key])
+    client.force_login(other)
+    assert client.get(f"{P}/overview").status_code == 403
+    assert client.get("/app/api/erp/me").json()["modules"] == ["warehouse", "logistics"]
+    client.force_login(User.objects.create_user(10, "Bo'limsiz", "employee"))
+    assert client.get("/app/api/erp/me").json()["modules"] == []
+    client.force_login(User.objects.create_user(11, "Admin", "admin"))
+    assert "hr" in client.get("/app/api/erp/me").json()["modules"]
+
+
 def test_erp_me(c):
     assert c.get("/app/api/erp/me").json() == {
         "tg_id": 7,
         "name": "Omborchi",
         "roles": ["employee"],
+        "is_head": False,
+        "modules": ["marketplace"],
         "warehouses": [],
         "firms": [],
         "kinds": [],
@@ -147,7 +170,12 @@ def test_erp_me(c):
 def test_sync_board_counts_overview(c, fake):
     wb_orders(fake)
     Card.objects.create(
-        channel="wb", ext_id="555", title="Remen SPA 1250", vendor_code="SPA-1250", codes=["4600000000101"]
+        channel="wb",
+        ext_id="555",
+        title="Remen SPA 1250",
+        vendor_code="SPA-1250",
+        codes=["4600000000101"],
+        ext={"photo": "https://img/555.webp"},
     )
     assert post(c, f"{P}/orders/wb/sync").json() == {"new": 3, "updated": 0, "imported": 2}
     assert post(c, f"{P}/orders/wb/sync").json() == {"new": 0, "updated": 3, "imported": 0}
@@ -158,6 +186,7 @@ def test_sync_board_counts_overview(c, fake):
     o = b["orders"][1]
     assert o["stage"] == "assembly" and o["price_uzs"] == 412000 and o["article"] == "SPA-1250" and o["need"] == 1
     assert o["lines"][0]["title"] == "Remen SPA 1250" and o["lines"][0]["codes"] == ["4600000000101"]
+    assert o["lines"][0]["photo"] == "https://img/555.webp"
     assert 100 < o["age_min"] < 140 and o["left_min"] is None
     assert [x["ext_id"] for x in c.get(f"{P}/orders/wb/board?stage=done").json()["orders"]] == ["102"]
     assert c.get(f"{P}/orders/wb/board?stage=xx").status_code == 400
@@ -363,7 +392,9 @@ def test_audit_run_and_mute(client, fake, settings):
     }
     fake.routes[("GET", "/api/v1/analytics/banned-products/blocked")] = {"report": [{"nmId": 556}]}
 
+    Order.objects.create(channel="wb", ext_id="9", stage="assembly", payload={"nmId": 555}, lines=[])
     assert post(client, f"{P}/audit/run").json() == {"cards": 2}
+    assert Order.objects.get(ext_id="9").lines is None  # kartochka yangilandi — qatorlar qayta hisoblanadi
     got = {(i["ext_id"], i["code"]) for i in client.get(f"{P}/audit").json()}
     assert got == {
         ("555", "photo_none"),

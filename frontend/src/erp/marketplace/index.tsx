@@ -16,6 +16,7 @@ import { Soon } from "@/erp/marketplace/soon";
 import { useWide } from "@/erp/kit/wide";
 
 import { BootView, MkLayout } from "./ui";
+import { usePoll } from "@/erp/marketplace/orders/sync";
 
 
 export default function MarketplaceApp() {
@@ -44,6 +45,7 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
   const [tick, setTick] = useState(0);
 
   const touched = useCallback(() => setTick((t) => t + 1), []);
+  usePoll(touched); // menyu raqamlari ham fonda yangilansin
   useEffect(() => {
     api<Counts>(`${P}/orders-counts`)
       .then(setCounts)
