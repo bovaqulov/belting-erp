@@ -194,6 +194,35 @@ def test_sotuvchi_javob_yozadi(client, settings, bot):
     assert TgChat.objects.get().last_text == "185 000 so'm"
 
 
+def test_24_soat_qoidasi_va_rad_etish(client, settings, bot, monkeypatch):
+    """Telegram Business: mijoz 24 soatdan beri yozmagan — oldindan 409 (Telegram'ga so'rov ketmaydi);
+    Telegram PEER_ID_INVALID qaytarsa ham — 409 tushunarli matn bilan (502 emas)."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    hook(client, settings, conn_upd("bc-1", SELLER))
+    hook(client, settings, msg_upd("bc-1", 1, "Salom"))
+    chat = TgChat.objects.get()
+    login(client, SELLER)
+    TgMessage.objects.filter(chat=chat).update(date=timezone.now() - timedelta(hours=30))
+    n = len(bot)
+    r = client.post(f"{P}/chats/{chat.pk}/send", {"text": "x"}, content_type="application/json")
+    assert r.status_code == 409 and "24 soat" in r.json()["detail"] and len(bot) == n
+    # sotuvchining o'zi Telegram'dan yozgan (jonli) xabar ham chatni «faol» qiladi
+    hook(client, settings, msg_upd("bc-1", 2, "salom", frm=SELLER))
+    TgMessage.objects.filter(chat=chat, message_id=2).update(date=timezone.now())
+    assert client.post(f"{P}/chats/{chat.pk}/send", {"text": "y"}, content_type="application/json").status_code == 200
+    # CRM boti yuborgani hisoblanmaydi
+    TgMessage.objects.filter(chat=chat, via_crm=False).update(date=timezone.now() - timedelta(hours=30))
+    assert client.post(f"{P}/chats/{chat.pk}/send", {"text": "z"}, content_type="application/json").status_code == 409
+    TgMessage.objects.filter(chat=chat).update(date=timezone.now())
+    monkeypatch.setattr(tg, "call", lambda *a, **k: (_ for _ in ()).throw(tg.reject("Bad Request: PEER_ID_INVALID")))
+    r = client.post(f"{P}/chats/{chat.pk}/send", {"text": "x"}, content_type="application/json")
+    assert r.status_code == 409 and "24 soat" in r.json()["detail"]
+    assert tg.reject("Bad Request: chat not found").detail == "Telegram rad etdi: Bad Request: chat not found"
+
+
 def test_javob_huquqi_yoq(client, settings, bot):
     hook(client, settings, conn_upd("bc-1", SELLER, can_reply=False))
     hook(client, settings, msg_upd("bc-1", 1, "Salom"))
@@ -326,7 +355,9 @@ def test_chatni_mijozga_biriktirish(client, settings, bot):
     hook(client, settings, msg_upd("bc-1", 1, "Remen kerak"))
     chat = TgChat.objects.get()
     login(client, SELLER)
-    c = post_json(client, "/app/api/erp/crm/customers", {"name": "Ali Valiyev"}).json()
+    c = post_json(
+        client, "/app/api/erp/crm/customers", {"name": "Ali Valiyev", "kind": "person", "phones": ["90 777 00 11"]}
+    ).json()
     r = post_json(client, "/app/api/erp/crm/deals", {"counterparty_id": c["id"], "title": "SPB", "tg_chat_id": chat.pk})
     assert r.status_code == 200
     assert TgChat.objects.get().customer_id == c["id"]
@@ -337,7 +368,9 @@ def test_chatni_mijozga_biriktirish(client, settings, bot):
     # begona chat bilan bitim — 404 va bitim yaratilmaydi
     login(client, OTHER)
     n = Deal.objects.count()
-    oc = post_json(client, "/app/api/erp/crm/customers", {"name": "O'zimniki"}).json()
+    oc = post_json(
+        client, "/app/api/erp/crm/customers", {"name": "O'zimniki", "kind": "person", "phones": ["90 777 00 12"]}
+    ).json()
     assert (
         post_json(client, "/app/api/erp/crm/deals", {"counterparty_id": oc["id"], "tg_chat_id": chat.pk}).status_code
         == 404
@@ -361,7 +394,7 @@ def test_telegramdan_avtomatik_lid(client, settings, bot):
     )
     login(client, SELLER)
     got = client.get("/app/api/erp/crm/leads").json()
-    assert got[0]["tg"] == {"chat_id": lead.tg_chat_id, "username": "ali_v", "unread": 2}
+    assert got[0]["tg"] == {"chat_id": lead.tg_chat_id, "username": "ali_v", "unread": 2, "channel": "tg"}
     # sotuvchi javob berdi — «Ishda», javob vaqti
     hook(client, settings, msg_upd("bc-1", 3, "Bor, 185 ming", frm=SELLER))
     lead.refresh_from_db()

@@ -1,9 +1,9 @@
 // Demo ombor boshlang'ich ma'lumotlari: konveyer lentalari (m², eni × uzunligi), rukav (eni), tishli remen rulon (m),
 // donali remenlar; 2 firma, 4 ombor (bittasi — yo'lda), bloklar va javonlar, yig'ish navbati, yo'ldagi kirim.
 // Urug' doimiy: bir xil `now` — bir xil ma'lumot (testlar uchun).
-import type { Dims, UnitKind, WhKind } from "@/erp/warehouse/lib";
+import { bldCode, blkCode, cellCode, rackCode, type CellKind, type CellStatus, type Dims, type Purpose, type UnitKind, type WhKind } from "@/erp/warehouse/lib";
 
-export const DB_VERSION = 1;
+export const DB_VERSION = 4; // 2: binolar; 3: stellajlar va joy kodlari (AO1-A-01-03-A); 4: harakatlar jurnali
 
 export type DbItem = {
   id: number;
@@ -42,8 +42,40 @@ export type DbBatch = {
   src: string | null;
   created: string;
 };
-export type DbCell = { id: number; code: string; wh: number; block_id: number | null };
-export type DbBlock = { id: number; wh: number; code: string; name: string; mine: boolean };
+/** Harakatlar jurnali yozuvi (backend StockMove bilan bir xil; o'chmaydi) */
+export type DbMove = {
+  id: number;
+  at: string;
+  op: string;
+  unit_id: number | null;
+  unit_code: string | null;
+  item_id: number;
+  char_id: number | null;
+  firm: string;
+  delta: number;
+  qty_after: number;
+  wh_from: number | null;
+  wh_to: number | null;
+  loc_from: string | null;
+  loc_to: string | null;
+  doc_id: number | null;
+  doc_number: string | null;
+  reason: string;
+  author_name: string;
+};
+export type DbCell = {
+  id: number;
+  code: string;
+  wh: number;
+  block_id: number | null;
+  rack_id?: number | null;
+  row?: number | null;
+  floor?: number | null;
+  status?: CellStatus;
+};
+export type DbRack = { id: number; wh: number; block_id: number; number: number; name: string; rows: number; floors: number; cell_kind?: CellKind; capacity?: number | null; max_width_mm?: number | null };
+export type DbBlock = { id: number; wh: number; code: string; name: string; mine: boolean; building_id: number | null; purpose?: Purpose; groups?: string[] };
+export type DbBuilding = { id: number; wh: number; number: number; name: string };
 export type DbDoc = {
   id: number;
   number: string | null;
@@ -67,7 +99,7 @@ export type DbPick = {
   firm: string;
   channel: string | null;
   wh: number;
-  lines: { line_no: number; item_id: number; char_id: number | null; left: number }[];
+  lines: { line_no: number; item_id: number; char_id: number | null; left: number; short?: { at: string; loc: string; reason: string; by: string }[] }[];
 };
 export type DbIncoming = {
   id: number;
@@ -85,15 +117,21 @@ export type Db = {
   seq: number;
   me: { tg_id: number; name: string; roles: string[] };
   firms: { id: number; code: string; name: string }[];
-  warehouses: { id: number; name: string; kind: WhKind }[];
+  /** active: false — arxivdagi (o'chirilgan, lekin tarixi bor) */
+  warehouses: { id: number; name: string; kind: WhKind; code: string; active?: boolean }[];
+  buildings: DbBuilding[];
   blocks: DbBlock[];
   cells: DbCell[];
+  racks: DbRack[];
   items: DbItem[];
   batches: DbBatch[];
   docs: DbDoc[];
   picks: DbPick[];
   incoming: DbIncoming[];
   places: DbPlace[];
+  moves: DbMove[];
+  /** to'ldirish me'yorlari (ombor, tovar, min, max) */
+  levels?: { id: number; wh: number; item_id: number; min_qty: number; max_qty: number }[];
 };
 
 export const ME_ID = 1001;
@@ -104,19 +142,32 @@ export function seed(now: number): Db {
   let id = 100;
   const nid = () => ++id;
 
-  const blocks: DbBlock[] = [
-    { id: 1, wh: 1, code: "A", name: "Konveyer lentalar", mine: true },
-    { id: 2, wh: 1, code: "B", name: "Remenlar", mine: true },
+  // tuzilma: ombor → bino → xona → stellaj (qator × qavat); joy kodi AO1-A-01-03-A (codes.lib) — backend demo.py bilan bir xil
+  const buildings: DbBuilding[] = [
+    { id: 1, wh: 1, number: 1, name: "1-bino" },
+    { id: 2, wh: 2, number: 1, name: "1-bino" },
   ];
+  const blocks: DbBlock[] = [
+    { id: 1, wh: 1, code: "A", name: "Konveyer lentalar", mine: true, building_id: 1 },
+    { id: 2, wh: 1, code: "B", name: "Remenlar", mine: true, building_id: 1 },
+    { id: 3, wh: 2, code: "A", name: "Vitrina", mine: true, building_id: 2 },
+  ];
+  const whCode: Record<number, string> = { 1: "AO", 2: "DC" };
   const cells: DbCell[] = [];
+  const racks: DbRack[] = [];
   let cid = 0;
-  const addCells = (z: string, racks: number, floors: number, block: number | null, wh = 1) => {
-    for (let r = 1; r <= racks; r++) for (let f = 1; f <= floors; f++) cells.push({ id: ++cid, code: `${z}-${String(r).padStart(2, "0")}-${f}`, wh, block_id: block });
-  };
-  addCells("A", 3, 2, 1);
-  addCells("B", 2, 3, 2);
-  addCells("C", 1, 2, null);
-  addCells("D", 1, 2, null, 2);
+  for (const [block, rows, floors] of [
+    [1, 3, 2],
+    [2, 2, 3],
+    [3, 1, 2],
+  ] as const) {
+    const b = blocks.find((x) => x.id === block)!;
+    const rack: DbRack = { id: 500 + block, wh: b.wh, block_id: block, number: 1, name: "", rows, floors };
+    racks.push(rack);
+    const rc = rackCode(blkCode(bldCode(whCode[b.wh], 1), b.code), 1);
+    for (let q = 1; q <= rows; q++) for (let f = 1; f <= floors; f++) cells.push({ id: ++cid, code: cellCode(rc, q, f), wh: b.wh, block_id: block, rack_id: rack.id, row: q, floor: f, status: "active" });
+  }
+  for (const f of [1, 2]) cells.push({ id: ++cid, code: `C-01-${f}`, wh: 1, block_id: null, rack_id: null }); // xonasiz (erkin) joy
   const cell = (code: string) => cells.find((c) => c.code === code)!.id;
 
   const items: DbItem[] = [
@@ -147,24 +198,24 @@ export function seed(now: number): Db {
     ...o,
   });
   const batches: DbBatch[] = [
-    b({ code: "P00000101", item_id: 1, firm: "BLT", wh: 1, loc_id: cell("A-01-1"), kind: "roll", width_mm: 800, length_mm: 40000, qty: 32,
+    b({ code: "P00000101", item_id: 1, firm: "BLT", wh: 1, loc_id: cell("AO1-A-01-01-A"), kind: "roll", width_mm: 800, length_mm: 40000, qty: 32,
       cuts: [{ by_name: "Akmal", posted_at: at(5, 11), job: "BR-BU-26-00027", number: "KS-26-0041", width_mm: 800, length_mm: 12500, qty: 10 }] }),
-    b({ code: "P00000102", item_id: 1, firm: "BLT", wh: 1, loc_id: cell("A-01-2"), kind: "piece", width_mm: 800, length_mm: 12500, qty: 10, parent_code: "P00000101",
+    b({ code: "P00000102", item_id: 1, firm: "BLT", wh: 1, loc_id: cell("AO1-A-01-01-B"), kind: "piece", width_mm: 800, length_mm: 12500, qty: 10, parent_code: "P00000101",
       made: { kind: "cut", by_name: "Akmal", posted_at: at(5, 11), job: "BR-BU-26-00027" } }),
     b({ code: "P00000103", item_id: 1, firm: "BLT", wh: 1, kind: "piece", width_mm: 650, length_mm: 3000, qty: 1.95, created: at(140) }),
-    b({ code: "P00000104", item_id: 2, firm: "BLT", wh: 1, loc_id: cell("A-02-1"), kind: "roll", width_mm: 500, length_mm: 30000, qty: 15 }),
-    b({ code: "P00000105", item_id: 2, firm: "RMN", wh: 1, loc_id: cell("A-02-2"), kind: "piece", width_mm: 500, length_mm: 4200, qty: 2.1 }),
-    b({ code: "P00000106", item_id: 3, firm: "BLT", wh: 1, loc_id: cell("A-03-1"), kind: "piece", width_mm: 120, qty: 1 }),
-    b({ code: "P00000107", item_id: 3, firm: "BLT", wh: 1, loc_id: cell("A-03-1"), kind: "piece", width_mm: 150, qty: 1 }),
-    b({ code: "P00000108", item_id: 7, firm: "BLT", wh: 1, loc_id: cell("B-02-1"), kind: "roll", length_mm: 50000, qty: 50 }),
+    b({ code: "P00000104", item_id: 2, firm: "BLT", wh: 1, loc_id: cell("AO1-A-01-02-A"), kind: "roll", width_mm: 500, length_mm: 30000, qty: 15 }),
+    b({ code: "P00000105", item_id: 2, firm: "RMN", wh: 1, loc_id: cell("AO1-A-01-02-B"), kind: "piece", width_mm: 500, length_mm: 4200, qty: 2.1 }),
+    b({ code: "P00000106", item_id: 3, firm: "BLT", wh: 1, loc_id: cell("AO1-A-01-03-A"), kind: "piece", width_mm: 120, qty: 1 }),
+    b({ code: "P00000107", item_id: 3, firm: "BLT", wh: 1, loc_id: cell("AO1-A-01-03-A"), kind: "piece", width_mm: 150, qty: 1 }),
+    b({ code: "P00000108", item_id: 7, firm: "BLT", wh: 1, loc_id: cell("AO1-B-01-02-A"), kind: "roll", length_mm: 50000, qty: 50 }),
     b({ code: "P00000109", item_id: 7, firm: "BLT", wh: 1, kind: "piece", length_mm: 12000, qty: 12, created: at(120) }),
     b({ code: "P00000110", item_id: 2, firm: "BLT", wh: 1, kind: "piece", width_mm: 500, length_mm: 2000, qty: 1, pending: true }),
     b({ code: "P00000111", item_id: 1, firm: "BLT", wh: 3, kind: "piece", width_mm: 800, length_mm: 5000, qty: 4 }),
-    b({ item_id: 4, firm: "RMN", wh: 1, loc_id: cell("B-01-1"), kind: "lot", qty: 14 }),
-    b({ item_id: 5, firm: "RMN", wh: 1, loc_id: cell("B-01-2"), kind: "lot", qty: 8 }),
-    b({ item_id: 6, firm: "RMN", wh: 2, loc_id: cell("D-01-1"), kind: "lot", qty: 30 }),
+    b({ item_id: 4, firm: "RMN", wh: 1, loc_id: cell("AO1-B-01-01-A"), kind: "lot", qty: 14 }),
+    b({ item_id: 5, firm: "RMN", wh: 1, loc_id: cell("AO1-B-01-01-B"), kind: "lot", qty: 8 }),
+    b({ item_id: 6, firm: "RMN", wh: 2, loc_id: cell("DC1-A-01-01-A"), kind: "lot", qty: 30 }),
     b({ item_id: 6, firm: "RMN", wh: 1, kind: "lot", qty: 3 }),
-    b({ item_id: 8, char_id: 81, firm: "RMN", wh: 1, loc_id: cell("B-01-3"), kind: "lot", qty: 6 }),
+    b({ item_id: 8, char_id: 81, firm: "RMN", wh: 1, loc_id: cell("AO1-B-01-01-C"), kind: "lot", qty: 6 }),
   ];
 
   const posted = (number: string, kind: string, days: number, data: Record<string, unknown> = {}): DbDoc => ({
@@ -200,18 +251,24 @@ export function seed(now: number): Db {
       { id: 2, code: "RMN", name: "Remen Savdo MChJ" },
     ],
     warehouses: [
-      { id: 1, name: "Asosiy ombor", kind: "store" },
-      { id: 2, name: "Do'kon — Chilonzor", kind: "shop" },
-      { id: 3, name: "Kesish sexi", kind: "production" },
-      { id: 4, name: "Yo'lda", kind: "transit" },
+      { id: 1, name: "Asosiy ombor", kind: "store", code: "AO" },
+      { id: 2, name: "Do'kon — Chilonzor", kind: "shop", code: "DC" },
+      { id: 3, name: "Kesish sexi", kind: "production", code: "KS" },
+      { id: 4, name: "Yo'lda", kind: "transit", code: "YL" },
     ],
+    buildings,
     blocks,
     cells,
+    racks,
     items,
     batches,
     docs,
     picks,
     incoming,
     places: [],
+    // jurnal boshlanishi: har tirik birlik — «Boshlang'ich holat» (backend 0008_ledger_opening)
+    moves: batches
+      .filter((b) => b.qty > 0 && !b.pending)
+      .map((b, i): DbMove => ({ id: i + 1, at: at(60), op: "opening", unit_id: b.id, unit_code: b.code, item_id: b.item_id, char_id: b.char_id, firm: b.firm, delta: b.qty, qty_after: b.qty, wh_from: null, wh_to: b.wh, loc_from: null, loc_to: b.loc_id ? (cells.find((c) => c.id === b.loc_id)?.code ?? null) : null, doc_id: null, doc_number: null, reason: "", author_name: "" })),
   };
 }

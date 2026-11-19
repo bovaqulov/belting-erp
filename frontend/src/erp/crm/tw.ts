@@ -72,9 +72,9 @@ export const BOX_H = "m-0 flex justify-between px-3.5 pt-[11px] pb-1.5 text-xs t
 export const FR = [
   "grid min-h-[34px] grid-cols-[110px_minmax(0,1fr)] items-center gap-2 px-3.5 py-1.5 max-md:grid-cols-[104px_minmax(0,1fr)] max-md:px-3 max-md:py-1",
   "[&>span]:text-[13px] [&>span]:text-hint",
-  "[&_:is(input,select,textarea)]:w-full [&_:is(input,select,textarea)]:rounded-md [&_:is(input,select,textarea)]:border [&_:is(input,select,textarea)]:border-transparent [&_:is(input,select,textarea)]:bg-transparent [&_:is(input,select,textarea)]:px-[7px] [&_:is(input,select,textarea)]:py-[5px] [&_:is(input,select,textarea)]:text-fg [&_:is(input,select,textarea)]:outline-none [&_:is(input,select,textarea)]:[font:inherit]",
-  "[&_:is(input,select,textarea):hover]:border-sep [&_:is(input,select,textarea):focus]:border-link [&_:is(input,select,textarea):focus]:bg-page",
-  "[&_textarea]:min-h-14 [&_textarea]:resize-y max-md:[&_:is(input,select)]:min-h-11",
+  "[&_:is(input:not(.ck),select,textarea)]:w-full [&_:is(input:not(.ck),select,textarea)]:rounded-md [&_:is(input:not(.ck),select,textarea)]:border [&_:is(input:not(.ck),select,textarea)]:border-transparent [&_:is(input:not(.ck),select,textarea)]:bg-transparent [&_:is(input:not(.ck),select,textarea)]:px-[7px] [&_:is(input:not(.ck),select,textarea)]:py-[5px] [&_:is(input:not(.ck),select,textarea)]:text-fg [&_:is(input:not(.ck),select,textarea)]:outline-none [&_:is(input:not(.ck),select,textarea)]:[font:inherit]",
+  "[&_:is(input:not(.ck),select,textarea):hover]:border-sep [&_:is(input:not(.ck),select,textarea):focus]:border-link [&_:is(input:not(.ck),select,textarea):focus]:bg-page",
+  "[&_textarea]:min-h-14 [&_textarea]:resize-y max-md:[&_:is(input:not(.ck),select)]:min-h-11",
 ].join(" ");
 export const FR_TOP = "!items-start [&>span]:pt-1.5";
 /** Bog'liq yozuv qatori (kontakt, kompaniya) */

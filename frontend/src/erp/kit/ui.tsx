@@ -110,9 +110,10 @@ export const Check = ({ on }: { on: boolean }) => (
 // ------------------------------------------------------------ uslub (Tailwind)
 /** Segment: yopishqoq (brauzerda tepa panel bo'lsa — uning ostida), tugmalar guruhi */
 const SEG =
-  "sticky top-0 z-15 mx-4 my-2 flex gap-0.5 overflow-x-auto rounded-[10px] [background:linear-gradient(var(--fill),var(--fill)),var(--page)] p-0.5 shadow-[0_0_0_8px_var(--page)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:root:has(#topbar:not(.hidden))_&]:top-[52px]";
+  "sticky top-0 z-15 mx-4 my-2 flex gap-0.5 rounded-[10px] [background:linear-gradient(var(--fill),var(--fill)),var(--page)] p-0.5 shadow-[0_0_0_8px_var(--page)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:root:has(#topbar:not(.hidden))_&]:top-[52px]";
 /** tanlangani — asosiy rang (qorong'i rejimda ham aniq ko'rinsin), qolganlari — ikkinchi darajali matn */
-const SEG_BTN = "flex-[1_0_auto] cursor-pointer whitespace-nowrap rounded-lg border-0 px-3 py-[7px] text-[13.5px] font-medium transition-colors coarse:min-h-10";
+/** teng bo'linadi, aylanmaydi: tor ekranda nom «…» bilan qisqaradi (to'liq nomi — title) */
+const SEG_BTN = "min-w-0 flex-auto cursor-pointer truncate whitespace-nowrap rounded-lg border-0 px-1.5 py-[7px] text-[13.5px] font-medium transition-colors coarse:min-h-10";
 
 /** Pastdan chiqadigan oyna (kompyuter karkasida — markazda): fon va quti */
 export const sheetBg = (on: boolean) => `fixed inset-0 z-60 bg-black/45 transition-opacity duration-200 ${on ? "opacity-100" : "opacity-0"}`;
@@ -134,6 +135,9 @@ export function Seg<K extends string>({ items, cur, onPick }: { items: [K, strin
           key={k}
           data-k={k}
           type="button"
+          title={l}
+          // joy yetmasa — uzun nom ko'proq qisqaradi, qisqasi («Sex») deyarli o'zgarmaydi
+          style={{ flexShrink: Math.max(1, l.length - 5) }}
           aria-pressed={k === cur}
           className={`${SEG_BTN} ${k === cur ? "bg-btn font-semibold text-btn-fg shadow-[0_1px_3px_rgba(0,0,0,.18)]" : "bg-transparent text-sub"}`}
           onClick={() => {

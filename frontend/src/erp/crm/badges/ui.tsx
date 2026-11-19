@@ -13,7 +13,7 @@ export const AvaView = ({ name }: { name: string }) => (
 
 export function TaskBadge({ d }: { d: Deal }) {
   return d.next_task ? (
-    <span className={`${TSK} ${isLate(d.next_task) ? "bg-danger/15 text-danger" : "bg-fill text-hint"}`}>⏰ {dt(d.next_task)}</span>
+    <span className={`${TSK} ${isLate(d.next_task) ? "bg-danger/15 text-danger" : "text-hint"}`}>⏰ {dt(d.next_task)}</span>
   ) : (
     <span className={`${TSK} bg-warn/15 text-warn`} title="Rejalashtirilgan ish yo'q">
       vazifa yo&apos;q

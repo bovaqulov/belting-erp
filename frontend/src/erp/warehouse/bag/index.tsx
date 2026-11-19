@@ -5,7 +5,8 @@
 import { useRef, useState } from "react";
 
 import { C } from "@/erp/kit/colors";
-import { beep } from "@/erp/kit/env";
+import { ApiError } from "@/shared/api/client";
+import { beep, confirm } from "@/erp/kit/env";
 import { MainButton } from "@/erp/kit/ui";
 import { api, post } from "@/erp/warehouse/api";
 import { useWh } from "@/erp/warehouse/context";
@@ -14,7 +15,15 @@ import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 
 import { BagView, type BagLine } from "./ui";
 
-const REASONS = ["Brak", "Kamomad", "Chiqindi (kesish)", "Shikastlangan", "Boshqa"];
+// sabab kodlari — backend OFF_REASONS bilan bir xil
+const REASONS: [string, string][] = [
+  ["defect", "Brak (ishlab chiqarish nuqsoni)"],
+  ["damage", "Shikastlangan"],
+  ["shortage", "Kamomad"],
+  ["scrap", "Chiqindi (kesish qoldig'i)"],
+  ["expired", "Yaroqlilik muddati o'tgan"],
+  ["other", "Boshqa"],
+];
 
 export function Bag({ mode }: { mode: "move" | "off" }) {
   const { wide, me, stores, whName, choose, ask, can } = useWh();
@@ -74,7 +83,20 @@ export function Bag({ mode }: { mode: "move" | "off" }) {
         header: { ...header, data },
         lines: ls.map((l) => ({ item_id: l.item_id, char_id: l.char_id || null, batch_id: l.batch_id, qty: String(l.qty) })),
       });
-      out.push(can(kind, "post") ? `${(await post<Doc>(`/app/api/erp/docs/${d.id}/post`, { version: d.version })).number} o'tkazildi` : `${d.number || "qoralama"} — tasdiqlash kutilmoqda`);
+      if (!can(kind, "post")) {
+        out.push(`${d.number || "qoralama"} — tasdiqlash kutilmoqda`);
+        continue;
+      }
+      try {
+        out.push(`${(await post<Doc>(`/app/api/erp/docs/${d.id}/post`, { version: d.version })).number} o'tkazildi`);
+      } catch (e) {
+        // katta summa — rahbar tasdig'i (409): tasdiqlasa approve bilan qayta o'tkazamiz, aks holda qoralama qoladi
+        if (!(e instanceof ApiError && e.status === 409) || !(await confirm(`${e.message}. Tasdiqlaysizmi?`))) {
+          out.push(`${d.number || "qoralama"} — ${(e as Error).message}`);
+          continue;
+        }
+        out.push(`${(await post<Doc>(`/app/api/erp/docs/${d.id}/post`, { version: d.version, approve: true })).number} o'tkazildi (tasdiqlangan)`);
+      }
     }
     return out.join(", ");
   };
@@ -84,13 +106,14 @@ export function Bag({ mode }: { mode: "move" | "off" }) {
       let r: string | null;
       if (move) {
         if (!to) throw new Error("Qayerga — omborni tanlang");
-        r = await docsByFirm("transfer", { warehouse_id: from, warehouse_to: to });
+        r = `${await docsByFirm("transfer", { warehouse_id: from, warehouse_to: to })} — tovar yo'lda; ${whName(to)} Qabul bo'limida skanerlab qabul qiladi`;
       } else {
-        const why = await choose("Sabab", REASONS.map((x) => ({ value: x, label: x })));
+        const why = await choose("Sabab", REASONS.map(([v, l]) => ({ value: v, label: l })));
         if (!why) return;
-        const note = why === "Boshqa" ? await ask("Sabab", { label: "Izoh", ok: "Hisobdan chiqarish" }) : "";
-        if (why === "Boshqa" && !note) return;
-        r = await docsByFirm("writeoff", { warehouse_id: from }, { reason: note ? `${why}: ${note}` : why });
+        const note = await ask("Izoh", { label: why === "other" ? "Sababni yozing (majburiy)" : "Qo'shimcha izoh (ixtiyoriy)", ok: "Hisobdan chiqarish" });
+        if (note === null || (why === "other" && !note.trim())) return;
+        const label = REASONS.find(([v]) => v === why)?.[1] ?? why;
+        r = await docsByFirm("writeoff", { warehouse_id: from }, { reason_code: why, reason: note.trim() ? `${label}: ${note.trim()}` : label });
       }
       beep(true);
       setLines([]);

@@ -10,7 +10,10 @@ import {
   hue,
   initials,
   isTeam,
+  autoTitle,
   itemAmount,
+  custSub,
+  priced,
   leadWait,
   paceCls,
   qs,
@@ -83,6 +86,21 @@ describe("crm.lib", () => {
     const t = boardTotals([s("open", 2, "100", "50"), s("open", 3, "200.5", ""), s("won", 9, "999", "999")]);
     expect(t).toMatchObject({ count: 5, amount: 300.5, weighted: 50 });
     expect(t.closed).toHaveLength(1);
+  });
+  it("priced: chegirma → ustama → logistika (backend bilan bir xil)", () => {
+    // 1 100 000 × 0,9 × 1,05 + 200 000 = 1 239 500
+    expect(priced(1_100_000, { discount: "10", markup: "5", logistics: "200000" })).toEqual({ sub: 1_100_000, disc: 110_000, mark: 49_500, log: 200_000, total: 1_239_500 });
+    expect(priced(500, {}).total).toBe(500);
+  });
+  it("custSub: mijoz turi bo'yicha qisqa ma'lumot", () => {
+    expect(custSub({ id: 1, name: "Rahim", kind: "employee", position: "Ta'minotchi", company: "Chinoz Un", phones: ["998901112233"] })).toBe("Firma xodimi: Ta'minotchi, Chinoz Un · +998901112233");
+    expect(custSub({ id: 2, name: "Ali", kind: "person", inn: "31234567890123" })).toBe("Jismoniy shaxs · JSHSHIR 31234567890123");
+    expect(custSub({ id: 3, name: "Z", inn: "305112847" })).toBe("Firma · STIR 305112847");
+  });
+  it("autoTitle: tizim beradigan bitim nomi (backend bilan bir xil)", () => {
+    expect(autoTitle([{ name: "Ремень SPB 1650", qty: "10", unit: "dona" }, { name: "Lenta", qty: "2,5", unit: "m" }], "X")).toBe("Ремень SPB 1650 — 10 dona +1");
+    expect(autoTitle([], "Avto Nom MChJ")).toBe("Avto Nom MChJ");
+    expect(autoTitle([])).toBe("Yangi bitim");
   });
   it("itemAmount: chegirma bilan", () => {
     expect(itemAmount({ name: "a", qty: "2", price: "1000", discount: "10" })).toBe(1800);

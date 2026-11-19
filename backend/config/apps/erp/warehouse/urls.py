@@ -1,5 +1,65 @@
-"""Ombor API (/app/api/...) — keyingi bosqichda."""
+"""Ombor API marshrutlari: /app/api/erp/* (docs/api/warehouse.md). Tartib muhim: aniq yo'l umumiydan oldin."""
 
-from django.urls import URLPattern
+from django.urls import path
 
-urlpatterns: list[URLPattern] = []
+from . import views as v
+
+P = "erp"
+
+urlpatterns = [
+    path(f"{P}/scan", v.scan),
+    path(f"{P}/items", v.items),
+    path(f"{P}/stock", v.item_stock),
+    path(f"{P}/stock/dashboard", v.dashboard),
+    path(f"{P}/stock/table", v.stock_table),
+    path(f"{P}/stock/cycle", v.cycle),
+    path(f"{P}/stock/cutplan", v.cutplan),
+    path(f"{P}/moves", v.moves),
+    path(f"{P}/putaway", v.putaway),
+    path(f"{P}/cat/groups", v.groups),
+    path(f"{P}/cells", v.cells),
+    path(f"{P}/cells/<int:pk>", v.cell),
+    path(f"{P}/cells/<int:pk>/units", v.cell_units),
+    path(f"{P}/wh/tree", v.wh_tree),
+    path(f"{P}/wh/structure", v.wh_structure),
+    path(f"{P}/wh/stores/<int:pk>", v.wh_store),
+    path(f"{P}/wh/buildings", v.wh_buildings),
+    path(f"{P}/wh/buildings/<int:pk>", v.wh_building),
+    path(f"{P}/wh/blocks", v.wh_blocks),
+    path(f"{P}/wh/blocks/<int:pk>", v.wh_block),
+    path(f"{P}/wh/racks", v.wh_racks),
+    path(f"{P}/wh/wizard", v.wh_wizard),
+    path(f"{P}/wh/racks/<int:pk>", v.wh_rack),
+    path(f"{P}/wh/unplaced", v.wh_unplaced),
+    path(f"{P}/units/loc", v.units_loc),
+    path(f"{P}/units", v.units),
+    path(f"{P}/units/<int:pk>/trace", v.unit_trace),
+    path(f"{P}/units/<int:pk>", v.unit_drop),
+    path(f"{P}/labels/print", v.labels_print),
+    path(f"{P}/labels/pdf", v.labels_pdf),
+    path(f"{P}/labels/units.pdf", v.label_units),
+    path(f"{P}/labels/place/<int:pk>.pdf", v.label_place),
+    path(f"{P}/cat/items", v.cat_items),
+    path(f"{P}/cat/items/<int:pk>", v.cat_item),
+    path(f"{P}/place", v.place),
+    path(f"{P}/place/recent", v.place_recent),
+    path(f"{P}/place/<int:pk>/undo", v.place_undo),
+    path(f"{P}/docs", v.docs),
+    path(f"{P}/docs/<int:pk>", v.doc),
+    path(f"{P}/docs/<int:pk>/<str:act>", v.doc_act),
+    path(f"{P}/picks", v.picks),
+    path(f"{P}/picks/<int:pk>", v.pick),
+    path(f"{P}/picks/<int:pk>/ship", v.pick_ship),
+    path(f"{P}/picks/<int:pk>/short", v.pick_short),
+    path(f"{P}/sales", v.sales),
+    path(f"{P}/returns", v.returns),
+    path(f"{P}/purchase/incoming", v.purchase_incoming),
+    path(f"{P}/purchase/incoming/<int:pk>", v.purchase_incoming_one),
+    path(f"{P}/kpi/dock", v.kpi_dock),
+    path(f"{P}/kpi/ira", v.kpi_ira),
+    path(f"{P}/kpi/summary", v.kpi_summary),
+    path(f"{P}/transfers/incoming", v.transfers_incoming),
+    path(f"{P}/wh/levels", v.wh_levels),
+    path(f"{P}/wh/levels/<int:pk>", v.wh_level),
+    path(f"{P}/replenish", v.replenish),
+]

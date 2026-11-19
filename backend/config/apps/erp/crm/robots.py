@@ -22,7 +22,7 @@ from config.apps.core.telegram import send_message
 from .access import is_sales_head
 from .customers import BOUGHT, repeat_cycle
 from .deals import iso
-from .models import Activity, Customer, Deal, Lead, LeadStatus, Stage, StageHistory, StageKind
+from .models import Activity, Customer, Deal, Lead, LeadStatus, Stage, StageHistory, StageKind, deal_title
 
 log = logging.getLogger(__name__)
 WORK_HOURS = (8, 20)
@@ -168,6 +168,8 @@ def repeat_sales(now: datetime, limit: int = 50) -> int:
             division=last.division,
             repeat=True,
         )
+        d.title = deal_title(d.pk, d.title)
+        d.save(update_fields=["title"])
         StageHistory.objects.create(deal=d, ts=now, actor=None, from_stage="", to_stage=first.code, src="robot")
         Activity.objects.create(
             deal=d,

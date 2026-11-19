@@ -8,13 +8,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { beep, confirm, hap, toast } from "@/erp/kit/env";
 import { dnum, hhmm, num, un } from "@/erp/kit/fmt";
-import { MainButton } from "@/erp/kit/ui";
+import { List, MainButton, Row, useLoad } from "@/erp/kit/ui";
 import { api, del, labelsPdf, post } from "@/erp/warehouse/api";
 import { useWh } from "@/erp/warehouse/context";
 import { invKey, size, type ChoiceOpt, type Cycle, type Doc, type DocBrief, type InvDiff, type Posted, type ScanItem, type ScanRes, type ScanUnit } from "@/erp/warehouse/lib";
 import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 
-import { CountView, type Line, type Result } from "./ui";
+import { CountView, ReviewView, type Line, type Result, type Review } from "./ui";
 
 type Inv = {
   doc: Doc | null;
@@ -55,6 +55,14 @@ export function Count() {
   const { wide, me, stores, whName, firmId, choose, ask, askSize, pickCell } = useWh();
   const [s, setS] = useState<Inv>(() => restore() ?? blank(stores[0]?.id, me.firms[0]?.code));
   const [result, setResult] = useState<Result | null>(null);
+  /** o'tkazishdan oldin ko'rish: katta farq bo'lsa — qayta sanash yoki rahbar tasdig'i */
+  const [review, setReview] = useState<Review | null>(null);
+  const [reason, setReason] = useState("");
+  /** zaxira yozuvlari aniqligi (IRA, 90 kun) — jahon amaliyoti 95–98%+ */
+  const ira = useLoad(
+    () => (s.wh ? api<{ positions: number; ira: number | null; counts: number; days: number }>(`/app/api/erp/kpi/ira?store_id=${s.wh}`).catch(() => null) : Promise.resolve(null)),
+    [s.wh, result?.number],
+  );
   const S = useRef(s);
   /** Holatni yangilash: ref (asinxron ishlovchilar uchun), modul nusxasi va React holati birga */
   const patch = useCallback((p: Partial<Inv> | ((x: Inv) => Partial<Inv>)) => {
@@ -246,8 +254,26 @@ export function Count() {
       clearTimeout(timer.current);
       await ensure();
       await saveNow();
+      const x1 = S.current;
+      const rv = await post<Review>(`/app/api/erp/docs/${x1.doc!.id}/review`);
+      if (rv.need) {
+        beep(false);
+        setReason("");
+        return setReview(rv);
+      }
+      await commit();
+    } catch (e) {
+      beep(false);
+      m.say(false, (e as Error).message);
+    }
+  };
+
+  /** o'tkazish (approve — rahbar tasdig'i, sabab bilan) */
+  const commit = async (approve?: { reason: string }) => {
+    try {
       const x = S.current;
-      const p = await post<Posted>(`/app/api/erp/docs/${x.doc!.id}/post`, { version: x.doc!.version });
+      const p = await post<Posted>(`/app/api/erp/docs/${x.doc!.id}/post`, { version: x.doc!.version, ...(approve ? { approve: true, reason: approve.reason } : {}) });
+      setReview(null);
       const names = Object.fromEntries(x.lines.map((l) => [l.batch_id ? `b${l.batch_id}` : `i${l.item_id}`, l.data.name]));
       const diff = ((p.data.result ?? []) as InvDiff[]).filter((r) => Number(r.diff) !== 0);
       patch({ ...blank(x.wh, x.firm), asked: true });
@@ -258,14 +284,40 @@ export function Count() {
       });
     } catch (e) {
       beep(false);
+      toast((e as Error).message, "bad"); // ko'rish ekranida skaner xabari ko'rinmaydi
       m.say(false, (e as Error).message);
     }
   };
 
   const counted = new Set(s.lines.map((l) => l.item_id));
-  const showMain = !result && (s.lines.length > 0 || s.full || !!s.items?.length);
+  const showMain = !result && !review && (s.lines.length > 0 || s.full || !!s.items?.length);
+  if (review)
+    return (
+      <ReviewView
+        r={review}
+        reason={reason}
+        onReason={setReason}
+        onRecount={() => {
+          setReview(null);
+          toast("Belgilangan pozitsiyalarni qayta sanang — skanerlab yoki qatorni bosib tuzating");
+        }}
+        onApprove={() => void commit({ reason })}
+      />
+    );
+  const k = ira.data;
   return (
     <>
+      {!result && !s.lines.length && k && k.positions ? (
+        <List>
+          <Row
+            icon="chart"
+            color={(k.ira ?? 0) >= 95 ? "green" : (k.ira ?? 0) >= 85 ? "orange" : "red"}
+            t="Zaxira aniqligi (IRA)"
+            s={`${k.days} kun · ${k.counts} sanash · ${k.positions} pozitsiya · maqsad ≥ 95%`}
+            val={<span className="num">{k.ira === null ? "—" : `${num(k.ira, 1)}%`}</span>}
+          />
+        </List>
+      ) : null}
       <CountView
         wide={wide}
         result={result}

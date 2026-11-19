@@ -1,4 +1,14 @@
-// CRM Telegram (sotuvchilar yozishmalari, Telegram Business bot) — turlar va sof yordamchilar. Kontrakt: docs/api/crm.md «Telegram».
+// CRM yozishmalari (Telegram Business bot, WhatsApp va Instagram — rasmiy Meta API) — turlar va sof yordamchilar.
+// Kontrakt: docs/api/crm.md «Telegram», «WhatsApp va Instagram».
+
+/** Kanal: Telegram (har sotuvchi o'zini ulaydi), WhatsApp / Instagram (kompaniya raqami/akkaunti, chat sotuvchiga taqsimlanadi) */
+export type Ch = "tg" | "wa" | "ig";
+export const CHANNELS: { k: Ch; name: string; icon: string; color: string }[] = [
+  { k: "tg", name: "Telegram", icon: "send-tg", color: "#2aabee" },
+  { k: "wa", name: "WhatsApp", icon: "message-circle", color: "#25d366" },
+  { k: "ig", name: "Instagram", icon: "instagram", color: "#e1306c" },
+];
+export const chOf = (k: Ch | undefined | null) => CHANNELS.find((x) => x.k === (k ?? "tg")) ?? CHANNELS[0];
 
 export type TgChat = {
   id: number;
@@ -10,6 +20,8 @@ export type TgChat = {
   last_text: string;
   last_out: boolean;
   unread: number;
+  /** kanal (eski javoblarda yo'q — Telegram) */
+  channel?: Ch;
   /** joriy foydalanuvchi shu chatga javob yoza oladimi (chat egasi + bot huquqi) */
   can_send: boolean;
   /** biriktirilgan CRM mijozi */
@@ -54,6 +66,8 @@ export type TgChats = {
   head: boolean;
   /** joriy foydalanuvchining o'z ulanishi; null — ulanmagan */
   connection: { enabled: boolean; can_reply: boolean } | null;
+  /** kanallar holati: ulanganmi (WhatsApp / Instagram — kompaniya kalitlari) va o'qilmaganlar (tab belgisi) */
+  channels?: Record<Ch, { enabled: boolean; unread: number }>;
   chats: TgChat[];
 };
 
@@ -81,7 +95,7 @@ export const KIND_LABEL: Record<string, string> = {
   game: "O'yin",
   invoice: "Hisob-faktura",
   gift: "Sovg'a",
-  other: "Bu turdagi xabar CRM'da ko'rsatilmaydi — Telegram'da oching",
+  other: "Bu turdagi xabar CRM'da ko'rsatilmaydi — ilovaning o'zida oching",
 };
 
 /** Fayl hajmi: 1,2 MB / 340 KB */
@@ -125,6 +139,8 @@ export function dayLabel(iso: string, now = Date.now()): string {
 /** Ro'yxatdagi oxirgi xabar ko'rinishi */
 export const lastLine = (c: Pick<TgChat, "last_text" | "last_out">): string => (c.last_out ? `Siz: ${c.last_text}` : c.last_text);
 
-/** Jami o'qilmaganlar (yozishmalar shaxsiy — ro'yxatda faqat o'z chatlari; tekshiruv zaxira uchun) */
+/** Jami o'qilmaganlar — barcha kanallar (channels bo'lmasa — ro'yxatdagi o'z chatlari; tekshiruv zaxira uchun) */
 export const unreadTotal = (r: TgChats | null | undefined, me: number): number =>
-  (r?.chats ?? []).filter((c) => c.seller_tg === me).reduce((a, c) => a + c.unread, 0);
+  r?.channels
+    ? Object.values(r.channels).reduce((a, x) => a + (x.unread || 0), 0)
+    : (r?.chats ?? []).filter((c) => c.seller_tg === me).reduce((a, c) => a + c.unread, 0);

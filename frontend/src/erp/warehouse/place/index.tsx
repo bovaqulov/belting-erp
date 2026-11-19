@@ -9,7 +9,7 @@ import { dnum } from "@/erp/kit/fmt";
 import { MainButton } from "@/erp/kit/ui";
 import { api, downloadPdf, post } from "@/erp/warehouse/api";
 import { useWh, type Size } from "@/erp/warehouse/context";
-import type { CatItem, Dims, PlaceRec, Placed, ScanRes, Unplaced, WhTree } from "@/erp/warehouse/lib";
+import type { CatItem, Dims, PlaceRec, Placed, PutawayTip, ScanRes, Unplaced, WhTree } from "@/erp/warehouse/lib";
 import { ScanBar, useScanMsg, useScanner } from "@/erp/warehouse/scan-bar";
 import { useLoad } from "@/erp/kit/ui";
 
@@ -38,10 +38,19 @@ export function Place() {
       store ? api<WhTree>(`/app/api/erp/wh/tree?store_id=${store}`).catch(() => null) : Promise.resolve(null),
       store ? api<Unplaced[]>(`/app/api/erp/wh/unplaced?store_id=${store}`).catch(() => [] as Unplaced[]) : Promise.resolve([] as Unplaced[]),
     ]);
-    return { rec, tree, wait };
+    return { rec, tree, wait, now: Date.now() };
   }, [loc?.id, store, tick]);
 
   const d = item ? dimsOf(item) : null;
+  // joylashtirish tavsiyasi: tovar (va kiritilgan birliklar soni/eni) bo'yicha mos joylar
+  const maxW = d === "wl" || d === "w" ? Math.max(0, ...units.map((u) => Number((d === "w" ? u.q : u.w) ?? 0))) : 0;
+  const tips = useLoad(
+    () =>
+      item && store
+        ? api<PutawayTip[]>(`/app/api/erp/putaway?store_id=${store}&item_id=${item.id}&n=${Math.max(1, units.length)}${maxW ? `&width_mm=${maxW}` : ""}`).catch(() => [] as PutawayTip[])
+        : Promise.resolve([] as PutawayTip[]),
+    [item?.id, store, units.length, maxW, tick],
+  );
   const setItemId = async (id: number) => {
     const it = await api<CatItem>(`/app/api/erp/cat/items/${id}`);
     if (it.kind === "service") throw new Error("Xizmat omborga joylanmaydi");
@@ -99,7 +108,7 @@ export function Place() {
     if (!t.restricted) for (const c of t.loose) opts.push({ value: { id: c.id, code: c.code, parent_id: t.store.id }, label: c.code, sub: "blokka biriktirilmagan" });
     if (stores.length > 1) opts.unshift({ value: "store", label: `Ombor: ${t.store.name}`, sub: "boshqa omborni tanlash" });
     if (!t.blocks.length && !t.loose.length)
-      return toast(t.restricted ? "Bu omborda sizga biriktirilgan blok yo'q — rahbariyat blokka javobgar qilib biriktiradi" : "Bu omborda javon yo'q — Joylar bo'limida yarating", "bad");
+      return toast(t.restricted ? "Bu omborda sizga biriktirilgan blok yo'q — rahbariyat blokka javobgar qilib biriktiradi" : "Bu omborda javon yo'q — «Ombor xaritasi» bo'limida yarating", "bad");
     const v = await choose<V>("Joy (javon)", opts);
     if (v === "store") {
       const w = await choose("Ombor", stores.map((x) => ({ value: x.id, label: x.name })));
@@ -160,6 +169,13 @@ export function Place() {
         last={last}
         rec={side.data?.rec ?? []}
         wait={side.data?.wait ?? []}
+        tips={tips.data ?? []}
+        now={side.data?.now ?? 0}
+        onTip={(x) => {
+          if (!store) return;
+          setLoc({ id: x.id, code: x.code, parent_id: store });
+          setLast(null);
+        }}
         meId={me.tg_id}
         onLoc={() => void pickLoc()}
         onItem={() => setSearch("")}
@@ -177,9 +193,19 @@ export function Place() {
         onChar={setChar}
         onPdf={() => last && void downloadPdf(last.label.url, `${last.loc}.pdf`)}
         onWait={async (w) => {
-          if (!loc) return toast("Avval javonni skanerlang yoki tanlang", "bad");
           try {
-            await moveTo(w.batch_id, w.code, w.name, null, loc);
+            let to = loc;
+            if (!to) {
+              // javon tanlanmagan — shu birlik uchun mos joylar (tavsiya)
+              if (!store || !w.item_id) return toast("Avval javonni skanerlang yoki tanlang", "bad");
+              const tips = await api<PutawayTip[]>(`/app/api/erp/putaway?store_id=${store}&item_id=${w.item_id}${w.width_mm ? `&width_mm=${w.width_mm}` : ""}`);
+              if (!tips.length) return toast("Mos bo'sh joy topilmadi — javonni o'zingiz tanlang", "bad");
+              const id = await choose(`${w.code ?? w.name} — qayerga?`, tips.map((x, i) => ({ value: x.id, label: x.code, sub: x.reason, icon: i === 0 ? "sparkles" : "pin", color: i === 0 ? "green" : "gray" })));
+              const x = tips.find((y) => y.id === id);
+              if (!x) return;
+              to = { id: x.id, code: x.code, parent_id: store };
+            }
+            await moveTo(w.batch_id, w.code, w.name, null, to);
           } catch (e) {
             toast((e as Error).message, "bad");
           }

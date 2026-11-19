@@ -9,6 +9,7 @@ javob yozadi. Boshqa CRM jadvallari — keyingi bosqichda.
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 from django.db import models
@@ -39,7 +40,7 @@ class Stage(models.Model):
     kind = models.CharField(max_length=8, choices=StageKind.choices, default=StageKind.OPEN)
     color = models.CharField(max_length=16, blank=True)
     probability = models.PositiveSmallIntegerField(null=True, blank=True)
-    rot_days = models.PositiveSmallIntegerField(null=True, blank=True)  # shuncha kun tegilmasa — "chirigan"
+    rot_days = models.PositiveSmallIntegerField(null=True, blank=True)  # shuncha kun tegilmasa — "harakatsiz"
     # SLA: bosqichda shuncha soatdan ortiq tursa — mas'ulga eslatma (robot), kartochkada "muddati o'tdi"
     sla_hours = models.PositiveIntegerField(null=True, blank=True)
     guide = models.TextField(blank=True)  # sotuvchiga ko'rsatma (bosqichda nima qilish)
@@ -63,8 +64,19 @@ class LostReason(models.Model):
         return self.name
 
 
+class CustomerKind(models.TextChoices):
+    COMPANY = "company", "Yuridik shaxs (firma)"
+    EMPLOYEE = "employee", "Firma xodimi"
+    TRADER = "trader", "Savdogar"
+    IP = "ip", "YaTT (yakka tartibdagi tadbirkor)"
+    PERSON = "person", "Jismoniy shaxs"
+    STATE = "state", "Davlat tashkiloti"
+
+
 class Customer(models.Model):
-    name = models.CharField(max_length=255)
+    # turi: firma / firma xodimi (lavozim + firma ma'lumotlari) / savdogar / YaTT / jismoniy shaxs / davlat tashkiloti
+    kind = models.CharField(max_length=10, choices=CustomerKind.choices, default=CustomerKind.COMPANY, db_index=True)
+    name = models.CharField(max_length=255)  # firma / tashkilot nomi yoki odamning ismi
     inn = models.CharField("STIR", max_length=20, blank=True, db_index=True)
     phones = models.JSONField(default=list, blank=True)  # ["998901234567"]
     owner_tg = models.BigIntegerField(null=True, blank=True, db_index=True)
@@ -72,6 +84,11 @@ class Customer(models.Model):
     # kontakt shaxslar: [{"name": "Rahim", "role": "ta'minotchi", "phone": "998901234567"}]
     contacts = models.JSONField(default=list, blank=True)
     note = models.TextField(blank=True)
+    address = models.CharField("Manzil (joylashuv)", max_length=300, blank=True)
+    # firma xodimi: lavozimi va qaysi firmadan
+    position = models.CharField("Lavozimi", max_length=120, blank=True)
+    company = models.CharField("Firma nomi", max_length=255, blank=True)
+    company_inn = models.CharField("Firma STIRi", max_length=20, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -95,6 +112,14 @@ class Division(models.TextChoices):
     BELTING = "belting", "Belting Rezina"
 
 
+DEAL_NO = re.compile(r"^#\d+\s*")
+
+
+def deal_title(pk: int, title: str) -> str:
+    """Bitim nomi unikal raqam bilan: «#42 SPB 1650 remen». Eski/qo'lda yozilgan «#N» prefiksi almashtiriladi."""
+    return f"#{pk} {DEAL_NO.sub('', title.strip()) or 'Yangi bitim'}"[:255]
+
+
 class Deal(models.Model):
     title = models.CharField(max_length=255)
     customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.SET_NULL, related_name="deals")
@@ -112,6 +137,11 @@ class Deal(models.Model):
     probability = models.PositiveSmallIntegerField(null=True, blank=True)
     need = models.TextField(blank=True)
     items = models.JSONField(default=list, blank=True)  # [{item_id, char_id, name, unit, qty, price, discount}]
+    # tovarlar bo'yicha summa: tovarlar × (1 − chegirma%) × (1 + ustama%) + logistika (deals.recalc)
+    discount = models.DecimalField("Chegirma, %", max_digits=5, decimal_places=2, default=Decimal(0))
+    markup = models.DecimalField("Ustama, %", max_digits=6, decimal_places=2, default=Decimal(0))
+    logistics = models.DecimalField("Logistika, so'm", max_digits=16, decimal_places=2, default=Decimal(0))
+    location = models.CharField("Yetkazish manzili", max_length=300, blank=True)
     # kartochka maydonlari: kontakt, bo'linma, 1C hujjat raqamlari, takroriy bitim
     contact = models.CharField("Kontakt shaxs", max_length=200, blank=True)
     division = models.CharField("Bo'linma", max_length=16, choices=Division.choices, blank=True)
@@ -202,6 +232,13 @@ class Doc(models.Model):
     status = models.CharField(max_length=16, default="draft")
     state = models.CharField(max_length=32, blank=True)
     total = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal(0))
+    # yaratilgan paytdagi nusxa: tovar qatorlari va narxlash (bitim keyin o'zgarsa ham hujjat o'zgarmaydi)
+    lines = models.JSONField(default=list, blank=True)  # [{item_id, char_id, name, unit, qty, price, discount, amount}]
+    meta = models.JSONField(default=dict, blank=True)  # {customer, inn, location, sub, discount, markup, logistics}
+    # Didox: qoralama ID'si va holati (0 qoralama, 1 mijoz imzosi kutilmoqda, 3 imzolangan, 4 rad …) — crm/didox.py
+    didox_id = models.CharField(max_length=64, blank=True)
+    didox_status = models.IntegerField(null=True, blank=True)
+    didox_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-date", "-id"]
@@ -216,6 +253,29 @@ class LeadStatus(models.TextChoices):
     INTERESTED = "interested", "Qiziqish bildirdi"
     CONVERTED = "converted", "Bitimga aylandi"
     JUNK = "junk", "Yaroqsiz"
+
+
+class Call(models.Model):
+    """Telefon qo'ng'irog'i: IP-telefoniyadan (webhook, calls.py) yoki qo'lda yozilgan. Mijozga — telefon raqami bo'yicha."""
+
+    customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.SET_NULL, related_name="calls")
+    deal = models.ForeignKey(Deal, null=True, blank=True, on_delete=models.SET_NULL, related_name="calls")
+    phone = models.CharField(max_length=20, db_index=True)
+    direction = models.CharField(max_length=3, default="out")  # in | out
+    status = models.CharField(max_length=10, default="answered")  # answered | missed | busy
+    started = models.DateTimeField(db_index=True)
+    duration = models.PositiveIntegerField(default=0)  # soniya (gaplashilgan)
+    recording_url = models.URLField(max_length=500, blank=True)
+    owner_tg = models.BigIntegerField(null=True, blank=True, db_index=True)  # sotuvchi (operator)
+    note = models.TextField(blank=True)
+    source = models.CharField(max_length=20, default="manual")  # manual | pbx (provayder nomi)
+    ext_id = models.CharField(max_length=80, blank=True, db_index=True)  # provayder qo'ng'iroq ID'si (takrorlanmasin)
+
+    class Meta:
+        ordering = ["-started"]
+
+    def __str__(self) -> str:
+        return f"{self.direction} {self.phone} {self.started:%d.%m %H:%M}"
 
 
 class Lead(models.Model):
@@ -285,10 +345,18 @@ class Goal(models.Model):
         return f"{self.owner_tg} {self.month:%Y-%m}"
 
 
-class TgConnection(models.Model):
-    """Sotuvchining Telegram Business ulanishi (business_connection)."""
+class Channel(models.TextChoices):
+    TG = "tg", "Telegram"
+    WA = "wa", "WhatsApp"
+    IG = "ig", "Instagram"
 
-    id = models.CharField(primary_key=True, max_length=128)  # business_connection_id
+
+class TgConnection(models.Model):
+    """Sotuvchining kanal ulanishi. Telegram — Business ulanishi (id — business_connection_id); WhatsApp / Instagram —
+    kompaniya raqami/akkaunti, sotuvchiga taqsimlangan chatlar shu yerda (id — «wa:<tg_id>», meta.py)."""
+
+    id = models.CharField(primary_key=True, max_length=128)  # business_connection_id | «wa:<tg_id>» | «ig:<tg_id>»
+    channel = models.CharField(max_length=2, choices=Channel.choices, default=Channel.TG, db_index=True)
     user_tg = models.BigIntegerField("Sotuvchi Telegram ID", db_index=True)
     user_name = models.CharField(max_length=200, blank=True)
     user_chat_id = models.BigIntegerField(null=True, blank=True)

@@ -1,7 +1,7 @@
 # Katalog API — `/app/api/erp/cat/*` (Accounting › Tovarlar)
 
 Jarvis kontrakti (`office/web/erp_setup_api.py`, mantiq `office/erp/catalog/manage.py`). Frontend: `frontend/src/erp/finance/`
-(`/app/erp/moliya`). Backend (belting_erp): `backend/config/apps/erp/catalog/` — skelet; ulangunicha frontend brauzer ichidagi
+(`/app/erp/moliya`). Backend (belting_erp): `backend/config/apps/erp/catalog/` — modellar (`Group`, `Item`, `Char`; qoldiq — `erp_warehouse.Stock`) va `services.py` (qidiruv, narx — CRM ishlatadi) tayyor, HTTP API hali ochilmagan; ulangunicha frontend brauzer ichidagi
 demo backend bilan ishlaydi (`src/erp/finance/demo/server.lib.ts` — shu qoidalar bilan). Demo/haqiqiy tanlovi:
 `GET /app/api/erp/me` va `GET /app/api/erp/cat/groups` — 404/5xx/tarmoq → demo.
 

@@ -85,8 +85,17 @@ function Queue({ onOpen }: { onOpen: (id: number) => void }) {
   return <Loaded st={st}>{(rs) => <PickList wide={wide} rs={rs} onOpen={onOpen} />}</Loaded>;
 }
 
-function Order({ o, onBack, onShipped }: { o: PickOrder; onBack: () => void; onShipped: (r: { number: string; total: number }) => void }) {
+// «Topilmadi» sabablari — backend SHORT_REASONS bilan bir xil
+const SHORT: [string, string][] = [
+  ["missing", "Joyida yo'q"],
+  ["damaged", "Shikastlangan"],
+  ["less", "Kam chiqdi"],
+  ["label", "Yorlig'i yo'q / o'qilmaydi"],
+];
+
+function Order({ o: o0, onBack, onShipped }: { o: PickOrder; onBack: () => void; onShipped: (r: { number: string; total: number }) => void }) {
   const { wide, can, whName, choose, ask } = useWh();
+  const [o, setO] = useState(o0);
   const cutUnit = useCutUnit();
   const [picks, setPicks] = useState<Picked[]>(savedPicks);
   // skan ishlovchisi (asinxron) eng so'nggi ro'yxatni ko'rsin — ref; render faqat `picks` holatini o'qiydi
@@ -210,10 +219,26 @@ function Order({ o, onBack, onShipped }: { o: PickOrder; onBack: () => void; onS
             ...us.map((u, i) => ({
               value: `u${i}`,
               label: u.code ?? "partiya",
-              sub: [u.loc ? `joy ${u.loc}` : "joyi belgilanmagan", `${num(u.qty, 3)} ${un(ln.unit)}`, size(u), u.firm].filter(Boolean).join(" · "),
+              sub: [u.loc ? `joy ${u.loc}` : "joyi belgilanmagan", `${num(u.qty, 3)} ${un(ln.unit)}`, size(u), u.tip, u.firm].filter(Boolean).join(" · "),
+              icon: i === 0 ? "sparkles" : "pin",
+              color: i === 0 ? "green" : "gray",
             })),
-            { value: "lbl", label: "Yorliq yo'q — stiker chop etish", sub: us.length ? "Birlik QR stikeri yoki tovar stikeri" : "Tovar stikeri" },
+            { value: "lbl", label: "Yorliq yo'q — stiker chop etish", sub: us.length ? "Birlik QR stikeri yoki tovar stikeri" : "Tovar stikeri", icon: "printer", color: "gray" },
+            { value: "short", label: "Topilmadi", sub: "Tovar navbatdan tashqari sanashga yuboriladi", icon: "alert", danger: true },
           ]);
+          if (a === "short") {
+            const why = await choose(`Topilmadi: ${ln.name}`, SHORT.map(([value, label]) => ({ value, label })));
+            if (!why) return;
+            try {
+              const n = await post<PickOrder>(`/app/api/erp/picks/${o.id}/short`, { line_no: ln.line_no, reason: why, loc: ln.at ?? "" });
+              PK.order = n;
+              setO(n);
+              toast("Yozildi — tovar sanash navbatining boshida");
+            } catch (e) {
+              m.fail(e);
+            }
+            return;
+          }
           if (a === "lbl") {
             const b = us.find((u) => u.batch_id);
             return void queueLabels(b ? { batch_ids: [b.batch_id!] } : { item_id: ln.item_id, char_id: ln.char_id });

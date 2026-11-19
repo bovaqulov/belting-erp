@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirm } from "@/erp/kit/env";
 import { useDialogs } from "@/erp/kit/modal";
 import { Shell, useLoad } from "@/erp/kit/ui";
+import { api as rawApi } from "@/shared/api/client";
+import { initData } from "@/shared/telegram/telegram";
 import { api, crmMode, demoReset, post } from "@/erp/crm/api";
 import { CrmCtx, type Crm } from "@/erp/crm/context";
 import { Deal } from "@/erp/crm/deal";
@@ -23,6 +25,7 @@ import { MAIN } from "@/erp/crm/tw";
 import type { TgChat } from "@/erp/crm/telegram/tg.lib";
 import { CustomerPanel, Customers } from "@/erp/crm/customers";
 import { Reports } from "@/erp/crm/reports";
+import { RecallModal, type Recall } from "@/erp/crm/recall";
 
 export default function CrmApp() {
   return (
@@ -90,6 +93,9 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
   const [unassigned, setUnassigned] = useState(0);
   const [tick, setTick] = useState(0);
   const dialogs = useDialogs();
+  // «Keyinroq» oynasi — Promise bilan (moveTo kutadi)
+  const [recallRes, setRecallRes] = useState<((v: Recall | null) => void) | null>(null);
+  const recall = useCallback(() => new Promise<Recall | null>((res) => setRecallRes(() => res)), []);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const openDeal = useCallback(
@@ -105,8 +111,8 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
   }, [sec]);
 
   const crm: Crm = useMemo(
-    () => ({ me, meta, ...lookups, choose: dialogs.choose, ask: dialogs.ask, openDeal, openCustomer, newDeal, refresh }),
-    [me, meta, lookups, dialogs.choose, dialogs.ask, openDeal, openCustomer, newDeal, refresh],
+    () => ({ me, meta, ...lookups, choose: dialogs.choose, ask: dialogs.ask, recall, openDeal, openCustomer, newDeal, refresh }),
+    [me, meta, lookups, dialogs.choose, dialogs.ask, recall, openDeal, openCustomer, newDeal, refresh],
   );
 
   // ROP: taqsimlanmagan lidlar soni (bo'lim belgisi)
@@ -137,11 +143,18 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
     <CrmCtx.Provider value={crm}>
       <CrmLayout
         demo={demo}
-        pipeName={meta.pipelines.length === 1 ? meta.pipelines[0].name : undefined}
         sec={sec}
         unassigned={unassigned}
         onSec={goSec}
         onNewDeal={() => newDeal()}
+        onLogout={
+          demo || initData()
+            ? undefined
+            : async () => {
+                await rawApi("/app/api/logout", { method: "POST" }).catch(() => {});
+                location.replace("/app/");
+              }
+        }
         me={me}
         users={meta.users}
         onDemoAs={async (tg) => {
@@ -187,6 +200,14 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
           />
         ) : null}
         {dialogs.node}
+        {recallRes ? (
+          <RecallModal
+            onDone={(v) => {
+              recallRes(v);
+              setRecallRes(null);
+            }}
+          />
+        ) : null}
       </CrmLayout>
     </CrmCtx.Provider>
   );

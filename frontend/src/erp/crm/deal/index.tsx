@@ -11,7 +11,9 @@ import { moveTo, useCrm } from "@/erp/crm/context";
 import { days, type DealDetail } from "@/erp/crm/lib";
 
 import { Activity } from "./activity";
-import { Items, openPdf } from "./items";
+import { DealChats } from "./chats";
+import { DocModal } from "./doc";
+import { Items } from "./items";
 import { DealBodyView, DrawerFrame, DrawerLoading } from "./ui";
 
 // yon panel qobig'i — mijoz kartochkasi ham ishlatadi
@@ -34,6 +36,10 @@ export function Deal({ id, onClose }: { id: number; onClose: () => void }) {
   }, []);
 
   const d = st.data;
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatN, setChatN] = useState(0);
+  // ochiq hujjat (taklif / buyurtma) — CRM ichidagi oyna; Body qayta yuklanganda yopilib qolmasin
+  const [docId, setDocId] = useState<number | null>(null);
   const changed = () => {
     void st.reload();
     crm.refresh();
@@ -49,12 +55,25 @@ export function Deal({ id, onClose }: { id: number; onClose: () => void }) {
   };
 
   return (
-    <DrawerFrame on={on} title={d ? dtitle(d.title) : "Bitim"} panelRef={panel} onClose={onClose}>
+    <DrawerFrame on={on} wide={chatN > 0 || chatOpen} title={d ? dtitle(d.title) : "Bitim"} panelRef={panel} onClose={onClose}>
       {!d ? (
         <DrawerLoading err={st.err} onRetry={() => void st.reload()} onClose={onClose} />
       ) : (
-        <Body key={st.at} d={d} save={save} changed={changed} onClose={onClose} />
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Body key={st.at} d={d} save={save} changed={changed} onClose={onClose} chatN={chatN} chatOpen={chatOpen} onChat={setChatOpen} onDoc={setDocId} />
+          </div>
+          {/* mijoz chatlari: katta ekranda — doim o'ngda, kichikda — «Chat» tugmasi bilan ustidan (saqlashda qayta yuklanmaydi) */}
+          <aside
+            aria-label="Mijoz bilan chat"
+            // katta ekranda — doim yonma-yon (chat bo'lsa yoki qo'lda ochilsa), drawer kengayadi; kichikda — ustidan
+            className={`min-h-0 flex-col border-l border-sep ${chatN || chatOpen ? "min-[1280px]:flex min-[1280px]:w-[360px] min-[1280px]:flex-none min-[1500px]:w-[400px]" : ""} ${chatOpen ? "absolute inset-y-0 right-0 z-10 flex w-[min(400px,100%)] shadow-[-8px_0_24px_rgba(0,0,0,.3)] max-md:w-full min-[1280px]:static min-[1280px]:shadow-none" : "hidden"}`}
+          >
+            <DealChats customerId={d.counterparty_id} dealId={d.id} docked={chatN > 0} onCount={setChatN} onClose={() => setChatOpen(false)} onChanged={changed} />
+          </aside>
+        </div>
       )}
+      {docId ? <DocModal id={docId} onClose={() => setDocId(null)} onChanged={changed} /> : null}
     </DrawerFrame>
   );
 }
@@ -64,11 +83,19 @@ function Body({
   save,
   changed,
   onClose,
+  chatN,
+  chatOpen,
+  onChat,
+  onDoc,
 }: {
   d: DealDetail;
   save: (f: string, v: unknown) => Promise<void>;
   changed: () => void;
   onClose: () => void;
+  chatN: number;
+  chatOpen: boolean;
+  onChat: (open: boolean) => void;
+  onDoc: (id: number) => void;
 }) {
   const crm = useCrm();
   const { meta, stg, pipes } = crm;
@@ -121,6 +148,7 @@ function Body({
         <Items
           d={d}
           closed={!isOpen}
+          onDoc={onDoc}
           onSaved={(a) => {
             if (a !== undefined) setAmount(Number(a) ? num(a, 0) : "");
             changed();
@@ -128,6 +156,9 @@ function Body({
         />
       }
       activity={<Activity d={d} onChanged={changed} />}
+      chatN={chatN}
+      chatOpen={chatOpen}
+      onChat={onChat}
       onClose={onClose}
       onSave={(f, v) => void save(f, v)}
       onPipe={(p) => void changePipe(p)}
@@ -150,7 +181,14 @@ function Body({
       onFinish={() => void finish()}
       onAmount={setAmount}
       onAmountBlur={() => amount !== amount0 && void save("amount", dnum(amount) || "0")}
-      onPdf={(docId) => void openPdf(docId)}
+      onOpenDoc={onDoc}
+      onCopyLink={() => {
+        const url = `${location.origin}/app/erp/crm/?deal=${d.id}`;
+        navigator.clipboard?.writeText(url).then(
+          () => toast("Havola nusxalandi"),
+          () => toast(url),
+        );
+      }}
     />
   );
 }

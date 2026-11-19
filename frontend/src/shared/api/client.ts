@@ -31,7 +31,7 @@ export async function apiBlob(path: string): Promise<Blob> {
   const r = await fetch(path, { credentials: "same-origin", headers: authHeaders() });
   if (!r.ok) {
     const detail = ((await r.json().catch(() => ({}))) as { detail?: unknown }).detail;
-    throw new ApiError(messageOf(detail, r.statusText), r.status, detail);
+    throw new ApiError(messageOf(detail, r.statusText || `Server javob bermadi (${r.status}) — birozdan so'ng qayta urining`), r.status, detail);
   }
   return r.blob();
 }
@@ -49,9 +49,9 @@ export function openBlob(blob: Blob, name = "fayl.pdf"): void {
 }
 
 /** body: obyekt → JSON; FormData → multipart (fayl yuklash; Content-Type'ni brauzer boundary bilan qo'yadi) */
-export async function api<T = unknown>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T = unknown>(path: string, opts: { method?: string; body?: unknown; headers?: Record<string, string> } = {}): Promise<T> {
   const form = typeof FormData !== "undefined" && opts.body instanceof FormData;
-  const headers: Record<string, string> = { ...(form ? {} : { "Content-Type": "application/json" }), ...authHeaders() };
+  const headers: Record<string, string> = { ...(form ? {} : { "Content-Type": "application/json" }), ...authHeaders(), ...opts.headers };
   const r = await fetch(path, {
     method: opts.method ?? (opts.body === undefined ? "GET" : "POST"),
     credentials: "same-origin",
@@ -61,7 +61,7 @@ export async function api<T = unknown>(path: string, opts: { method?: string; bo
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
     const detail = (data as { detail?: unknown }).detail;
-    throw new ApiError(messageOf(detail, r.statusText), r.status, detail);
+    throw new ApiError(messageOf(detail, r.statusText || `Server javob bermadi (${r.status}) — birozdan so'ng qayta urining`), r.status, detail);
   }
   return data as T;
 }

@@ -6,7 +6,7 @@ import { dt, num, un } from "@/erp/kit/fmt";
 import { Icon, List, Row, Sf, Sh } from "@/erp/kit/ui";
 import { CodeAnd, Split } from "@/erp/warehouse/common";
 import type { Size } from "@/erp/warehouse/context";
-import { size, type CatItem, type Dims, type PlaceRec, type Placed, type Unplaced } from "@/erp/warehouse/lib";
+import { size, type CatItem, type Dims, type PlaceRec, type Placed, type PutawayTip, type Unplaced } from "@/erp/warehouse/lib";
 import { ScanMsg } from "@/erp/warehouse/scan-bar";
 
 export type Loc = { id: number; code: string; parent_id: number; block?: string };
@@ -29,6 +29,11 @@ export function PlaceView(p: {
   last: Placed | null;
   rec: PlaceRec[];
   wait: Unplaced[];
+  /** joylashtirish tavsiyasi (tovar tanlanganda): mos joylar sababi bilan */
+  tips: PutawayTip[];
+  /** navbat yuklangan vaqt (kutish vaqtini hisoblash uchun) */
+  now: number;
+  onTip: (t: PutawayTip) => void;
   meId: number;
   onLoc: () => void;
   onItem: () => void;
@@ -66,6 +71,25 @@ export function PlaceView(p: {
         <Row icon="building" color="gray" t="Egasi (firma)" val={p.firm} chev onClick={p.onFirm} />
         {p.myBlocks !== null ? <Row icon="users" color="indigo" t="Bloklaringiz" s={p.myBlocks} /> : null}
       </List>
+      {it && p.tips.length ? (
+        <>
+          <Sh t="Tavsiya etilgan joylar" />
+          <List>
+            {p.tips.map((x, i) => (
+              <Row
+                key={x.id}
+                icon={i === 0 ? "sparkles" : "pin"}
+                color={loc?.id === x.id ? "blue" : i === 0 ? "green" : "gray"}
+                t={<span className="code">{x.code}</span>}
+                s={`${x.reason}${x.capacity ? ` · ${x.units}/${x.capacity}` : x.units ? ` · ${x.units} birlik` : ""}`}
+                val={loc?.id === x.id ? "tanlangan" : undefined}
+                chev={loc?.id !== x.id}
+                onClick={() => p.onTip(x)}
+              />
+            ))}
+          </List>
+        </>
+      ) : null}
       {last ? (
         <ScanMsg
           msg={{
@@ -93,7 +117,12 @@ export function PlaceView(p: {
                 }
               />
             ))}
-            <Row icon="plus" color="blue" t={p.units.length ? "Yana birlik" : d === "w" ? "Rukav enini kiritish" : "O'lchamni kiritish"} onClick={p.onAddUnit} />
+            <Row
+              icon="plus"
+              color="blue"
+              t={p.units.length ? "Yana birlik" : d === "w" ? "Rukav enini kiritish" : "O'lchamni kiritish"}
+              onClick={p.onAddUnit}
+            />
           </List>
           <Sf>{d === "w" ? "Har rukav — alohida birlik (o'z QR stikeri). Enini o'lchab kiriting." : "Har rulon/bo'lak — alohida birlik (o'z QR stikeri)."}</Sf>
         </>
@@ -155,21 +184,33 @@ export function PlaceView(p: {
         <>
           <Sh t="Joylash navbati (qabul qilingan)" r={p.wait.length} />
           <List>
-            {p.wait.map((w) => (
-              <Row
-                key={w.batch_id}
-                icon="truck"
-                color="orange"
-                t={w.name}
-                tcls="wrap2"
-                s={<CodeAnd code={w.code} rest={[size(w), w.doc, w.firm]} />}
-                val={<span className="num">{num(w.qty, 3)}</span>}
-                valSmall={un(w.unit)}
-                onClick={() => p.onWait(w)}
-              />
-            ))}
+            {p.wait.map((w) => {
+              // kutish vaqti (dock-to-stock): 2 soatdan oshsa — qizil
+              const hrs = w.since ? (p.now - Date.parse(w.since)) / 36e5 : null;
+              const age =
+                hrs === null
+                  ? null
+                  : hrs < 1
+                    ? `${Math.max(1, Math.round(hrs * 60))} daq`
+                    : hrs < 48
+                      ? `${Math.round(hrs)} soat`
+                      : `${Math.round(hrs / 24)} kun`;
+              return (
+                <Row
+                  key={w.batch_id}
+                  icon="truck"
+                  color={hrs !== null && hrs > 2 ? "red" : "orange"}
+                  t={w.name}
+                  tcls="wrap2"
+                  s={<CodeAnd code={w.code} rest={[size(w), w.doc, w.firm, age && `kutmoqda ${age}`]} />}
+                  val={<span className="num">{num(w.qty, 3)}</span>}
+                  valSmall={un(w.unit)}
+                  onClick={() => p.onWait(w)}
+                />
+              );
+            })}
           </List>
-          <Sf>Birlikni bosing yoki stikerini skanerlang — tanlangan javonga qo&apos;yiladi.</Sf>
+          <Sf>Birlikni bosing: javon tanlangan bo&apos;lsa — unga qo&apos;yiladi, bo&apos;lmasa — mos joylar tavsiya qilinadi. Yoki stikerini skanerlang.</Sf>
         </>
       ) : null}
     </>

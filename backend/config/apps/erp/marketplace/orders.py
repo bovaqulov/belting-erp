@@ -8,6 +8,7 @@ solishtiriladi (peresort oldini olish). Bosqich manbasi — kanal: sinxron har s
 from __future__ import annotations
 
 import base64
+import re
 import time
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
@@ -90,6 +91,15 @@ def stage_of(ch: str, st: dict | str | None) -> str:
     return Stage.TRANSIT
 
 
+_UZUM_WIDTH = re.compile(r"Ширина[^:()]*:\s*(\d+(?:[.,]\d+)?)\s*(?:mm|мм)", re.I)
+
+
+def uzum_width(title: str | None) -> float | None:
+    """Uzum SKU nomidagi xususiyat: '… (Ширина ремня: 15 mm)' → 15.0 (kartochkada kenglik bo'lmasa)."""
+    m = _UZUM_WIDTH.search(title or "")
+    return float(m.group(1).replace(",", ".")) if m else None
+
+
 def derive(ch: str, p: dict) -> dict:
     """Kanal javobidan: muddat va xom qatorlar (kalit — kartochka bilan bog'lash uchun, `codes` — javobdagi shtrixkodlar)."""
     if ch == "uzum":
@@ -101,6 +111,8 @@ def derive(ch: str, p: dict) -> dict:
                 "title": x.get("skuTitle") or x.get("title"),
                 "qty": x.get("amount") or 1,
                 "codes": [str(x["barcode"])] if x.get("barcode") else [],
+                "vendor_code": x.get("sellerSkuCode") or x.get("skuTitle"),
+                "width_mm": uzum_width(x.get("title")),
             }
             for x in p.get("orderItems") or []
         ]
@@ -144,8 +156,8 @@ def fill_lines(o: Order) -> list[dict]:
                 "title": (c and c.title) or ln.get("title"),
                 "qty": int(ln.get("qty") or 1),
                 "codes": codes,
-                "vendor_code": (c and c.vendor_code) or None,
-                "width_mm": float(c.width_mm) if c and c.width_mm else None,
+                "vendor_code": (c and c.vendor_code) or ln.get("vendor_code") or None,
+                "width_mm": float(c.width_mm) if c and c.width_mm else ln.get("width_mm"),
                 "mode": (c and c.mode) or None,
                 "photo": ((c.ext or {}).get("photo") if c else None),
             }

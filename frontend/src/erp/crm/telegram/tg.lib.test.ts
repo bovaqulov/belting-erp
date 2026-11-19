@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { chatTime, dayLabel, lastLine, unreadTotal, type TgChats } from "./tg.lib";
+import { chatTime, chOf, dayLabel, lastLine, unreadTotal, type TgChats } from "./tg.lib";
 
 const NOW = new Date(2026, 10, 14, 15, 30).getTime();
 const at = (d: number, h = 9, m = 5) => new Date(2026, 10, 14 - d, h, m).toISOString();
@@ -23,5 +23,11 @@ describe("tg.lib", () => {
     const r = { chats: [{ seller_tg: 1, unread: 2 }, { seller_tg: 2, unread: 5 }, { seller_tg: 1, unread: 1 }] } as TgChats;
     expect(unreadTotal(r, 1)).toBe(3);
     expect(unreadTotal(undefined, 1)).toBe(0);
+    // kanallar bo'lsa — barcha kanallar yig'indisi (WhatsApp / Instagram ham)
+    const all = { ...r, channels: { tg: { enabled: true, unread: 3 }, wa: { enabled: true, unread: 2 }, ig: { enabled: false, unread: 0 } } } as TgChats;
+    expect(unreadTotal(all, 1)).toBe(5);
+  });
+  it("chOf: kanal ma'lumoti (yo'q bo'lsa — Telegram)", () => {
+    expect([chOf("wa").name, chOf(undefined).name, chOf("ig").icon]).toEqual(["WhatsApp", "Telegram", "instagram"]);
   });
 });

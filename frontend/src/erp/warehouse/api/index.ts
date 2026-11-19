@@ -7,6 +7,10 @@ import { decideModeAll, makeStore, type DemoMode, type KV } from "@/shared/demo"
 
 import { DB_VERSION, DEMO_KEY, handle, PROBE_PATHS, seed, type Db } from "@/erp/warehouse/demo";
 
+import { flush, sendOrQueue } from "./outbox";
+
+export { outbox, outTitle, Queued, type OutItem } from "./outbox";
+
 let modeP: Promise<DemoMode> | null = null;
 
 const status = (path: string): Promise<number | "network"> =>
@@ -43,9 +47,21 @@ async function demo<T>(method: string, path: string, body?: unknown): Promise<T>
   return JSON.parse(JSON.stringify(res.body)) as T;
 }
 
+const realSend = <T,>(path: string, body: unknown, key: string): Promise<T> => realApi<T>(path, body, { "Idempotency-Key": key });
+
 export async function api<T = unknown>(path: string, body?: unknown): Promise<T> {
-  if ((await whMode()) === "real") return realApi<T>(path, body);
+  if ((await whMode()) === "real") {
+    if (body === undefined) return realApi<T>(path);
+    // har o'zgartiruvchi so'rov — o'z kaliti bilan (qayta yuborilsa ham bir marta bajariladi); skaner amallari — navbat bilan
+    return sendOrQueue<T>(path, body, realSend);
+  }
   return demo<T>(body === undefined ? "GET" : "POST", path, body);
+}
+
+/** Navbatni yuborish (ulanganda, sahifa ochilganda, har 20 soniyada) — haqiqiy rejimda */
+export async function flushOutbox(): Promise<number> {
+  if ((await whMode()) !== "real") return 0;
+  return flush(realSend);
 }
 
 export const post = <T = unknown>(path: string, body: unknown = {}): Promise<T> => api<T>(path, body);
@@ -56,7 +72,7 @@ export async function del<T = unknown>(path: string): Promise<T> {
   return demo<T>("DELETE", path);
 }
 
-export type LabelReq = { batch_ids?: number[]; item_id?: number; char_id?: number | null; cell_ids?: number[] };
+export type LabelReq = { batch_ids?: number[]; item_id?: number; char_id?: number | null; cell_ids?: number[]; rack_ids?: number[] };
 
 /** Stikerlarni printer navbatiga yuborish */
 export async function queueLabels(body: LabelReq): Promise<void> {

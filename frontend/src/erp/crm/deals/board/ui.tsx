@@ -1,9 +1,9 @@
 // Kanban (faqat ko'rinish): ochiq bosqich ustunlari, kartochkalar, "Yana N ta", pastda yutildi/yutqazildi zonalari.
-import { dtitle, num, short } from "@/erp/kit/fmt";
-import { Empty } from "@/erp/kit/ui";
-import { AvaView, Tags, TaskBadge } from "@/erp/crm/badges";
-import { boardTotals, days, isLate, rotLevel, type BoardResp, type Deal } from "@/erp/crm/lib";
-import { idle as idleCls, LINKB, SP } from "@/erp/crm/tw";
+import { dtitle, short } from "@/erp/kit/fmt";
+import { Empty, Icon } from "@/erp/kit/ui";
+import { AvaView, TaskBadge } from "@/erp/crm/badges";
+import { boardTotals, isLate, rotLevel, type BoardResp, type Deal } from "@/erp/crm/lib";
+import { LINKB, SP } from "@/erp/crm/tw";
 
 /** Ustun/zona uchun sudrash hodisalari (konteyner beradi) */
 export type Zone = {
@@ -13,17 +13,17 @@ export type Zone = {
 };
 
 const C = "mt-0.5 truncate text-[12.5px] text-hint";
-const DIV: Record<string, string> = { novobelt: "Novobelt", belting: "Belting Rezina" };
 /** chirish darajasi: chap chiziq rangi (rot2 — qizil fon ham) */
 const ROT: Record<string, string> = { rot: "!border-l-warn bg-sec", rot2: "!border-l-danger bg-[color-mix(in_srgb,var(--danger)_7%,var(--sec))]" };
 
 function Card({ d, nameOf, onOpen, onDrag }: { d: Deal; nameOf: (tg?: number | null) => string; onOpen: (id: number) => void; onDrag: (d: Deal | null) => void }) {
-  const st = days(d.stage_since || d.created);
-  const idle = days(d.touched || d.updated);
   const rot = rotLevel(d);
+  const title = dtitle(d.title);
+  // nom mijoz nomidan yasalgan bo'lsa (tovarsiz bitim) — mijoz qatori takrorlanmaydi
+  const sameName = !!d.customer && title.trim().toLowerCase() === d.customer.trim().toLowerCase();
   return (
     <div
-      className={`cursor-pointer rounded-lg border-l-[3px] px-2.5 py-[9px] shadow-1 transition-shadow duration-150 hover:shadow-[0_2px_8px_rgba(0,0,0,.15)] ${ROT[rot] ?? "border-transparent bg-sec"}`}
+      className={`cursor-pointer rounded-lg border-l-[3px] px-2.5 py-2 shadow-1 transition-shadow duration-150 hover:shadow-[0_2px_8px_rgba(0,0,0,.15)] ${ROT[rot] ?? "border-transparent bg-sec"}`}
       draggable
       role="button"
       tabIndex={0}
@@ -42,48 +42,22 @@ function Card({ d, nameOf, onOpen, onDrag }: { d: Deal; nameOf: (tg?: number | n
         onDrag(null);
       }}
     >
-      <div className="line-clamp-2 leading-[1.3] font-medium [overflow-wrap:anywhere]">{dtitle(d.title)}</div>
-      {d.repeat || d.sla_late ? (
-        <div className="flex flex-wrap gap-x-2 text-[11.5px]">
+      <div className="line-clamp-2 text-[13.5px] leading-[1.3] font-semibold [overflow-wrap:anywhere]">{title}</div>
+      {!sameName || d.sla_late ? (
+        <div className={`${C} flex items-center gap-x-1.5`}>
           {d.sla_late ? (
-            <span className="font-semibold text-danger" title={`Bosqich muddati (${d.sla_hours} soat) o'tdi`}>
-              ⏱ muddat o&apos;tdi
+            <span className="flex-none font-semibold text-danger" title={`Bosqich muddati (${d.sla_hours} soat) o'tdi`}>
+              ⏱
             </span>
           ) : null}
-          {d.repeat ? <span className="text-hint">takroriy bitim</span> : null}
+          <span className="min-w-0 truncate">{sameName ? "" : d.customer || "Mijozsiz"}</span>
         </div>
       ) : null}
-      <div className={C}>
-        {d.contact ? `${d.contact} · ` : ""}
-        {d.customer || "Mijozsiz"}
-        <Tags d={d} />
-      </div>
-      {d.buyer_order || d.prod_order || d.prod_no || d.division ? (
-        <div className={`${C} flex flex-wrap gap-x-2`}>
-          {[d.buyer_order, d.prod_order, d.prod_no]
-            .filter((x, i, a) => x && a.indexOf(x) === i)
-            .map((x) => (
-              <span key={x} className="font-code tabular-nums">
-                № {x}
-              </span>
-            ))}
-          {d.division ? <span>{DIV[d.division] ?? d.division}</span> : null}
-        </div>
-      ) : null}
-      <div className="mt-[7px] flex items-center gap-1.5 text-xs">
+      <div className="mt-1.5 flex items-center gap-1.5 text-xs">
         <AvaView name={nameOf(d.owner_tg)} />
-        <span className="text-[13px] font-semibold tabular-nums">{d.amount && Number(d.amount) ? short(d.amount) : ""}</span>
+        <span className="text-[13px] font-semibold whitespace-nowrap tabular-nums">{d.amount && Number(d.amount) ? short(d.amount) : ""}</span>
         <span className={SP} />
         <TaskBadge d={d} />
-      </div>
-      <div className={`${C} !mt-1`}>
-        {st ? `bosqichda ${st} kun` : "bugun o'tdi"}
-        {idle ? (
-          <>
-            {" · "}
-            <span className={rot ? idleCls(rot === "rot2") : ""}>{idle} kun tegilmagan</span>
-          </>
-        ) : null}
       </div>
     </div>
   );
@@ -99,6 +73,11 @@ export function BoardView({
   onOpen,
   onDrag,
   onMore,
+  onNew,
+  kbRef,
+  active,
+  onScroll,
+  onPick,
 }: {
   r: BoardResp;
   /** "Yana N ta" bilan qo'shilgan kartochkalar (bosqich → bitimlar) */
@@ -110,6 +89,13 @@ export function BoardView({
   onOpen: (id: number) => void;
   onDrag: (d: Deal | null) => void;
   onMore: (code: string, offset: number) => void;
+  /** birinchi ("Yangi") ustundagi "+" — yangi bitim oynasi (yangi bitim shu bosqichga tushadi) */
+  onNew: () => void;
+  /** telefon: ustunlar konteyneri, joriy ustun, surish va tasmadan tanlash */
+  kbRef: React.RefObject<HTMLDivElement | null>;
+  active: number;
+  onScroll: () => void;
+  onPick: (i: number) => void;
 }) {
   const { open, closed } = boardTotals(r.stages);
   if (!open.length)
@@ -120,11 +106,26 @@ export function BoardView({
     );
   return (
     <>
-      <div className="flex min-h-0 flex-1 gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 py-3.5 max-md:snap-x max-md:snap-mandatory max-md:scroll-px-3 max-md:px-3 max-md:py-2.5" aria-label="Kanban">
-        {open.map((s) => {
+      <nav className="flex flex-none gap-1.5 overflow-x-auto border-b border-sep px-3 py-2 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden" aria-label="Bosqichlar">
+        {open.map((s, i) => (
+          <button
+            key={s.code}
+            type="button"
+            aria-current={i === active ? "true" : undefined}
+            onClick={() => onPick(i)}
+            className={`flex h-9 flex-none cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap ${i === active ? "border-transparent bg-btn font-semibold text-btn-fg" : "border-sep bg-sec text-sub"}`}
+          >
+            <i className="size-2 flex-none rounded-full" style={{ background: s.color || "#8e8e93" }} aria-hidden="true" />
+            {s.name}
+            <b className={`tabular-nums ${i === active ? "" : "text-hint"}`}>{s.count}</b>
+          </button>
+        ))}
+      </nav>
+      <div ref={kbRef} onScroll={onScroll} className="flex min-h-0 flex-1 gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 py-3.5 max-md:snap-x max-md:snap-mandatory max-md:gap-3 max-md:px-3 max-md:py-2 max-md:[scrollbar-width:none]" aria-label="Kanban">
+        {open.map((s, i) => {
           const deals = [...s.deals, ...(more[s.code] ?? [])];
           return (
-            <section key={s.code} className={`flex min-h-0 flex-[0_0_272px] flex-col rounded-[10px] bg-fill max-md:basis-[min(300px,84vw)] max-md:snap-start ${over === s.code ? "outline-2 -outline-offset-2 outline-link outline-dashed" : ""}`} data-st={s.code} aria-label={s.name} {...zone(s.code)}>
+            <section key={s.code} className={`flex min-h-0 flex-[0_0_272px] flex-col rounded-[10px] bg-fill max-md:basis-[calc(100vw-24px)] max-md:snap-center ${over === s.code ? "outline-2 -outline-offset-2 outline-link outline-dashed" : ""}`} data-st={s.code} aria-label={s.name} {...zone(s.code)}>
               <div className="pb-2">
                 <div className="h-1 rounded-t-[10px]" style={{ background: s.color || "#8e8e93" }} />
                 <div className="flex justify-between gap-1.5 px-3 pt-2 text-[13px] font-semibold [&>span:first-child]:truncate">
@@ -133,17 +134,21 @@ export function BoardView({
                 </div>
                 <div className="px-3 pt-0.5 text-xs text-hint tabular-nums">
                   {s.amount && Number(s.amount) ? `${short(s.amount)} so'm` : " "}
-                  {Number(s.weighted) && (s.probability ?? 100) < 100 ? (
-                    <span title={`Vaznli: summa × ehtimollik ${num(s.probability, 0)}%`}> · ≈ {short(s.weighted)}</span>
-                  ) : null}
-                  {s.rotten ? (
-                    <span className={idleCls(true)} title="Chirigan bitimlar">
-                      {" · "}
-                      {s.rotten} chirigan
-                    </span>
-                  ) : null}
                 </div>
               </div>
+              {i === 0 ? (
+                <div className="px-2 pb-1.5">
+                  <button
+                    type="button"
+                    className="flex h-9 w-full items-center justify-center rounded-lg border border-dashed border-sep text-hint transition-colors duration-150 hover:border-link hover:bg-sec hover:text-link focus-visible:border-link focus-visible:text-link coarse:h-11"
+                    aria-label={`${s.name}: yangi bitim`}
+                    title="Yangi bitim"
+                    onClick={onNew}
+                  >
+                    <Icon n="plus" />
+                  </button>
+                </div>
+              ) : null}
               <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
                 {deals.map((d) => (
                   <Card key={d.id} d={d} nameOf={nameOf} onOpen={onOpen} onDrag={onDrag} />

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { decideMode, decideModeAll } from "./mode.lib";
 import { DB_VERSION, seed, type Db } from "./seed.lib";
-import { handle, phoneKey } from "./server.lib";
+import { handle, phoneKey, seesCustomer } from "./server.lib";
 import { DEMO_KEY, makeStore, type KV } from "./store.lib";
 
 const NOW = new Date("2026-11-13T09:00:00Z").getTime();
@@ -132,7 +132,7 @@ describe("demo store", () => {
     st.save(db);
     expect(kv.m.has(DEMO_KEY)).toBe(true);
     const again = makeStore<Db>(kv, DB_VERSION).load(() => seed(NOW));
-    expect(again.deals[0].title).toBe("O'zgargan nom");
+    expect(again.deals[0].title).toBe(`#${db.deals[0].id} O'zgargan nom`);
   });
   it("storage xato bersa — xotirada ishlaydi; eski versiya — qayta seed", () => {
     const bad: KV = {
@@ -215,6 +215,14 @@ describe("demo server: ko'rish huquqi", () => {
     const c = db.customers.find((x) => x.owner_tg === me)!;
     const r = post<{ owner_tg: number }>(db, `${C}/deals`, { counterparty_id: c.id, title: "Yangi", owner_tg: 1003 });
     expect(r.body.owner_tg).toBe(me);
+    // tovarlar bilan yaratish — summa tovarlardan, nomda unikal raqam
+    const w = post<{ id: number; title: string; amount: string; items: { name: string }[] }>(db, `${C}/deals`, {
+      counterparty_id: c.id,
+      title: "Tovarli",
+      amount: 5,
+      items: [{ name: "SPB 1650", qty: "2", price: "185000", discount: 0 }],
+    }).body;
+    expect([w.title, w.amount, w.items.map((x) => x.name)]).toEqual([`#${w.id} Tovarli`, "370000", ["SPB 1650"]]);
   });
 
   it("lidlar: sotuvchi faqat o'zinikini ko'radi va taqsimlay olmaydi; rahbar hammasini ko'radi va taqsimlaydi", () => {
@@ -238,7 +246,7 @@ describe("demo server: ko'rish huquqi", () => {
 });
 
 describe("demo server: Telegram", () => {
-  type Chat = { id: number; seller_tg: number; unread: number; can_send: boolean };
+  type Chat = { id: number; seller_tg: number; unread: number; can_send: boolean; channel?: string };
   type Chats = { head: boolean; connection: { can_reply: boolean } | null; chats: Chat[] };
   type Thread = { messages: { text: string; out: boolean }[] };
 
@@ -275,6 +283,115 @@ describe("demo server: Telegram", () => {
     expect(get<Chats>(db, `${C}/tg/chats`).connection).toBeNull();
   });
 
+  it("narxlash, joylashuv va yangi mijoz (STIR, manzil) — backend bilan bir xil", () => {
+    const db = seed(NOW);
+    type Cu = { id: number; address: string | null; phones: string[] };
+    const c = post<Cu>(db, `${C}/customers`, { name: "Chinoz Un", phones: ["90 123 45 67"], inn: "301999888", address: "Chinoz t." }).body;
+    expect([c.phones, c.address]).toEqual([["998901234567"], "Chinoz t."]);
+    expect(post(db, `${C}/customers`, { name: "X", phones: ["900000001"], inn: "301999888" }).status).toBe(409);
+    type D = { id: number; amount: string; location: string | null };
+    const items = [{ name: "SPB", qty: "10", price: "100000" }, { name: "Lenta", qty: "2", price: "50000" }];
+    const d = post<D>(db, `${C}/deals`, { counterparty_id: c.id, title: "Ko'p", items, discount: 10, markup: 5, logistics: 200000 }).body;
+    expect([d.amount, d.location]).toEqual(["1239500", "Chinoz t."]);
+    expect(post<D>(db, `${C}/deals/${d.id}`, { discount: 0, markup: 0, logistics: 0 }).body.amount).toBe("1100000");
+    expect(post(db, `${C}/deals/${d.id}`, { discount: 150 }).status).toBe(400);
+  });
+
+  it("hujjatni yuborish: chatga (Telegram — fayl, Instagram — matn), Didox demo'da ulanmagan", () => {
+    const db = seed(NOW);
+    const chat = db.tg_chats.find((c) => c.seller_tg === db.me.tg_id && c.customer_id)!;
+    const d = db.deals.find((x) => x.counterparty_id === chat.customer_id && x.items.some((i) => i.item_id))!;
+    const doc = post<{ id: number }>(db, `${C}/deals/${d.id}/doc`, { kind: "quote" }).body;
+    const full = get<{ customer_id: number; didox: { enabled: boolean } }>(db, `${C}/docs/${doc.id}`);
+    expect([full.customer_id, full.didox.enabled]).toEqual([chat.customer_id, false]);
+    expect(post(db, `${C}/docs/${doc.id}/send`, { chat_id: chat.id }).status).toBe(200);
+    expect(db.tg_msgs.filter((m) => m.chat === chat.id).at(-1)).toMatchObject({ out: true, via_crm: true, kind: (chat.channel ?? "tg") === "ig" ? "text" : "document" });
+    expect(post(db, `${C}/docs/${doc.id}/send`, { chat_id: 99999 }).status).toBe(404);
+    expect(post(db, `${C}/docs/${doc.id}/didox`, { subtype: 4 }).status).toBe(503);
+  });
+
+  it("ketma-ketlik: taklif → buyurtma tasdig'i → imzo — bitim avtomatik oldinga o'tadi (orqaga emas)", () => {
+    const db = seed(NOW);
+    const cu = db.customers.find((c) => seesCustomer(db, c))!;
+    const items = [{ item_id: 1, name: "SPB", qty: "2", unit: "dona", price: "100000" }];
+    const d = post<{ id: number }>(db, `${C}/deals`, { counterparty_id: cu.id, items }).body;
+    const stage = () => get<{ stage: string }>(db, `${C}/deals/${d.id}`).stage;
+    expect(stage()).toBe("new");
+    post(db, `${C}/deals/${d.id}/doc`, { kind: "quote" });
+    expect(stage()).toBe("offer");
+    const o = post<{ id: number }>(db, `${C}/deals/${d.id}/doc`, { kind: "order" }).body;
+    post(db, `${C}/docs/${o.id}/confirm`, {});
+    expect(stage()).toBe("contract");
+    post(db, `${C}/deals/${d.id}`, { sign_status: "signed" });
+    expect(stage()).toBe("payment");
+    post(db, `${C}/deals/${d.id}/doc`, { kind: "quote" });
+    expect(stage()).toBe("payment");
+    expect(db.history.filter((h) => h.deal_id === d.id && h.src === "auto").map((h) => h.to_stage)).toEqual(["offer", "contract", "payment"]);
+  });
+
+  it("bitim nomi — tizimdan (backend auto_title bilan bir xil)", () => {
+    const db = seed(NOW);
+    const cu = db.customers.find((c) => seesCustomer(db, c))!;
+    const d = post<{ id: number; title: string }>(db, `${C}/deals`, { counterparty_id: cu.id, items: [{ name: "Ремень SPB 1650", qty: "10", unit: "dona", price: "1" }, { name: "Lenta", qty: "2", unit: "m", price: "1" }] }).body;
+    expect(d.title).toBe(`#${d.id} Ремень SPB 1650 — 10 dona +1`);
+    const e = post<{ id: number; title: string }>(db, `${C}/deals`, { counterparty_id: cu.id }).body;
+    expect(e.title).toBe(`#${e.id} ${cu.name}`);
+  });
+
+  it("chatni mijozga ulash va qo'ng'iroqni yozish", () => {
+    const db = seed(NOW);
+    const chat = db.tg_chats.find((c) => c.seller_tg === db.me.tg_id)!;
+    const cu = db.customers.find((c) => c.phones.length && db.deals.some((d) => d.counterparty_id === c.id && d.owner_tg === db.me.tg_id))!;
+    expect(post<{ customer: { id: number } }>(db, `${C}/tg/chats/${chat.id}/link`, { customer_id: cu.id }).body.customer.id).toBe(cu.id);
+    const deal = db.deals.find((d) => d.counterparty_id === cu.id)!;
+    const r = post<{ duration: number; deal_id: number }>(db, `${C}/calls`, { customer_id: cu.id, deal_id: deal.id, direction: "out", status: "answered", duration: 125, note: "Narx" });
+    expect([r.status, r.body.duration, r.body.deal_id]).toEqual([200, 125, deal.id]);
+    expect(get<unknown[]>(db, `${C}/calls?customer=${cu.id}`)).toHaveLength(1);
+    expect(db.activity.filter((a) => a.deal_id === deal.id && a.kind === "call").at(-1)!.text).toBe(`Chiquvchi qo'ng'iroq +${cu.phones[0]}: gaplashildi 2:05 — Narx`);
+    expect(post(db, `${C}/calls`, { customer_id: cu.id, direction: "x" }).status).toBe(400);
+  });
+
+  it("mijoz turlari: firma xodimi, savdogar, jismoniy shaxs — backend bilan bir xil", () => {
+    const db = seed(NOW);
+    const cu = `${C}/customers`;
+    expect(post(db, cu, { kind: "employee", name: "Rahim" }).status).toBe(400);
+    const e = post<{ id: number; kind: string; company: string }>(db, cu, { kind: "employee", name: "Rahim", phones: ["900000002"], position: "Ta'minotchi", company: "Termiz Sement" }).body;
+    expect([e.kind, e.company]).toEqual(["employee", "Termiz Sement"]);
+    expect(post(db, cu, { kind: "trader", name: "Akmal" }).status).toBe(400);
+    expect(post(db, cu, { kind: "trader", name: "Akmal", phones: ["901112233"] }).status).toBe(200);
+    expect(post(db, cu, { kind: "person", name: "Ali", phones: ["900000003"], inn: "305112847" }).status).toBe(400);
+    // yangi mijoz: telefonsiz — 400; firma / YaTT / davlat — STIRsiz 400
+    expect(post(db, cu, { kind: "person", name: "Vali" }).status).toBe(400);
+    for (const kind of ["company", "ip", "state"]) expect(post(db, cu, { kind, name: "Q", phones: ["900000009"] }).status).toBe(400);
+    expect(get<{ id: number }[]>(db, `${cu}?q=termiz sement`).map((x) => x.id)).toEqual([e.id]);
+    expect(post(db, `${cu}/${e.id}`, { kind: "trader", phones: [] }).status).toBe(400); // telefonsiz savdogar bo'lmaydi
+  });
+
+  it("hujjat: qatorlar nusxasi, ko'rish va buyurtmani tasdiqlash", () => {
+    const db = seed(NOW);
+    const d = db.deals.find((x) => x.items.some((i) => i.item_id) && x.owner_tg === db.me.tg_id) ?? db.deals.find((x) => x.items.some((i) => i.item_id))!;
+    type F = { id: number; status: string; state: string | null; lines: { name: string }[]; meta: { customer?: string } };
+    const q = post<{ id: number }>(db, `${C}/deals/${d.id}/doc`, { kind: "quote" }).body;
+    const f = get<F>(db, `${C}/docs/${q.id}`);
+    expect(f.lines.length).toBeGreaterThan(0);
+    expect(f.meta.customer).toBeTruthy();
+    expect(post(db, `${C}/docs/${q.id}/confirm`, {}).status).toBe(400);
+    const o = post<{ id: number }>(db, `${C}/deals/${d.id}/doc`, { kind: "order" }).body;
+    expect(post<F>(db, `${C}/docs/${o.id}/confirm`, {}).body).toMatchObject({ status: "posted", state: "confirmed" });
+    expect(post(db, `${C}/docs/${o.id}/confirm`, {}).status).toBe(409);
+  });
+
+  it("WhatsApp / Instagram: kanal filtri va o'qilmaganlar (tab belgilari)", () => {
+    const db = seed(NOW);
+    type Ch = Chats & { channels: Record<string, { enabled: boolean; unread: number }> };
+    const all = get<Ch>(db, `${C}/tg/chats`);
+    expect(new Set(all.chats.map((x) => x.channel))).toEqual(new Set(["tg", "wa", "ig"]));
+    const wa = get<Ch>(db, `${C}/tg/chats?ch=wa`);
+    expect(wa.chats.length).toBeGreaterThan(0);
+    expect(wa.chats.every((x) => x.channel === "wa")).toBe(true);
+    expect(all.channels.wa.unread).toBe(wa.chats.reduce((a, x) => a + x.unread, 0));
+  });
+
   it("fayl va joylashuv yuborish (demo)", () => {
     const db = seed(NOW);
     const c = get<Chats>(db, `${C}/tg/chats`).chats.find((x) => x.can_send)!;
@@ -289,7 +406,7 @@ describe("demo server: Telegram", () => {
   it("chatdan bitim — chat mijozga biriktiriladi", () => {
     const db = seed(NOW);
     const c = get<Chats>(db, `${C}/tg/chats`).chats[0];
-    const cu = post<{ id: number }>(db, `${C}/customers`, { name: "Bobur Xasanov" }).body;
+    const cu = post<{ id: number }>(db, `${C}/customers`, { name: "Bobur Xasanov", kind: "person", phones: ["907770011"] }).body;
     expect(post(db, `${C}/deals`, { counterparty_id: cu.id, title: "SPB", tg_chat_id: c.id }).status).toBe(200);
     const after = get<{ chats: { id: number; customer: { id: number } | null }[] }>(db, `${C}/tg/chats`).chats.find((x) => x.id === c.id)!;
     expect(after.customer?.id).toBe(cu.id);
@@ -361,6 +478,15 @@ describe("demo server: Telegram", () => {
     const d = db.deals.find((x) => x.stage === "offer")!;
     expect(post(db, `${C}/deals/${d.id}/stage`, { stage: "later" }).status).toBe(400);
     expect(post<{ stage: string }>(db, `${C}/deals/${d.id}/stage`, { stage: "later", recall: "15.12.2026" }).body.stage).toBe("later");
+    // soat va izoh bilan — vazifa shu vaqtga, izoh matnida
+    const d2 = db.deals.find((x) => x.stage === "offer" && x.id !== d.id)!;
+    const r = post<{ stage: string }>(db, `${C}/deals/${d2.id}/stage`, { stage: "later", recall: "2026-12-01", recall_time: "14:30", recall_note: "Rahbar bilan kelishadi" });
+    expect(r.body.stage).toBe("later");
+    const task = db.activity.filter((a) => a.deal_id === d2.id && a.kind === "task").at(-1)!;
+    expect(task.text).toBe("Mijoz bilan qayta bog'lanish: Rahbar bilan kelishadi");
+    const due = new Date(task.due!);
+    expect([due.getDate(), due.getHours(), due.getMinutes()]).toEqual([1, 14, 30]);
+    expect(post(db, `${C}/deals/${d2.id}/stage`, { stage: "later", recall: "2026-12-01", recall_time: "xx" }).status).toBe(400);
   });
 });
 

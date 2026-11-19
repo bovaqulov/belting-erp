@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { CH, d8, num, un } from "@/erp/kit/fmt";
 import { Tbl } from "@/erp/kit/table";
-import { Empty, Icon, List, Row, Sf, Sh } from "@/erp/kit/ui";
+import { C, Empty, Icon, List, Row, Sf, Sh } from "@/erp/kit/ui";
 import { Btns, Done, Split } from "@/erp/warehouse/common";
 import { EPS, size, type PickBrief, type PickLine, type PickOrder } from "@/erp/warehouse/lib";
 
@@ -53,7 +53,7 @@ export function PickList({ wide, rs, onOpen }: { wide: boolean; rs: PickBrief[];
             tcls="wrap2"
             s={
               <>
-                <span className="code">{r.number}</span> · {[r.firm, r.channel && ch(r.channel), `${r.lines} qator`, r.names.join(", ")].filter(Boolean).join(" · ")}
+                <span className="code">{r.number}</span> · {[r.firm, r.channel && ch(r.channel), `${r.lines} qator`, r.short ? `⚠ ${r.short} topilmadi` : "", r.names.join(", ")].filter(Boolean).join(" · ")}
               </>
             }
             val={d8(r.date)}
@@ -97,27 +97,47 @@ export function PickOrderView({
   );
   const lines = (
     <>
-      <Sh t="Qatorlar" r="kerak / yig'ildi" />
+      <Sh t="Yig'ish yo'li" r="kerak / yig'ildi" />
+      {o.route && o.route.length > 1 ? <Sf>{o.route.join(" → ")}</Sf> : null}
       <List>
         {o.lines.map((ln) => {
           const g = got(ln);
           const left = Number(ln.left);
           const full = g >= left - EPS;
           const pct = Math.min(100, (g * 100) / left);
-          const hint = ln.units
-            .slice(0, 3)
-            .map((u) => `${u.code ?? "partiya"}${u.loc ? " @" + u.loc : ""} (${num(u.qty, 3)}${size(u) ? ", " + size(u) : ""})`)
+          const u0 = ln.units[0];
+          const more = ln.units
+            .slice(1, 3)
+            .map((u) => `${u.code ?? "partiya"}${u.loc ? " @" + u.loc : ""} (${num(u.qty, 3)})`)
             .join("; ");
           return (
             <Row
               key={ln.line_no}
-              icon={full ? "check" : ln.dims ? "layers" : "package"}
-              color={full ? "green" : "orange"}
+              lead={
+                <span
+                  className={`sq num text-[15px] font-bold ${full ? "" : "text-white"}`}
+                  style={{ background: full ? C.green : ln.units.length ? C.orange : C.red }}
+                  aria-label={full ? "Yig'ildi" : `${ln.stop ?? ""}-to'xtash`}
+                >
+                  {full ? <Icon n="check" /> : (ln.stop ?? "•")}
+                </span>
+              }
               t={ln.name}
               tcls="wrap2"
+              scls="ml"
               s={
                 <>
-                  {hint ? `Taklif: ${hint}` : "Omborda mos birlik yo'q"}
+                  {u0 ? (
+                    <span className="block">
+                      <b className="code">{u0.loc ?? "joysiz"}</b> · {u0.code ?? "partiya"} · {num(u0.qty, 3)}
+                      {size(u0) ? `, ${size(u0)}` : ""}
+                      {u0.tip ? <span className="text-hint"> · {u0.tip}</span> : null}
+                    </span>
+                  ) : (
+                    <span className="block text-bad">Omborda mos birlik yo&apos;q</span>
+                  )}
+                  {more ? <span className="block text-hint">yana: {more}</span> : null}
+                  {ln.short ? <span className="block text-warn">⚠ {ln.short} marta topilmadi — sanashga yuborilgan</span> : null}
                   <span className="mt-1.5 block h-1 overflow-hidden rounded-sm bg-fill" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label="Yig'ildi">
                     <i className="block h-full bg-st-done" style={{ width: `${pct}%` }} />
                   </span>
@@ -159,7 +179,7 @@ export function PickOrderView({
       ) : null}
       <Sf>
         Har tovar skaner bilan tasdiqlanadi — qo&apos;lda qo&apos;shib bo&apos;lmaydi. Birlik QR — butun birlik (kerakdan katta bo&apos;lsa kesish taklif qilinadi). Donali tovar: birinchi
-        skanda soni so&apos;raladi, keyingi har skan +1. Noto&apos;g&apos;ri tovar bloklanadi. Yorlig&apos;i yo&apos;q tovar — qatorni bosib stiker chiqaring.
+        skanda soni so&apos;raladi, keyingi har skan +1. Noto&apos;g&apos;ri tovar bloklanadi. Qatorni bosing: boshqa birlik, stiker yoki «Topilmadi» (tovar sanashga yuboriladi).
       </Sf>
       <Btns>
         <button className="btn plain" onClick={onBack}>

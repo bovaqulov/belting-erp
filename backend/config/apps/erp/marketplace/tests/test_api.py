@@ -154,16 +154,11 @@ def test_modul_huquqi(client, user):
 
 
 def test_erp_me(c):
-    assert c.get("/app/api/erp/me").json() == {
-        "tg_id": 7,
-        "name": "Omborchi",
-        "roles": ["employee"],
-        "is_head": False,
-        "modules": ["marketplace"],
-        "warehouses": [],
-        "firms": [],
-        "kinds": [],
-    }
+    me = c.get("/app/api/erp/me").json()
+    wh = {k: me.pop(k) for k in ("warehouses", "firms", "kinds")}  # ombor appi qo'shadi
+    assert me == {"tg_id": 7, "name": "Omborchi", "roles": ["employee"], "is_head": False, "modules": ["marketplace"]}
+    assert wh["warehouses"] and wh["firms"]
+    assert all(k["can"] == [] for k in wh["kinds"])  # ombor moduli yo'q — hujjat yarata olmaydi
 
 
 # ---------------------------------------------------------------- sinxron, taxta, hisoblar
@@ -233,6 +228,30 @@ def test_sync_uzum_deadline(c, fake):
     assert c.get(f"{P}/overview").json()["orders"] == {"n": 1, "soon": 1}
     shops = [call for call in fake.calls if call[1] == "/v2/fbs/orders"]
     assert shops  # shopIds bilan so'raldi
+
+
+def test_uzum_line_width_and_article_from_order(c, fake):
+    """Uzum kartochkasida kenglik/artikul bo'lmasa — buyurtma qatoridan: nomdagi 'Ширина ремня' va skuTitle."""
+    fake.routes[("GET", "/v1/shops")] = {"payload": [{"id": 77, "name": "Belting"}]}
+    fake.routes[("GET", "/v2/fbs/orders/count")] = {"payload": 1}
+    title = "Ремень приводной зубчатый 177-3M, Novobelt, HTD, 59 зубьев, шаг 3 мм, 10-50 мм (Ширина ремня: 15 mm)"
+    fake.routes[("GET", "/v2/fbs/orders")] = {
+        "payload": {
+            "orders": [
+                {
+                    "id": 9002,
+                    "status": "CREATED",
+                    "dateCreated": ms(NOW),
+                    "acceptUntil": ms(NOW + timedelta(hours=2)),
+                    "orderItems": [{"skuId": 32, "skuTitle": "RMNUZ-1773M-17767L6", "title": title, "amount": 1}],
+                },
+            ]
+        }
+    }
+    post(c, f"{P}/orders/uzum/sync")
+    ln = c.get(f"{P}/orders/uzum/board").json()["orders"][0]["lines"][0]
+    assert ln["width_mm"] == 15 and ln["vendor_code"] == "RMNUZ-1773M-17767L6"
+    assert O.uzum_width("… (Ширина ремня: 12,5 mm)") == 12.5 and O.uzum_width("(Ширина ремня: 1 dona)") is None
 
 
 def test_channel_error_is_502(c, fake):

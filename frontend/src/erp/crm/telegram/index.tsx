@@ -1,5 +1,7 @@
 "use client";
-// CRM Telegram paneli: sotuvchining mijozlar bilan yozishmalari (Telegram Business bot orqali, backend: erp/crm/tg.py).
+// CRM yozishmalar paneli: sotuvchining mijozlar bilan yozishmalari — Telegram (Business bot, backend: erp/crm/tg.py),
+// WhatsApp va Instagram (rasmiy Meta API, erp/crm/meta.py). Kanal — tab; ro'yxat bitta so'rov (barcha kanallar), tab
+// bo'yicha shu yerda filtrlanadi (tez o'tish; tashqaridan istalgan kanal chatini ochish).
 // Real vaqt — WebSocket (live.ts): yangi xabar kelishi bilan ro'yxat va ochiq chat yangilanadi. WebSocket uzilganda —
 // zaxira so'rov: ro'yxat har 10 s, ochiq chat har 4 s (ulangan paytda — 60 s, xavfsizlik uchun); sahifa yashirin — yo'q. Sotuvchi o'z chatiga javob yozadi
 // (bot huquqi bo'lsa). Yozishmalar shaxsiy — har kim faqat o'z chatlarini ko'radi (rahbar ham). Kanban yonida (xl+) yoki o'ngdan chiquvchi panel.
@@ -9,13 +11,30 @@ import { confirm, toast } from "@/erp/kit/env";
 import { Icon, Loaded, useLoad } from "@/erp/kit/ui";
 import { api, post } from "@/erp/crm/api";
 import { useCrm } from "@/erp/crm/context";
-import { qs } from "@/erp/crm/lib";
+import { ls, qs } from "@/erp/crm/lib";
 
-import { TG, unreadTotal, type TgChat, type TgChats, type TgMsg, type TgThread } from "./tg.lib";
+import { chOf, TG, unreadTotal, type Ch, type TgChat, type TgChats, type TgMsg, type TgThread } from "./tg.lib";
 import { useTgLive } from "./live";
-import { TgConnect, TgLightbox, TgList, TgShell, TgThreadView } from "./ui";
+import { TG_W, TgConnect, TgLightbox, TgList, TgMetaOff, TgRail, TgShell, TgTabs, TgThreadView, type TgSize } from "./ui";
 
 export { TgButton } from "./ui";
+
+// kompyuterda panel kengligi va yig'ilgan holati — shu brauzerda eslab qolinadi (crm.chats.panel); standart — yig'ilgan (kanban keng)
+type PS = { w: number; min: boolean };
+function usePanelSize(): [PS, (p: Partial<PS>) => void] {
+  const [s, setS] = useState<PS>(() => {
+    const v = ls<Partial<PS>>("chats.panel");
+    return { w: Math.min(Math.max(Number(v?.w) || TG_W.def, TG_W.lo), TG_W.hi), min: v?.min ?? true };
+  });
+  const set = useCallback((p: Partial<PS>) => {
+    setS((o) => {
+      const n = { ...o, ...p };
+      ls("chats.panel", n);
+      return n;
+    });
+  }, []);
+  return [s, set];
+}
 
 /** Sahifa ko'rinib turganda har `ms` da chaqiradi */
 function usePoll(fn: () => void, ms: number, on = true) {
@@ -50,6 +69,8 @@ export function TgPanel({
   const [q, setQ] = useState("");
   const [qd, setQd] = useState("");
   const [cur, setCur] = useState<TgChat | null>(null);
+  const [ch, setCh] = useState<Ch>("tg");
+  const [ps, setPs] = usePanelSize();
   useEffect(() => {
     const t = setTimeout(() => setQd(q.trim()), 300);
     return () => clearTimeout(t);
@@ -78,6 +99,7 @@ export function TgPanel({
     const c = list.data.chats.find((x) => x.id === focus.chat);
     if (c) {
       setSeenFocus(focus.n);
+      setCh(c.channel ?? "tg");
       setCur(c);
     }
   }
@@ -97,11 +119,31 @@ export function TgPanel({
     onClose();
   };
 
+  const size: TgSize = {
+    w: ps.w,
+    min: ps.min,
+    onW: (w) => setPs({ w }),
+    onMin: (min) => setPs({ min }),
+    rail: (
+      <TgRail
+        ch={ch}
+        r={list.data ?? null}
+        onCh={(k) => {
+          setCh(k);
+          setCur(null);
+        }}
+        onOpen={() => setPs({ min: false })}
+      />
+    ),
+  };
+
   if (cur) {
     const c = list.data?.chats.find((x) => x.id === cur.id) ?? cur; // eng yangi holat (biriktirilgan mijoz)
     return (
       <TgShell
         open={open}
+        size={size}
+        ch={c.channel}
         title={c.title}
         sub={[c.username && `@${c.username}`, c.customer && `mijoz: ${c.customer.name}`].filter(Boolean).join(" · ") || undefined}
         actions={
@@ -120,16 +162,28 @@ export function TgPanel({
     );
   }
   const r = list.data;
-  const n = r?.chats.length ?? 0;
+  const mine = (d: TgChats): TgChats => ({ ...d, chats: d.chats.filter((x) => (x.channel ?? "tg") === ch) });
+  const n = r ? mine(r).chats.length : 0;
   return (
-    <TgShell open={open} title="Telegram" sub={r ? `${n} chat` : undefined} onClose={close}>
+    <TgShell open={open} size={size} ch={ch} title={chOf(ch).name} sub={r ? `${n} chat` : undefined} actions={<TgTabs ch={ch} r={r ?? null} onCh={setCh} />} onClose={close}>
       <Loaded st={list}>
-        {(d) =>
-          !d.chats.length && !qd && !d.connection ? <TgConnect bot={d.bot} /> : <TgList r={d} me={me.tg_id} q={q} onQ={setQ} onOpen={setCur} />
-        }
+        {(d) => {
+          const v = mine(d);
+          if (!v.chats.length && !qd) {
+            if (ch === "tg" && !d.connection) return <TgConnect bot={d.bot} />;
+            if (ch !== "tg" && d.channels && !d.channels[ch].enabled) return <TgMetaOff ch={ch} />;
+          }
+          return <TgList r={v} ch={ch} me={me.tg_id} q={q} onQ={setQ} onOpen={setCur} />;
+        }}
       </Loaded>
     </TgShell>
   );
+}
+
+/** Bitim kartochkasidagi chat (mijoz yozishmasi): panelsiz yozishma va javob maydoni; yangilanish — so'rov bilan (4 s). */
+export function ChatThread({ chat, onSent }: { chat: TgChat; onSent?: () => void }) {
+  const { me } = useCrm();
+  return <Thread key={chat.id} chat={chat} me={me.tg_id} live={false} bump={0} onSent={onSent ?? (() => {})} />;
 }
 
 function Thread({ chat, me, live, bump, onSent }: { chat: TgChat; me: number; live: boolean; bump: number; onSent: () => void }) {
@@ -163,7 +217,7 @@ function Thread({ chat, me, live, bump, onSent }: { chat: TgChat; me: number; li
   }, [view]);
   const [preview, setPreview] = useState<string | null>(null);
   const pick = (f: File) => {
-    if (f.size > 50 * 1024 * 1024) return toast("Fayl 50 MB dan katta — Telegram bot orqali yuborib bo'lmaydi", "bad");
+    if (f.size > 50 * 1024 * 1024) return toast("Fayl 50 MB dan katta — yuborib bo'lmaydi", "bad");
     setFile(f);
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);

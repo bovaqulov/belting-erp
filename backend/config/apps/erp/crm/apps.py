@@ -12,3 +12,7 @@ class ErpCrmConfig(AppConfig):
         from .access import is_sales_head
 
         register_me_field("is_head", is_sales_head)  # /app/api/erp/me: sotuv bo'limi rahbari
+
+        from . import production
+
+        production.register()  # sex tayyor → «Tayyor», ombor jo'natdi → «Jo'natildi»

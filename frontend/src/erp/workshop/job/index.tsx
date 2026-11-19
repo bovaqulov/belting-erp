@@ -88,6 +88,18 @@ export function Job({ id, setTitle }: { id: number; setTitle: (t: string) => voi
             toast("Tayyorlanmoqda");
             await reload();
           }}
+          onUntake={async (t) => {
+            if (!(await confirm(`${t.code ?? t.name} omborga qaytarilsinmi? Sarf (${t.doc ?? "—"}) bekor bo'ladi, bo'lak joylash navbatiga tushadi. Bir nechta zakazga bo'lingan bo'lsa — hammasidan ayriladi.`))) return;
+            try {
+              const r = await post<{ number: string; codes: string[]; warehouse: string }>(`/app/api/erp/shop/jobs/${id}/untake`, { take_id: t.id });
+              beep(true);
+              toast(`${r.number}: ${r.codes.join(", ") || "material"} → ${r.warehouse} (joylash navbati)`);
+              await reload();
+            } catch (e) {
+              beep(false);
+              toast((e as Error).message, "bad");
+            }
+          }}
           onReady={async () => {
             if (!(await confirm("Mahsulot tayyormi? Omborga kiritiladi va buyurtma stikeri chiqadi."))) return;
             try {

@@ -8,7 +8,7 @@ import { HDR, HROW, MAIN, ROOT, SCROLL_X, SP } from "@/erp/crm/tw";
 
 export const Header = ({ children }: { children?: ReactNode }) => (
   <header className={HDR}>
-    <div className={HROW}>
+    <div className={`${HROW} max-md:flex-wrap max-md:gap-y-1.5 max-md:pb-1`}>
       <div className="mr-1.5 flex items-baseline gap-2 text-xl font-bold whitespace-nowrap max-md:mr-0 max-md:text-lg">
         CRM
         <a href="/app/erp" className="self-center max-md:hidden" title="Belting ERP" aria-label="Belting ERP">
@@ -75,11 +75,11 @@ export const DemoStrip = ({ onReset, me, users, onAs }: { onReset: () => void; m
 /** Sahifa karkasi: demo belgisi, sarlavha, bo'lim mazmuni; ustida — panel va oynalar */
 export function CrmLayout({
   demo,
-  pipeName,
   sec,
   unassigned,
   onSec,
   onNewDeal,
+  onLogout,
   onDemoReset,
   me,
   users,
@@ -87,12 +87,12 @@ export function CrmLayout({
   children,
 }: {
   demo: boolean;
-  /** voronka nomi (sarlavhada) — CRM'da faqat Sales */
-  pipeName?: string;
   sec: Sec;
   unassigned: number;
   onSec: (s: Sec) => void;
   onNewDeal: () => void;
+  /** brauzerda (Telegram tashqarisi, demo emas) — sessiyadan chiqish; yo'q bo'lsa tugma ko'rinmaydi */
+  onLogout?: () => void;
   onDemoReset: () => void;
   me: Me;
   users: Meta["users"];
@@ -103,7 +103,7 @@ export function CrmLayout({
     <div className={ROOT}>
       {demo ? <DemoStrip onReset={onDemoReset} me={me} users={users} onAs={onDemoAs} /> : null}
       <Header>
-        <nav className={`flex min-w-0 gap-1 ${SCROLL_X}`} aria-label="Bo'limlar">
+        <nav className={`flex min-w-0 gap-1 ${SCROLL_X} max-md:order-last max-md:-mx-1 max-md:basis-[calc(100%+8px)]`} aria-label="Bo'limlar">
           {SECS.map(([k, t]) => (
             <button key={k} type="button" className={`cursor-pointer rounded-lg border-0 px-3.5 py-[7px] text-[15px] font-semibold whitespace-nowrap max-md:px-2.5 max-md:text-sm coarse:min-h-11 ${sec === k ? "bg-fill text-fg" : "bg-transparent text-hint"}`} aria-current={sec === k ? "page" : undefined} onClick={() => onSec(k)}>
               {t}
@@ -111,15 +111,15 @@ export function CrmLayout({
             </button>
           ))}
         </nav>
-        {pipeName ? (
-          <span className="ml-1 rounded-lg border border-sep px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap text-sub max-md:hidden" title="Voronka">
-            {pipeName}
-          </span>
-        ) : null}
         <span className={SP} />
         {sec === "deals" ? (
-          <button type="button" className="b pri" onClick={onNewDeal}>
+          <button type="button" className="b pri max-md:h-9 max-md:px-3" onClick={onNewDeal}>
             <Icon n="plus" /> Bitim
+          </button>
+        ) : null}
+        {onLogout ? (
+          <button type="button" className="b ic" title="Chiqish" aria-label="Chiqish" onClick={onLogout}>
+            <Icon n="log-out" />
           </button>
         ) : null}
       </Header>

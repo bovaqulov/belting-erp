@@ -7,7 +7,7 @@ import { toast } from "@/erp/kit/env";
 import { useLoad } from "@/erp/kit/ui";
 import { api, post } from "@/erp/crm/api";
 import { useCrm } from "@/erp/crm/context";
-import { ls, qs, type Contact, type CustomerCard, type CustomersResp } from "@/erp/crm/lib";
+import { custKind, ls, qs, type Contact, type CustKind, type CustomerCard, type CustomersResp } from "@/erp/crm/lib";
 import { DrawerFrame, DrawerLoading } from "@/erp/crm/deal";
 
 import { CustomerCardView, CustomersView } from "./ui";
@@ -55,16 +55,21 @@ export function CustomerPanel({ id, tick, onClose }: { id: number; tick: number;
   }, []);
   // kontaktlar — mahalliy tahrir (har harfda saqlamaslik uchun), yuklanganda serverdagisi
   const [contacts, setContacts] = useState<Contact[] | null>(null);
+  // turni o'zgartirish: yangi tur majburiy maydon talab qilsa (xodim — firma, savdogar — telefon) — avval maydon
+  // to'ldiriladi, tur u bilan birga saqlanadi
+  const [pk, setPk] = useState<CustKind | null>(null);
   const [seen, setSeen] = useState(st.at);
   if (st.at !== seen) {
     setSeen(st.at);
     setContacts(null);
+    setPk(null);
   }
   const c = st.data;
 
   const save = async (field: string, value: unknown) => {
+    const withKind = pk && (field === "company" || field === "phones") ? { kind: pk } : {};
     try {
-      await post(`${C}/${id}`, { [field]: value });
+      await post(`${C}/${id}`, { ...withKind, [field]: value });
       toast("Saqlandi");
       void st.reload();
       crm.refresh();
@@ -86,6 +91,16 @@ export function CustomerPanel({ id, tick, onClose }: { id: number; tick: number;
           pipelines={crm.meta.pipelines}
           contacts={contacts ?? c.contacts}
           onSave={(f, v) => void save(f, v)}
+          pendingKind={pk}
+          onAskPosition={() => crm.ask("Lavozim", { label: "Lavozim nomi", placeholder: "Masalan: Bosh texnolog", ok: "Saqlash" })}
+          onKind={(k) => {
+            const need = custKind(k);
+            if ((need.employee && !c.company) || (need.phoneRequired && !c.phones?.length)) setPk(k);
+            else {
+              setPk(null);
+              void save("kind", k);
+            }
+          }}
           onContacts={(list, persist) => {
             setContacts(list);
             if (persist && JSON.stringify(list) !== JSON.stringify(c.contacts)) void save("contacts", list);

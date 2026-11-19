@@ -8,6 +8,7 @@ import { Empty, Icon, Loaded } from "@/erp/kit/ui";
 import { AvaView } from "@/erp/crm/badges";
 import { LEAD_STAGES, leadWait, LSRC, waitText, type Lead, type Meta } from "@/erp/crm/lib";
 import { idle, PANE, RT, SP, SRCH, SUM, TACTS, TB_IN, TTL, WHO } from "@/erp/crm/tw";
+import { chOf } from "@/erp/crm/telegram/tg.lib";
 
 export const OPEN = "new,work,interested";
 export const STATES: [string, string][] = [
@@ -359,9 +360,16 @@ function LeadBoard({
                           <span className={`${idle(true)} flex-1`}>taqsimlanmagan</span>
                         )}
                         {l.tg ? (
-                          <button type="button" className="b h-8 flex-none px-2 text-[13px] coarse:h-11" onClick={() => onChat(l.tg!.chat_id)} title="Telegram yozishmasi">
-                            <Icon n="send-tg" /> Chat
-                            {l.tg.unread ? <b className="ml-0.5 rounded-full bg-[#2aabee] px-1.5 text-[11px] leading-[18px] text-white">{l.tg.unread}</b> : null}
+                          <button type="button" className="b h-8 flex-none px-2 text-[13px] coarse:h-11" onClick={() => onChat(l.tg!.chat_id)} title={`${chOf(l.tg.channel).name} yozishmasi`}>
+                            <span className="contents" style={{ color: chOf(l.tg.channel).color }}>
+                              <Icon n={chOf(l.tg.channel).icon} />
+                            </span>{" "}
+                            Chat
+                            {l.tg.unread ? (
+                              <b className="ml-0.5 rounded-full px-1.5 text-[11px] leading-[18px] text-white" style={{ background: chOf(l.tg.channel).color }}>
+                                {l.tg.unread}
+                              </b>
+                            ) : null}
                           </button>
                         ) : null}
                       </div>

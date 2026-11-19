@@ -137,6 +137,29 @@ def check_move(d: Deal, st: Stage) -> None:
         )
 
 
+# Sales ketma-ketligi (asosiy voronka) — avtomatik o'tish faqat oldinga
+FLOW = ("new", "offer", "later", "contract", "payment", "production", "ready", "shipping", "won")
+
+
+def advance(me: Me, d: Deal, code: str, now: datetime, why: str) -> bool:
+    """Hodisa bo'yicha bitimni keyingi bosqichga avtomatik o'tkazish: faqat ochiq va maqsaddan oldingi bosqichdan
+    (orqaga hech qachon; yopilgan bitim — tegilmaydi). Bosqich sharti bajarilmasa (masalan, to'lov) — o'tkazilmaydi.
+    Tarixda — `src: auto` va sababi bilan izoh."""
+    from .deals import move_stage
+
+    cur = d.stage_id
+    if d.stage.kind != StageKind.OPEN or cur not in FLOW or code not in FLOW or FLOW.index(cur) >= FLOW.index(code):
+        return False
+    try:
+        move_stage(me, d, code, "", now, src="auto")
+    except ApiError:
+        return False
+    Activity.objects.create(
+        deal=d, kind="stage", ts=now, actor=None, text=f"Avtomatik: «{d.stage.name}» bosqichiga o'tdi — {why}"
+    )
+    return True
+
+
 def on_enter(me: Me, d: Deal, now: datetime) -> None:
     """Bosqichga kirgandagi avtomatik amallar."""
     if d.stage_id == "offer":
@@ -152,14 +175,23 @@ def on_enter(me: Me, d: Deal, now: datetime) -> None:
             )
     elif d.stage_id == "ready":
         notify_ready(d, now)
+    from . import production
+
+    production.on_enter(d, now)  # sex zakazlari, ombor yig'ish navbati, bekor qilish
+
+
+def chat_name(chat: TgChat) -> str:
+    return {"wa": "WhatsApp", "ig": "Instagram"}.get(chat.connection.channel, "Telegram")
 
 
 def notify_ready(d: Deal, now: datetime) -> None:
-    """«Tayyor» — mijozga mas'ul sotuvchining Telegram'i orqali xabar (Business bot; chat 24 soat ichida faol bo'lsa)."""
+    """«Tayyor» — mijozga mas'ul sotuvchining eng so'nggi chati orqali xabar (Telegram Business bot / WhatsApp / Instagram;
+    WhatsApp va Instagram — mijoz oxirgi 24 soatda yozgan bo'lsa)."""
     from . import tg
 
     chat = (
         TgChat.objects.people()
+        .select_related("connection")
         .filter(customer_id=d.customer_id, connection__user_tg=d.owner_tg, connection__is_enabled=True)
         .order_by("-last_at")
         .first()
@@ -171,19 +203,21 @@ def notify_ready(d: Deal, now: datetime) -> None:
             deal=d,
             kind="comment",
             ts=now,
-            text="Tayyor: mijozga bog'langan Telegram chat yo'q — o'zingiz xabar bering.",
+            text="Tayyor: mijozga bog'langan chat (Telegram / WhatsApp / Instagram) yo'q — o'zingiz xabar bering.",
         )
         return
     text = f"Assalomu alaykum! «{d.title}» buyurtmangiz tayyor. Jo'natish bo'yicha tez orada bog'lanamiz."
     try:
         tg.send(chat, text)
-        Activity.objects.create(deal=d, kind="message", ts=now, text=f"Mijozga Telegram'da xabar yuborildi: {text}")
+        Activity.objects.create(
+            deal=d, kind="message", ts=now, text=f"Mijozga {chat_name(chat)}'da xabar yuborildi: {text}"
+        )
     except ApiError as e:
         Activity.objects.create(
             deal=d,
             kind="comment",
             ts=now,
-            text=f"Tayyor: Telegram xabari yuborilmadi ({e.detail}) — o'zingiz xabar bering.",
+            text=f"Tayyor: {chat_name(chat)} xabari yuborilmadi ({e.detail}) — o'zingiz xabar bering.",
         )
 
 
@@ -211,8 +245,8 @@ def add_payment(me: Me, d: Deal, amount: Decimal, via: str, now: datetime) -> No
 
 
 # ------------------------------------------------------------------ kvalifikatsiya
-def later(me: Me, d: Deal, recall: Any, now: datetime) -> None:
-    """«Keyinroq»: qayta bog'lanish sanasi majburiy — shu kunga vazifa (10:00)."""
+def later(me: Me, d: Deal, recall: Any, now: datetime, at: Any = None, note: Any = "") -> None:
+    """«Keyinroq»: qayta bog'lanish sanasi majburiy — shu kun va soatga (standart 10:00) vazifa; izoh — vazifa matnida."""
     from django.utils import timezone
     from django.utils.dateparse import parse_date
 
@@ -229,14 +263,22 @@ def later(me: Me, d: Deal, recall: Any, now: datetime) -> None:
         raise ApiError(400, "Qayta bog'lanish sanasini kiriting (masalan, 15.12.2026).")
     if day < timezone.localdate(now):
         raise ApiError(400, "Qayta bog'lanish sanasi o'tib ketgan — bugun yoki keyingi kunni tanlang.")
+    hm = str(at or "").strip() or "10:00"
+    try:
+        h, mi = (int(x) for x in hm.split(":")[:2])
+        due = timezone.make_aware(datetime(day.year, day.month, day.day, h, mi))
+    except ValueError as e:
+        raise ApiError(400, "Soat noto'g'ri — masalan, 14:30.") from e
+    if due < now:
+        raise ApiError(400, "Bu vaqt o'tib ketgan — keyingi soat yoki kunni tanlang.")
+    text = str(note or "").strip()[:500]
     move_stage(me, d, "later", "", now)
-    due = timezone.make_aware(datetime(day.year, day.month, day.day, 10))
     Activity.objects.create(
         deal=d,
         kind="task",
         ts=now,
         actor=me.tg_id or None,
-        text="Mijoz bilan qayta bog'lanish (keyinroq degan)",
+        text=f"Mijoz bilan qayta bog'lanish: {text}" if text else "Mijoz bilan qayta bog'lanish (keyinroq degan)",
         due=due,
         assignee=d.owner_tg,
     )

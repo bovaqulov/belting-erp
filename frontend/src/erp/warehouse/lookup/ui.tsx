@@ -2,7 +2,7 @@
 import { C, Icon, List, Row, Sf, Sh } from "@/erp/kit/ui";
 import { dt, num, un } from "@/erp/kit/fmt";
 import { Btns, CodeAnd, Done } from "@/erp/warehouse/common";
-import { KINDN, size, type CellUnit, type ItemStock, type ScanUnit } from "@/erp/warehouse/lib";
+import { KINDN, size, type CellUnit, type ItemStock, type Move, type ScanUnit, type Trace } from "@/erp/warehouse/lib";
 
 import type { Cut } from "@/erp/warehouse/cut";
 
@@ -194,6 +194,90 @@ export function CellView({ c, wh, us, onPdf }: { c: { code: string }; wh: string
           Joy yorlig&apos;i PDF
         </button>
       </Btns>
+    </>
+  );
+}
+
+/** Harakatlar tarixi (jurnal): eng yangisi tepada; delta — rangli (+ kirim, − chiqim, 0 — ko'chish) */
+export function MovesView({ ms, unit, showUnit }: { ms: Move[]; unit?: string; showUnit?: boolean }) {
+  if (!ms.length) return <Sf>Harakat yo&apos;q.</Sf>;
+  return (
+    <List>
+      {ms.map((m) => {
+        const from = m.loc_from ?? m.wh_from;
+        const to = m.loc_to ?? m.wh_to;
+        const path = m.wh_from && m.wh_to && m.wh_from !== m.wh_to ? `${m.wh_from} → ${m.wh_to}` : from || to ? `${from ?? "—"} → ${to ?? "—"}` : "";
+        return (
+          <Row
+            key={m.id}
+            icon={m.delta > 0 ? "plus" : m.delta < 0 ? "minus" : "swap"}
+            color={m.delta > 0 ? "green" : m.delta < 0 ? "red" : "gray"}
+            t={
+              <>
+                {m.op_title}
+                {m.doc_number ? <span className="code text-hint"> · {m.doc_number}</span> : null}
+              </>
+            }
+            tcls="wrap2"
+            s={[showUnit && m.unit_code ? m.unit_code : "", path, m.reason, m.author_name, dt(m.at)].filter(Boolean).join(" · ")}
+            val={m.delta ? <span className={`num ${m.delta > 0 ? "text-st-done" : "text-danger"}`}>{`${m.delta > 0 ? "+" : "−"}${num(Math.abs(m.delta), 3)}`}</span> : <span className="text-hint">0</span>}
+            valSmall={`qoldiq ${num(m.qty_after, 3)}${unit ? ` ${un(unit)}` : ""}`}
+          />
+        );
+      })}
+    </List>
+  );
+}
+
+/** Kelib chiqish zanjiri: mahsulot — qaysi material birliklaridan; material — qaysi zakaz va mahsulotga ishlatilgan */
+export function TraceView({ t }: { t: Trace }) {
+  if (!t.from.length && !t.used.length) return null;
+  return (
+    <>
+      {t.from.length ? (
+        <>
+          <Sh t="Qaysi materialdan qilingan" r={t.job ?? undefined} />
+          <List>
+            {t.from.map((x, i) => (
+              <Row
+                key={`${x.doc}:${i}`}
+                icon="layers"
+                color="orange"
+                t={x.name}
+                tcls="wrap2"
+                s={<CodeAnd code={x.code} rest={[x.doc]} />}
+                val={<span className="num">{num(x.qty, 3)}</span>}
+                valSmall={un(x.unit)}
+              />
+            ))}
+          </List>
+        </>
+      ) : null}
+      {t.used.length ? (
+        <>
+          <Sh t="Sexda ishlatilgan" r={t.used.length} />
+          <List>
+            {t.used.map((x) => (
+              <Row
+                key={x.doc}
+                icon={x.returned ? "undo-2" : "factory"}
+                color={x.returned ? "gray" : "purple"}
+                t={x.job ? `Zakaz ${x.job}` : x.doc}
+                tcls="wrap2"
+                scls="ml"
+                s={[
+                  x.doc,
+                  dt(x.date),
+                  x.returned ? `omborga qaytarilgan (${x.returned})` : x.products.length ? `→ ${x.products.map((p) => `${p.code ?? ""} ${p.name}`.trim()).join(", ")}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                val={<span className="num">{num(x.qty, 3)}</span>}
+              />
+            ))}
+          </List>
+        </>
+      ) : null}
     </>
   );
 }

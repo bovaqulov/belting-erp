@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { deskView, MORE, parseView, tabOf, TABS, viewQs } from "./nav.lib";
-import { genCells, invKey, parseNeeds, size, stockCsv } from "./wh.lib";
+import { cellPos, genCells, invKey, parseNeeds, racks, size, stockCsv, tally } from "./wh.lib";
 
 describe("ombor navigatsiyasi", () => {
   it("URL ↔ ko'rinish", () => {
     expect(parseView("")).toBe("place");
     expect(parseView("?sec=inv")).toBe("inv");
     expect(parseView("?sec=xx")).toBe("place");
-    expect(parseView("?sec=pick")).toBe("place");
+    expect(parseView("?sec=pick")).toBe("pick");
+    expect(parseView("?sec=stock")).toBe("place");
     expect(parseView("?sec=more")).toBe("more");
     expect(viewQs("place")).toBe("");
     expect(viewQs("cells")).toBe("?sec=cells");
@@ -17,6 +18,8 @@ describe("ombor navigatsiyasi", () => {
     expect(TABS).toContain("more");
     expect(MORE).not.toContain("place");
     expect(MORE).toContain("cells");
+    expect(MORE).toContain("pick");
+    expect(TABS).not.toContain("pick");
     expect(tabOf("cells")).toBe("more");
     expect(tabOf("inv")).toBe("inv");
     expect(deskView("more")).toBe("place");
@@ -64,5 +67,26 @@ describe("ombor yordamchilari", () => {
     expect(row).toContain('"Lenta ""EP"""');
     expect(row).toContain('"12,5";"m²"');
     expect(row.endsWith('"10,5"')).toBe(true);
+  });
+});
+
+describe("joylar tuzilmasi", () => {
+  it("joy kodi: qator va qavat", () => {
+    expect(cellPos("A-03-2")).toEqual({ row: "A-03", floor: 2 });
+    expect(cellPos("A-03")).toEqual({ row: "A-03", floor: null });
+    expect(cellPos("RAMPA")).toEqual({ row: "RAMPA", floor: null });
+  });
+  it("stellaj: qatorlar tartibda, qavatlar yuqoridan pastga, birliklar jami", () => {
+    const cs = [
+      { code: "A-10-1", units: 1 },
+      { code: "A-02-1", units: 2 },
+      { code: "A-02-3", units: 0 },
+      { code: "A-02-2", units: 4 },
+    ];
+    const r = racks(cs);
+    expect(r.map((x) => x.row)).toEqual(["A-02", "A-10"]);
+    expect(r[0].floors.map((f) => f.floor)).toEqual([3, 2, 1]);
+    expect(r[0].units).toBe(6);
+    expect(tally(cs)).toEqual({ cells: 4, units: 7 });
   });
 });

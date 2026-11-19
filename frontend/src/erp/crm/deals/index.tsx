@@ -76,7 +76,6 @@ export function Deals({
         q={q}
         qRef={qRef}
         onQ={setQ}
-        onRefresh={crm.refresh}
         extra={<TgButton unread={tgUnread} onClick={() => setTgOpen(true)} />}
       />
       {idleOn || banner.data?.total ? (

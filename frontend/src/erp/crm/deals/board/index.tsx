@@ -1,6 +1,7 @@
 "use client";
 // Kanban: yuklash, fon yangilanishi (har daqiqa), kartochkani sudrab bosqichga o'tkazish (sichqoncha), "Yana N ta".
-// Telefonda ustunlar gorizontal suriladi; bosqich bitim panelidagi strelkalar bilan o'zgartiriladi.
+// Telefonda: tepada bosqichlar tasmasi (joriy — belgilangan, bosilsa o'sha ustunga o'tadi), ustunlar ekran kengligida
+// gorizontal suriladi; bosqich bitim panelidagi strelkalar bilan o'zgartiriladi.
 import { useEffect, useRef, useState } from "react";
 
 import { toast } from "@/erp/kit/env";
@@ -33,6 +34,16 @@ export function Board({
   // "Yana N ta" bilan qo'shilgan kartochkalar — faqat shu yuklanishga tegishli (yangilanganda tozalanadi)
   const [extra, setExtra] = useState<{ at: number; m: Record<string, Deal[]> }>({ at: 0, m: {} });
   const more = extra.at === st.at ? extra.m : {};
+  // telefon: joriy ustun (surish bo'yicha) va tasmadan tanlash
+  const kb = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    kb.current?.parentElement?.querySelector('nav[aria-label="Bosqichlar"] [aria-current]')?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }, [active]);
+  const col = () => {
+    const el = kb.current?.querySelector<HTMLElement>("section[data-st]");
+    return el ? el.offsetWidth + 12 : 1;
+  };
 
   const loaded = useRef(onLoaded);
   useEffect(() => {
@@ -103,6 +114,17 @@ export function Board({
           onOpen={crm.openDeal}
           onDrag={setDrag}
           onMore={(code, off) => void loadMore(code, off)}
+          onNew={() => crm.newDeal()}
+          kbRef={kb}
+          active={active}
+          onScroll={() => {
+            const i = Math.round((kb.current?.scrollLeft ?? 0) / col());
+            if (i !== active) setActive(i);
+          }}
+          onPick={(i) => {
+            setActive(i);
+            kb.current?.scrollTo({ left: i * col(), behavior: "smooth" });
+          }}
         />
       )}
     </Loaded>

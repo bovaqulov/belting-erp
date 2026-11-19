@@ -25,6 +25,7 @@ export const ACT: Record<string, string> = {
   plan: "reja",
   done: "bosqich",
   brak: "brak",
+  untake: "materialni omborga qaytardi",
 };
 
 export type Job = {
@@ -67,6 +68,10 @@ export type Plan = {
   candidates: Cand[];
 };
 export type Taken = {
+  /** sarf yozuvi (qaytarish uchun) */
+  id?: number;
+  /** ombor sarf hujjati SR-… */
+  doc?: string | null;
   name: string;
   unit: string;
   qty: string;

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { CH, d8, dt, num, un, usz } from "@/erp/kit/fmt";
 import { Icon, List, MainButton, Row, Sh } from "@/erp/kit/ui";
 import { Flow, Material } from "@/erp/workshop/common";
-import { ACT, type Detail } from "@/erp/workshop/lib";
+import { ACT, type Detail, type Taken } from "@/erp/workshop/lib";
 
 export function JobScreen({
   j,
@@ -16,6 +16,7 @@ export function JobScreen({
   onAccept,
   onCollected,
   onReady,
+  onUntake,
 }: {
   j: Detail;
   /** skaner (konteyner) — material yig'ish/tayyorlash bosqichida */
@@ -27,6 +28,8 @@ export function JobScreen({
   onAccept: () => void;
   onCollected: () => void;
   onReady: () => void;
+  /** olingan materialni omborga qaytarish (noto'g'ri / ortiqcha olingan) */
+  onUntake: (t: Taken) => void;
 }) {
   const sp = j.spec || {};
   const work = j.phase === "collecting" || j.phase === "making";
@@ -168,6 +171,13 @@ export function JobScreen({
                   .join(" · ")}
                 val={<span className="num">{num(t.qty, 3)}</span>}
                 valSmall={un(t.unit)}
+                right={
+                  work && t.id ? (
+                    <button type="button" className="mini" aria-label="Omborga qaytarish" title="Omborga qaytarish" onClick={() => onUntake(t)}>
+                      <Icon n="undo-2" />
+                    </button>
+                  ) : undefined
+                }
               />
             ))}
           </List>

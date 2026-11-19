@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from config.apps.core.http import ApiError
 
-from . import live
+from . import live, meta
 from .models import Lead, LeadStatus, TgChat, TgConnection, TgMessage
 
 log = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ def call(method: str, **params: Any) -> Any:
     except (httpx.HTTPError, ValueError) as e:
         raise ApiError(502, "Telegram bilan aloqa bo'lmadi — keyinroq urinib ko'ring.") from e
     if not data.get("ok"):
-        raise ApiError(502, f"Telegram rad etdi: {data.get('description') or 'nomaʼlum xato'}")
+        raise reject(data.get("description"))
     return data.get("result")
 
 
@@ -247,8 +247,11 @@ def save_message(conn: TgConnection, m: dict[str, Any], *, edited: bool = False,
     return msg
 
 
+SOURCES = {"tg": "telegram", "wa": "whatsapp", "ig": "instagram"}
+
+
 def lead_from_chat(chat: TgChat, conn: TgConnection, msg: TgMessage, from_user: dict[str, Any]) -> None:
-    """Telegram → lid: mijozga bog'lanmagan chatda yangi odam yozsa — «Yangi» lid (mas'ul — shu sotuvchi; har chatdan
+    """Telegram / WhatsApp / Instagram → lid: mijozga bog'lanmagan chatda yangi odam yozsa — «Yangi» lid (mas'ul — shu sotuvchi; har chatdan
     bir marta — "Yaroqsiz: shaxsiy chat" qilinsa qayta ochilmaydi). Sotuvchi javob yozsa — «Ishda» (javob vaqti)."""
     lead = Lead.objects.filter(tg_chat=chat).order_by("-created").first()
     if msg.out:
@@ -265,7 +268,10 @@ def lead_from_chat(chat: TgChat, conn: TgConnection, msg: TgMessage, from_user: 
 
         if chat.customer is not None:
             customer_deal(
-                chat.customer, {"source": "telegram", "note": preview(msg.kind, msg.text)}, msg.date, comment=False
+                chat.customer,
+                {"source": SOURCES.get(conn.channel, "telegram"), "note": preview(msg.kind, msg.text)},
+                msg.date,
+                comment=False,
             )
         return
     # suhbatni sotuvchining o'zi boshlagan bo'lsa — darhol «Ishda»
@@ -274,7 +280,7 @@ def lead_from_chat(chat: TgChat, conn: TgConnection, msg: TgMessage, from_user: 
         created=msg.date,
         name=chat.title[:200],
         note=preview(msg.kind, msg.text),
-        source="telegram",
+        source=SOURCES.get(conn.channel, "telegram"),
         owner_tg=conn.user_tg,
         status=LeadStatus.WORK if first_out else LeadStatus.NEW,
         first_touch=first_out,
@@ -338,8 +344,29 @@ UPLOAD_MAX = 50 * 1024 * 1024  # Bot API — yuborishda 50 MB gacha
 PHOTO_MAX = 10 * 1024 * 1024  # sendPhoto — 10 MB gacha (kattasi — fayl sifatida)
 
 
+# Telegram Business: bot sotuvchi nomidan faqat oxirgi 24 soatda faol bo'lgan (mijoz yozgan) chatga yoza oladi —
+# aks holda Telegram PEER_ID_INVALID qaytaradi. Oldindan tekshiriladi (tushunarli xato).
+WINDOW = timedelta(hours=24)
+WINDOW_TEXT = (
+    "Telegram Business qoidasi: chatda oxirgi 24 soatda xabar bo'lmagan — bot unga yoza olmaydi. Mijozga Telegram'dan "
+    "bitta xabar yozing (yoki mijoz yozsin) — keyin qayta yuboring; yoki PDF'ni yuklab olib o'zingiz yuboring."
+)
+
+
+def reject(desc: str | None) -> ApiError:
+    """Telegram rad etdi → 409 (502 emas: tunnel/proksi 5xx javob matnini almashtirib yuboradi — sabab yo'qolmasin)."""
+    if desc and "PEER_ID_INVALID" in desc:
+        return ApiError(409, WINDOW_TEXT)
+    return ApiError(409, f"Telegram rad etdi: {desc or 'nomaʼlum xato'}")
+
+
 def _can_send(chat: TgChat) -> TgConnection:
     conn = chat.connection
+    # «faol» — oxirgi 24 soatda chatda jonli xabar bo'lgan (mijoz yoki sotuvchining o'zi Telegram'dan yozgan);
+    # CRM boti yuborganlari hisoblanmaydi. Yakuniy hakam — Telegram (PEER_ID_INVALID → reject()).
+    last = TgMessage.objects.filter(chat=chat, via_crm=False).order_by("-date").values_list("date", flat=True).first()
+    if last is not None and timezone.now() - last > WINDOW:
+        raise ApiError(409, WINDOW_TEXT)
     if not conn.is_enabled:
         raise ApiError(409, "Telegram ulanishi uzilgan — sotuvchi botni Telegram Business'da qayta ulasin.")
     if not conn.can_reply:
@@ -355,7 +382,14 @@ def _reply_params(reply_to: int | None) -> dict[str, Any] | None:
     return {"message_id": reply_to, "allow_sending_without_reply": True} if reply_to else None
 
 
+def _meta(chat: TgChat) -> bool:
+    """WhatsApp / Instagram chati — yuborish va fayl meta.py orqali."""
+    return chat.connection.channel != "tg"
+
+
 def send(chat: TgChat, text: str, reply_to: int | None = None) -> TgMessage:
+    if _meta(chat):
+        return meta.send(chat, text, reply_to)
     conn = _can_send(chat)
     m = call(
         "sendMessage",
@@ -368,6 +402,8 @@ def send(chat: TgChat, text: str, reply_to: int | None = None) -> TgMessage:
 
 
 def send_location(chat: TgChat, lat: float, lon: float, reply_to: int | None = None) -> TgMessage:
+    if _meta(chat):
+        return meta.send_location(chat, lat, lon, reply_to)
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         raise ApiError(400, "Koordinata noto'g'ri.")
     conn = _can_send(chat)
@@ -411,6 +447,8 @@ def send_file(
         raise ApiError(413, "Fayl 50 MB dan katta — Telegram bot orqali yuborib bo'lmaydi.")
     if len(caption) > 1024:
         raise ApiError(400, "Izoh juda uzun (1024 belgigacha).")
+    if _meta(chat):
+        return meta.send_file(chat, name, mime, data, caption, as_file, reply_to)
     conn = _can_send(chat)
     method, field = upload_method(mime, len(data), as_file)
     url = f"https://api.telegram.org/bot{settings.BUSINESS_CONNECTION_BOT_TOKEN}/{method}"
@@ -428,13 +466,15 @@ def send_file(
     except (httpx.HTTPError, ValueError) as e:
         raise ApiError(502, "Telegram bilan aloqa bo'lmadi — keyinroq urinib ko'ring.") from e
     if not res.get("ok"):
-        raise ApiError(502, f"Telegram rad etdi: {res.get('description') or 'nomaʼlum xato'}")
+        raise reject(res.get("description"))
     return save_message(conn, res["result"], via_crm=True)
 
 
 # ------------------------------------------------------------------ fayl
 def download(msg: TgMessage) -> tuple[bytes, str]:
     """Xabar fayli (getFile → Telegram fayl serveri). 20 MB dan katta — Bot API bermaydi."""
+    if _meta(msg.chat):
+        return meta.download(msg)
     media = msg.media or {}
     if not media.get("file_id"):
         raise ApiError(404, "Bu xabarda fayl yo'q")

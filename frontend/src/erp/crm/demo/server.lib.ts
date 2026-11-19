@@ -1,9 +1,9 @@
 // Brauzer ichidagi soxta CRM backend: Jarvis kontrakti bilan bir xil yo'llar va JSON shakllari, holat haqiqatan
-// o'zgaradi (Db obyekti joyida). Filtr, saralash, sahifalash, "chirigan"/300+ kun mantiqi — shu yerda hisoblanadi.
+// o'zgaradi (Db obyekti joyida). Filtr, saralash, sahifalash, "harakatsiz"/300+ kun mantiqi — shu yerda hisoblanadi.
 // handle() sof: tarmoq yo'q, vaqt `now` bilan beriladi.
-import { days, itemAmount, type Deal, type DealItem } from "@/erp/crm/lib";
+import { autoTitle, days, dealTitle, innRequired, itemAmount, priced, type CustKind, type Deal, type DealItem } from "@/erp/crm/lib";
 
-import { HEAD_TG, type Db, type DbAct, type DbCustomer, type DbDeal, type DbLead, type DbTgChat, type DbTgMsg } from "./seed.lib";
+import { HEAD_TG, type Db, type DbAct, type DbCustomer, type DbDeal, type DbDoc, type DbLead, type DbTgChat, type DbTgMsg } from "./seed.lib";
 
 export type Res = { status: number; body: unknown };
 type B = Record<string, unknown>;
@@ -50,6 +50,10 @@ export function row(db: Db, d: DbDeal, now: number): Deal {
     customer: db.customers.find((c) => c.id === d.counterparty_id)?.name ?? null,
     owner_tg: d.owner_tg,
     amount: String(d.amount),
+    discount: String(d.discount ?? 0),
+    markup: String(d.markup ?? 0),
+    logistics: String(d.logistics ?? 0),
+    location: d.location || null,
     next_task: open ? nextTask(db, d) : null,
     stage: d.stage,
     stage_since: d.stage_since,
@@ -222,6 +226,18 @@ function detail(db: Db, d: DbDeal, now: number) {
 
 // ------------------------------------------------------------------ o'zgartirishlar
 /** Bosqichga o'tkazish (tarix bilan). Xato bo'lsa — matn. */
+// Sales ketma-ketligi — avtomatik o'tish faqat oldinga (backend sales.advance bilan bir xil)
+const FLOW = ["new", "offer", "later", "contract", "payment", "production", "ready", "shipping", "won"];
+function advance(db: Db, d: DbDeal, code: string, now: number, why: string): boolean {
+  const cur = stageOf(db, d.stage);
+  if (cur?.kind !== "open" || !FLOW.includes(d.stage) || !FLOW.includes(code) || FLOW.indexOf(d.stage) >= FLOW.indexOf(code)) return false;
+  if (moveStage(db, d, code, null, now)) return false;
+  const h = db.history.at(-1);
+  if (h && h.deal_id === d.id) h.src = "auto";
+  addAct(db, { deal_id: d.id, kind: "stage", text: `Avtomatik: «${stageOf(db, code)?.name ?? code}» bosqichiga o'tdi — ${why}`, due: null, assignee: null }, now);
+  return true;
+}
+
 export function moveStage(db: Db, d: DbDeal, code: string, reason: string | null, now: number): string | null {
   const st = stageOf(db, code);
   if (!st) return "Bunday bosqich yo'q";
@@ -255,9 +271,18 @@ function addAct(db: Db, p: Omit<DbAct, "id" | "ts" | "actor" | "data" | "done_at
 function newDeal(db: Db, b: B, now: number): DbDeal {
   const first = db.stages.find((x) => x.pipeline === "main" && x.kind === "open")!;
   const ts = iso(now);
+  const id = nextId(db);
   const d: DbDeal = {
-    id: nextId(db),
-    title: s(b.title).trim() || "Yangi bitim",
+    id,
+    // nomni tizim beradi (backend auto_title): birinchi tovar va miqdori / mijoz nomi
+    title: dealTitle(
+      id,
+      s(b.title) ||
+        autoTitle(
+          (Array.isArray(b.items) ? (b.items as B[]) : []).map((x) => ({ name: s(x.name), qty: s(x.qty), unit: s(x.unit) || null })),
+          db.customers.find((c) => c.id === nOrNull(b.counterparty_id))?.name,
+        ),
+    ),
     counterparty_id: nOrNull(b.counterparty_id),
     owner_tg: db.me.is_head ? (nOrNull(b.owner_tg) ?? db.me.tg_id) : db.me.tg_id,
     amount: n(b.amount),
@@ -274,20 +299,29 @@ function newDeal(db: Db, b: B, now: number): DbDeal {
     need: s(b.need) || null,
     items: [],
   };
+  const pe = pricing(d, b);
+  if (pe) throw new Error(pe);
+  d.location = s(b.location).trim() || db.customers.find((c) => c.id === d.counterparty_id)?.address || null;
   db.deals.push(d);
+  if (Array.isArray(b.items) && b.items.length) saveItems(d, b, now); // tovarlar bilan — summa ulardan
   db.history.push({ deal_id: d.id, ts, actor: db.me.tg_id, from_stage: null, to_stage: first.code, src: "web" });
   return d;
 }
 
 const DEAL_FIELDS = ["title", "amount", "close_date", "probability", "owner_tg", "source", "need"] as const;
-function patchDeal(db: Db, d: DbDeal, b: B, now: number) {
+function patchDeal(db: Db, d: DbDeal, b: B, now: number): string | null {
+  const pe = pricing(d, b);
+  if (pe) return pe;
+  if ("location" in b) d.location = s(b.location).trim() || null;
   if (b.pay_terms === "full" || b.pay_terms === "half") d.pay_terms = b.pay_terms;
+  const signedNow = s(b.sign_status) === "signed" && d.sign_status !== "signed";
   if ("sign_status" in b) d.sign_status = (s(b.sign_status) || null) as DbDeal["sign_status"];
+  if (signedNow) advance(db, d, "payment", now, "shartnoma imzolandi");
   if ("docs_done" in b) d.docs_done = !!b.docs_done;
   for (const k of DEAL_FIELDS) {
     if (!(k in b)) continue;
     const v = b[k];
-    if (k === "title") d.title = s(v).trim() || d.title;
+    if (k === "title") d.title = dealTitle(d.id, s(v) || d.title);
     else if (k === "amount") d.amount = n(v);
     else if (k === "probability") d.probability = nOrNull(v);
     else if (k === "owner_tg") {
@@ -297,7 +331,10 @@ function patchDeal(db: Db, d: DbDeal, b: B, now: number) {
     else if (k === "source") d.source = s(v) || null;
     else d.need = s(v) || null;
   }
+  // narxlash o'zgarsa — tovarlar bor bo'lsa summa qayta hisoblanadi (backend deals.recalc)
+  if (["discount", "markup", "logistics"].some((f) => f in b) && d.items.length) d.amount = priced(d.items.reduce((a, x) => a + itemAmount(x), 0), d).total;
   d.updated = iso(now);
+  return null;
 }
 
 function saveItems(d: DbDeal, b: B, now: number) {
@@ -313,9 +350,25 @@ function saveItems(d: DbDeal, b: B, now: number) {
       discount: String(n(x.discount)),
     }),
   );
-  d.amount = Math.round(d.items.reduce((a, x) => a + itemAmount(x), 0));
+  d.amount = d.items.length ? priced(d.items.reduce((a, x) => a + itemAmount(x), 0), d).total : 0;
   d.updated = iso(now);
   return { items: d.items, amount: String(d.amount) };
+}
+
+/** Narxlash maydonlari (backend deals.PRICING bilan bir xil): xato — matn */
+function pricing(d: DbDeal, b: B): string | null {
+  const lim: [keyof DbDeal & ("discount" | "markup" | "logistics"), number | null, string][] = [
+    ["discount", 100, "Chegirma 0–100% oralig'ida bo'lsin."],
+    ["markup", 1000, "Ustama 0–1000% oralig'ida bo'lsin."],
+    ["logistics", null, "Logistika summasi manfiy bo'lmasin."],
+  ];
+  for (const [f, hi, msg] of lim) {
+    if (!(f in b)) continue;
+    const v = n(b[f]);
+    if (v < 0 || (hi !== null && v > hi)) return msg;
+    d[f] = v;
+  }
+  return null;
 }
 
 function makeDoc(db: Db, d: DbDeal, kind: string, now: number): Res {
@@ -330,12 +383,67 @@ function makeDoc(db: Db, d: DbDeal, kind: string, now: number): Res {
     date: iso(now).slice(0, 10),
     status: kind === "quote" ? "posted" : "draft",
     state: null,
-    total: Math.round(items.reduce((a, x) => a + itemAmount(x), 0)),
+    total: priced(items.reduce((a, x) => a + itemAmount(x), 0), d).total,
+    ...docSnap(db, d),
   };
   db.docs.push(doc);
   addAct(db, { deal_id: d.id, kind: "doc", text: `${kind === "quote" ? "Tijorat taklifi" : "Buyurtma qoralamasi"} ${doc.number}`, due: null, assignee: null }, now);
   d.updated = iso(now);
+  advance(db, d, "offer", now, `${kind === "quote" ? "tijorat taklifi" : "buyurtma"} ${doc.number} tuzildi`);
   return ok({ ...doc, total: String(doc.total) });
+}
+
+/** hujjat nusxasi: bitimning katalog tovarlari va narxlash (backend make_doc bilan bir xil) */
+function docSnap(db: Db, d: DbDeal): { lines: (DealItem & { amount: string })[]; meta: Record<string, string> } {
+  const items = d.items.filter((x) => x.item_id);
+  const c = db.customers.find((y) => y.id === d.counterparty_id);
+  return {
+    lines: items.map((x) => ({ ...x, amount: String(Math.round(itemAmount(x))) })),
+    meta: {
+      customer: c?.name ?? "",
+      inn: c?.inn ?? "",
+      location: d.location ?? "",
+      sub: String(Math.round(items.reduce((a, x) => a + itemAmount(x), 0))),
+      discount: String(d.discount ?? 0),
+      markup: String(d.markup ?? 0),
+      logistics: String(d.logistics ?? 0),
+    },
+  };
+}
+
+function docFull(db: Db, x: DbDoc) {
+  const d = db.deals.find((y) => y.id === x.deal_id)!;
+  const snap = x.lines?.length ? { lines: x.lines, meta: x.meta ?? {} } : { ...docSnap(db, d), meta: { ...docSnap(db, d).meta, restored: true } };
+  return {
+    ...x,
+    total: String(x.total),
+    deal_title: d.title,
+    customer_id: d.counterparty_id,
+    ...snap,
+    // demo: Didox ulanmagan (kalitlar — haqiqiy backend'da)
+    didox: { enabled: false, id: null, status: null, status_text: null, at: null, url: "https://didox.uz", subtypes: DIDOX_SUBTYPES },
+  };
+}
+const DIDOX_SUBTYPES = [
+  { code: 3, name: "Shartnoma" },
+  { code: 4, name: "To'lov uchun hisob" },
+  { code: 7, name: "Buyurtma (zayavka)" },
+  { code: 8, name: "Spetsifikatsiya" },
+  { code: 6, name: "Boshqa hujjat" },
+];
+
+/** hujjatni mijoz chatiga (demo): Telegram / WhatsApp — fayl xabari, Instagram — matn */
+function sendDoc(db: Db, x: DbDoc, b: B, now: number): Res {
+  const c = tgChats(db).find((y) => y.id === n(b.chat_id));
+  if (!c) return fail(404, "Chat topilmadi");
+  const ch = c.channel ?? "tg";
+  const text = ch === "ig" ? `${x.number}: jami ${x.total} so'm` : `${x.number} — ${x.total} so'm`;
+  db.tg_msgs.push({ id: nextId(db), chat: c.id, out: true, kind: ch === "ig" ? "text" : "document", text, date: iso(now), edited: false, deleted: false, via_crm: true });
+  c.unread = 0;
+  const name = { tg: "Telegram", wa: "WhatsApp", ig: "Instagram" }[ch];
+  addAct(db, { deal_id: x.deal_id, kind: "message", text: `${x.number} mijozga ${name} orqali yuborildi`, due: null, assignee: null }, now);
+  advance(db, findDeal(db, x.deal_id)!, x.kind === "quote" ? "offer" : "contract", now, `${x.number} mijozga yuborildi`);
+  return ok({ ok: true, channel: ch });
 }
 
 function bulk(db: Db, b: B, now: number): Res {
@@ -485,6 +593,7 @@ function tgChat(db: Db, c: DbTgChat) {
     last_text: m ? (m.text || KINDS[m.kind] || "").slice(0, 300) : "",
     last_out: !!m?.out,
     unread: c.unread,
+    channel: c.channel ?? "tg",
     can_send: c.seller_tg === db.me.tg_id && c.can_reply,
     customer: c.customer_id ? (cu => (cu ? { id: cu.id, name: cu.name } : null))(db.customers.find((x) => x.id === c.customer_id)) : null,
   };
@@ -492,11 +601,16 @@ function tgChat(db: Db, c: DbTgChat) {
 function tgList(db: Db, q: F) {
   const t = lc(q.get("q")).trim().replace(/^@/, "");
   const own = db.tg_chats.filter((c) => c.seller_tg === db.me.tg_id);
+  const tgOwn = own.filter((c) => (c.channel ?? "tg") === "tg");
+  const ch = q.get("ch") ?? "";
+  const unread = (k: string) => own.filter((c) => (c.channel ?? "tg") === k).reduce((a, c) => a + c.unread, 0);
   return {
     bot: "belting_crm_bot",
     head: db.me.is_head,
-    connection: own.length ? { enabled: true, can_reply: own.every((c) => c.can_reply) } : null,
+    connection: tgOwn.length ? { enabled: true, can_reply: tgOwn.every((c) => c.can_reply) } : null,
+    channels: Object.fromEntries((["tg", "wa", "ig"] as const).map((k) => [k, { enabled: true, unread: unread(k) }])),
     chats: tgChats(db)
+      .filter((c) => !["tg", "wa", "ig"].includes(ch) || (c.channel ?? "tg") === ch)
       .map((c) => tgChat(db, c))
       .filter((c) => !t || [c.title, c.username, c.seller].map(lc).join(" ").includes(t))
       .sort((a, b) => (b.last_at ?? "").localeCompare(a.last_at ?? "")),
@@ -531,7 +645,7 @@ function custTable(db: Db, q: F, now: number) {
     .map((c) => {
       const s = custStats(db, c);
       const open_n = db.deals.filter((d) => d.counterparty_id === c.id && stageOf(db, d.stage)?.kind === "open" && stageOf(db, d.stage)?.pipeline === "main" && !BOUGHT.includes(d.stage)).length;
-      return { id: c.id, name: c.name, inn: c.inn, phones: [...c.phones], owner_tg: c.owner_tg, ...s, overdue: !!(s.next_buy && s.next_buy < today && !open_n), open_n };
+      return { id: c.id, name: c.name, kind: c.kind ?? "company", company: c.company ?? null, position: c.position ?? null, inn: c.inn, phones: [...c.phones], owner_tg: c.owner_tg, ...s, overdue: !!(s.next_buy && s.next_buy < today && !open_n), open_n };
     });
   const sort = q.get("sort") || "next";
   if (sort === "name") rows.sort((a, b) => a.name.localeCompare(b.name));
@@ -539,6 +653,36 @@ function custTable(db: Db, q: F, now: number) {
   else if (sort === "last") rows.sort((a, b) => s(b.last_buy).localeCompare(s(a.last_buy)));
   else rows.sort((a, b) => (a.next_buy ? (b.next_buy ? a.next_buy.localeCompare(b.next_buy) : -1) : b.next_buy ? 1 : a.name.localeCompare(b.name)));
   return { rows: rows.slice(0, 100), total: rows.length, overdue: rows.filter((r) => r.overdue).length };
+}
+// mijoz turi va turga xos maydonlar (backend deals.cust_fields bilan bir xil): xato — matn
+const INN_RULES: Record<string, [number[], string]> = {
+  company: [[9], "Firma STIRi 9 xonali bo'lsin."],
+  state: [[9], "Tashkilot STIRi 9 xonali bo'lsin."],
+  person: [[14], "JSHSHIR 14 xonali bo'lsin."],
+  ip: [[9, 14], "YaTT: STIR 9 yoki JSHSHIR 14 xonali bo'lsin."],
+};
+const CUST_KINDS = ["company", "employee", "trader", "ip", "person", "state"];
+function custFields(b: B, c: DbCustomer | null): Partial<DbCustomer> | string {
+  const kind = "kind" in b ? s(b.kind) : (c?.kind ?? "company");
+  if (!CUST_KINDS.includes(kind)) return "Mijoz turi noto'g'ri.";
+  const out: Partial<DbCustomer> = "kind" in b ? { kind: kind as DbCustomer["kind"] } : {};
+  if ("inn" in b) {
+    const inn = digits(b.inn);
+    const [lens, msg] = INN_RULES[kind] ?? [[9, 14], "STIR 9 yoki JSHSHIR 14 xonali bo'lsin."];
+    if (inn && !lens.includes(inn.length)) return msg;
+    out.inn = inn || null;
+  }
+  for (const f of ["position", "company", "address"] as const) if (f in b) out[f] = s(b[f]).trim() || null;
+  if ("company_inn" in b) {
+    const ci = digits(b.company_inn);
+    if (ci && ci.length !== 9) return "Firma STIRi 9 xonali bo'lsin.";
+    out.company_inn = ci || null;
+  }
+  if ("phones" in b) out.phones = Array.isArray(b.phones) ? (b.phones as unknown[]).map(digits).filter(Boolean).map((p) => (p.length === 9 ? "998" + p : p)) : [];
+  const cur = <K extends keyof DbCustomer>(f: K) => (f in out ? out[f] : c?.[f]);
+  if (kind === "employee" && !s(cur("company")).trim()) return "Firma xodimi: qaysi firmadan — firma nomini yozing.";
+  if (kind === "trader" && !(cur("phones") as string[] | undefined)?.length) return "Savdogar: telefon raqamini yozing.";
+  return out;
 }
 function custCard(db: Db, c: DbCustomer) {
   return {
@@ -549,13 +693,18 @@ function custCard(db: Db, c: DbCustomer) {
     owner_tg: c.owner_tg,
     contacts: (c.contacts ?? []).map((x) => ({ ...x })),
     note: c.note ?? "",
+    address: c.address ?? "",
+    kind: c.kind ?? "company",
+    position: c.position ?? "",
+    company: c.company ?? "",
+    company_inn: c.company_inn ?? "",
     created: null,
     stats: custStats(db, c),
     deals: db.deals
       .filter((d) => d.counterparty_id === c.id && seesDeal(db, d))
       .sort((a, b) => b.created.localeCompare(a.created))
       .map((d) => ({ id: d.id, title: d.title, stage: d.stage, pipeline: stageOf(db, d.stage)?.pipeline ?? "main", kind: stageOf(db, d.stage)?.kind ?? "open", amount: String(d.amount), created: d.created, owner_tg: d.owner_tg, repeat: false })),
-    tg: db.tg_chats.filter((x) => x.customer_id === c.id && x.seller_tg === db.me.tg_id).map((x) => ({ id: x.id, title: x.title, username: x.username, unread: x.unread })),
+    tg: db.tg_chats.filter((x) => x.customer_id === c.id && x.seller_tg === db.me.tg_id).map((x) => ({ id: x.id, title: x.title, username: x.username, unread: x.unread, channel: x.channel ?? "tg" })),
   };
 }
 
@@ -641,6 +790,10 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     if (p === `${C}/tags`) return ok([...new Set(db.deals.filter((d) => seesDeal(db, d)).flatMap((d) => d.tags))].sort());
     if (p === `${C}/board`) return ok(board(db, q, now));
     if (p === `${C}/deals`) return ok(list(db, q, now));
+    if ((x = m(/^\/app\/api\/erp\/crm\/docs\/(\d+)$/))) {
+      const doc = db.docs.find((y) => y.id === Number(x![1]));
+      return doc && findDeal(db, doc.deal_id) ? ok(docFull(db, doc)) : fail(404, "Hujjat topilmadi");
+    }
     if ((x = m(/^\/app\/api\/erp\/crm\/deals\/(\d+)$/))) {
       const d = findDeal(db, Number(x[1]));
       return d ? ok(detail(db, d, now)) : fail(404, "Bitim topilmadi");
@@ -656,7 +809,7 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
       return ok(
         db.customers
           .filter((c) => seesCustomer(db, c))
-          .filter((c) => t && (lc(c.name).includes(t) || s(c.inn).includes(t) || (dg.length >= 4 && c.phones.some((ph) => ph.includes(dg)))))
+          .filter((c) => t && (lc(c.name).includes(t) || lc(c.company ?? "").includes(t) || s(c.inn).includes(t) || (dg.length >= 4 && c.phones.some((ph) => ph.includes(dg)))))
           .slice(0, 20)
           .map((c) => ({ ...c, phones: [...c.phones] })),
       );
@@ -671,6 +824,11 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     }
     if (p === `${C}/goals`) return ok(goals(db, q.get("month") || "", now));
     if (p === `${C}/tg/chats`) return ok(tgList(db, q));
+    if (p === `${C}/calls`) {
+      const c = db.customers.find((y) => y.id === n(q.get("customer")) && seesCustomer(db, y));
+      if (!c) return fail(404, "Mijoz topilmadi");
+      return ok((db.calls ?? []).filter((x) => x.customer_id === c.id).sort((a, b) => b.started.localeCompare(a.started)).slice(0, 50));
+    }
     if ((x = m(/^\/app\/api\/erp\/crm\/tg\/chats\/(\d+)\/messages$/))) {
       const c = tgChats(db).find((y) => y.id === Number(x![1]));
       if (!c) return fail(404, "Chat topilmadi");
@@ -711,7 +869,29 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     const tgc = b.tg_chat_id ? tgChats(db).find((y) => y.id === n(b.tg_chat_id)) : null;
     if (b.tg_chat_id && !tgc) return fail(404, "Chat topilmadi");
     if (tgc) tgc.customer_id = c.id;
-    return ok(detail(db, newDeal(db, b, now), now));
+    try {
+      return ok(detail(db, newDeal(db, b, now), now));
+    } catch (e) {
+      return fail(400, (e as Error).message);
+    }
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/docs\/(\d+)\/(send|didox|didox-status)$/))) {
+    const doc = db.docs.find((y) => y.id === Number(x![1]));
+    if (!doc || !findDeal(db, doc.deal_id)) return fail(404, "Hujjat topilmadi");
+    if (x[2] === "send") return sendDoc(db, doc, b, now);
+    if (x[2] === "didox") return fail(503, "Didox ulanmagan — administrator DIDOX_PARTNER_TOKEN, DIDOX_TIN va DIDOX_PASSWORD kalitlarini qo'yishi kerak.");
+    return fail(400, "Hujjat hali Didox'ga yuborilmagan.");
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/docs\/(\d+)\/confirm$/))) {
+    const doc = db.docs.find((y) => y.id === Number(x![1]));
+    if (!doc || !findDeal(db, doc.deal_id)) return fail(404, "Hujjat topilmadi");
+    if (doc.kind !== "order") return fail(400, "Faqat buyurtma qoralamasi tasdiqlanadi.");
+    if (doc.status !== "draft") return fail(409, "Buyurtma allaqachon tasdiqlangan.");
+    doc.status = "posted";
+    doc.state = "confirmed";
+    addAct(db, { deal_id: doc.deal_id, kind: "doc", text: `Buyurtma ${doc.number} tasdiqlandi`, due: null, assignee: null }, now);
+    advance(db, findDeal(db, doc.deal_id)!, "contract", now, `buyurtma ${doc.number} tasdiqlandi`);
+    return ok(docFull(db, doc));
   }
   if ((x = m(/^\/app\/api\/erp\/crm\/deals\/(\d+)\/payment$/))) {
     const d = findDeal(db, Number(x[1]));
@@ -733,9 +913,16 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
       const day = m2 ? `${m2[3]}-${m2[2].padStart(2, "0")}-${m2[1].padStart(2, "0")}` : /^\d{4}-\d{2}-\d{2}/.test(s(b.recall)) ? s(b.recall).slice(0, 10) : "";
       if (!day) return fail(400, "Qayta bog'lanish sanasini kiriting (masalan, 15.12.2026).");
       if (day < iso(now).slice(0, 10)) return fail(400, "Qayta bog'lanish sanasi o'tib ketgan — bugun yoki keyingi kunni tanlang.");
+      // soat (standart 10:00, mahalliy vaqt) va izoh — vazifa matnida
+      const hm = /^(\d{1,2}):(\d{2})/.exec(s(b.recall_time).trim() || "10:00");
+      if (!hm) return fail(400, "Soat noto'g'ri — masalan, 14:30.");
+      const [y, mo, dd] = day.split("-").map(Number);
+      const due = new Date(y, mo - 1, dd, Number(hm[1]), Number(hm[2]));
+      if (due.getTime() < now) return fail(400, "Bu vaqt o'tib ketgan — keyingi soat yoki kunni tanlang.");
+      const note = s(b.recall_note).trim().slice(0, 500);
       const e = moveStage(db, d, "later", null, now);
       if (e) return fail(400, e);
-      addAct(db, { deal_id: d.id, kind: "task", text: "Mijoz bilan qayta bog'lanish (keyinroq degan)", due: `${day}T05:00:00.000Z`, assignee: d.owner_tg }, now);
+      addAct(db, { deal_id: d.id, kind: "task", text: note ? `Mijoz bilan qayta bog'lanish: ${note}` : "Mijoz bilan qayta bog'lanish (keyinroq degan)", due: due.toISOString(), assignee: d.owner_tg }, now);
       return ok(detail(db, d, now));
     }
     if (x[2] === "stage") {
@@ -745,16 +932,17 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     if (x[2] === "items") return ok(saveItems(d, b, now));
     if (x[2] === "doc") return makeDoc(db, d, s(b.kind), now);
     if ("owner_tg" in b && !db.me.is_head && nOrNull(b.owner_tg) !== d.owner_tg) return fail(403, "Mas'ulni faqat sotuv bo'limi rahbari o'zgartiradi");
-    patchDeal(db, d, b, now);
-    return ok(detail(db, d, now));
+    const pe = patchDeal(db, d, b, now);
+    return pe ? fail(400, pe) : ok(detail(db, d, now));
   }
   if ((x = m(/^\/app\/api\/erp\/crm\/customers\/(\d+)$/))) {
     const c = db.customers.find((y) => y.id === Number(x![1]) && seesCustomer(db, y));
     if (!c) return fail(404, "Mijoz topilmadi");
     if ("owner_tg" in b && nOrNull(b.owner_tg) !== c.owner_tg && !db.me.is_head) return fail(403, "Mijoz mas'ulini faqat sotuv bo'limi rahbari o'zgartiradi");
     if ("name" in b && s(b.name).trim()) c.name = s(b.name).trim();
-    if ("inn" in b) c.inn = digits(b.inn) || null;
-    if (Array.isArray(b.phones)) c.phones = (b.phones as unknown[]).map(digits).filter(Boolean).map((p) => (p.length === 9 ? "998" + p : p));
+    const f = custFields(b, c);
+    if (typeof f === "string") return fail(400, f);
+    Object.assign(c, f);
     if (Array.isArray(b.contacts)) c.contacts = (b.contacts as B[]).map((y) => ({ name: s(y.name).trim(), role: s(y.role).trim(), phone: ((p) => (p.length === 9 ? "998" + p : p))(digits(y.phone)) })).filter((y) => y.name || y.phone);
     if ("note" in b) c.note = s(b.note);
     if ("owner_tg" in b) c.owner_tg = nOrNull(b.owner_tg);
@@ -763,7 +951,13 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
   if (p === `${C}/customers`) {
     const name = s(b.name).trim();
     if (!name) return fail(400, "Mijoz nomini yozing");
-    const c = { id: nextId(db), name, inn: null, phones: Array.isArray(b.phones) ? (b.phones as unknown[]).map(s) : [], owner_tg: db.me.is_head ? (nOrNull(b.owner_tg) ?? db.me.tg_id) : db.me.tg_id };
+    const f = custFields({ phones: [], ...b }, null);
+    if (typeof f === "string") return fail(400, f);
+    if (!f.phones?.length) return fail(400, "Telefon raqamini yozing.");
+    if (innRequired((f.kind ?? "company") as CustKind) && !f.inn) return fail(400, "STIR raqamini yozing.");
+    const twin = f.inn ? db.customers.find((y) => y.inn === f.inn && seesCustomer(db, y)) : null;
+    if (twin) return fail(409, `Bu STIR bilan mijoz bor: «${twin.name}» — ro'yxatdan tanlang.`);
+    const c: DbCustomer = { id: nextId(db), name, inn: null, phones: [], owner_tg: db.me.is_head ? (nOrNull(b.owner_tg) ?? db.me.tg_id) : db.me.tg_id, ...f };
     db.customers.push(c);
     return ok(c);
   }
@@ -845,6 +1039,46 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: unkno
     db.tg_msgs.push(msg);
     c.unread = 0;
     return ok(msg);
+  }
+  if ((x = m(/^\/app\/api\/erp\/crm\/tg\/chats\/(\d+)\/link$/))) {
+    const c = tgChats(db).find((y) => y.id === Number(x![1]));
+    if (!c) return fail(404, "Chat topilmadi");
+    const cu = b.customer_id ? db.customers.find((y) => y.id === n(b.customer_id) && seesCustomer(db, y)) : null;
+    if (b.customer_id && !cu) return fail(404, "Mijoz topilmadi");
+    c.customer_id = cu ? cu.id : null;
+    return ok(tgChat(db, c));
+  }
+  if (p === `${C}/calls`) {
+    // qo'lda yozilgan qo'ng'iroq (backend calls.log_manual bilan bir xil)
+    const cu = db.customers.find((y) => y.id === n(b.customer_id) && seesCustomer(db, y));
+    if (!cu) return fail(404, "Mijoz topilmadi");
+    const dir = s(b.direction) || "out";
+    const st = s(b.status) || "answered";
+    if (!["in", "out"].includes(dir) || !["answered", "missed", "busy"].includes(st)) return fail(400, "Qo'ng'iroq turi yoki natijasi noto'g'ri.");
+    const phone = digits(b.phone) || cu.phones[0] || "";
+    if (!phone) return fail(400, "Telefon raqami yo'q — mijozga telefon qo'shing yoki raqamni yozing.");
+    const deal = db.deals.find((y) => y.id === n(b.deal_id) && y.counterparty_id === cu.id) ?? null;
+    const call = {
+      id: nextId(db),
+      customer_id: cu.id,
+      deal_id: deal?.id ?? null,
+      phone,
+      direction: dir as "in" | "out",
+      status: st as "answered" | "missed" | "busy",
+      started: iso(now),
+      duration: st === "answered" ? Math.max(0, n(b.duration)) : 0,
+      recording_url: null,
+      owner_tg: db.me.tg_id,
+      note: s(b.note).trim() || null,
+      source: "manual",
+    };
+    (db.calls ??= []).push(call);
+    if (deal) {
+      const mm = `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, "0")}`;
+      const res = { answered: `gaplashildi ${mm}`, missed: "javob berilmadi", busy: "band" }[call.status];
+      addAct(db, { deal_id: deal.id, kind: "call", text: `${dir === "in" ? "Kiruvchi" : "Chiquvchi"} qo'ng'iroq +${phone}: ${res}${call.note ? ` — ${call.note}` : ""}`, due: null, assignee: null }, now);
+    }
+    return ok(call);
   }
   if ((x = m(/^\/app\/api\/erp\/crm\/tg\/chats\/(\d+)\/send$/))) {
     const c = tgChats(db).find((y) => y.id === Number(x![1]));

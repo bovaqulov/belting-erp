@@ -48,7 +48,6 @@ frontend/
   app/                          marshrutlar (yupqa o'ram)
     layout.tsx page.tsx         / — bo'lim tanlash (Launcher)
     jarvis/                     Jarvis — faqat AI: agentlar, xotira, bilimlar, graph → @/ai/shell area=jarvis
-    staff/                      xodimlar                          → Shell area=staff
     templates/                  hisobot shablonlari               → Shell area=templates
     dev/                        texnik: audit, tizim              → Shell area=dev
     report/                     kunlik hisobot                    → @/ai/report
@@ -62,6 +61,7 @@ frontend/
     erp/ombor/                  Ombor (Warehouse)                 → @/erp/warehouse
     erp/moliya/                 Accounting (Mahsulotlar, Shartnomalar, Maoshlar) → @/erp/finance
     erp/logistics/              logistika                         → @/erp/logistics
+    erp/staff/                  HR · xodimlar (ERP moduli)        → @/ai/shell area=staff
   src/
     shared/                     domenlarga bog'liq emas
       api/client.ts             fetch, ApiError, apiBlob/openBlob

@@ -23,8 +23,10 @@ export function Scan({ plan, hint, onUnit }: { plan: Plan[]; hint: string; onUni
             ? "Kod topilmadi"
             : "Rukav/lenta birligining QR stikerini skanerlang",
         );
-      const have = (r.stock || []).reduce((a, s) => a + Number(s.qty), 0);
-      if (!have) throw new Error(`${r.code}: omborda qoldig'i yo'q`);
+      const inStock = (r.stock || []).reduce((a, s) => a + Number(s.qty), 0);
+      if (!inStock) throw new Error(`${r.code}: omborda qoldig'i yo'q`);
+      // rukav hisobda 1 dona, sex esa enidan (mm) kesadi — mavjud miqdor eni bo'yicha
+      const have = r.unit === "mm" && r.width_mm ? r.width_mm : inStock;
       beep(true);
       onUnit({ u: r, have, p: plan.find((x) => x.item_id === r.item_id) });
     } catch (e) {

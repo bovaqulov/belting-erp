@@ -15,6 +15,64 @@ export type Line = {
   data: { name?: string; code?: string; size?: string; unit: string; loc?: string; firm_id?: number; created?: boolean };
 };
 export type Result = { number: string; diff: (InvDiff & { name: string; from: string | null })[] };
+/** Sanashni o'tkazishdan oldin ko'rish (server): har pozitsiya — tolerans bo'yicha */
+export type Review = {
+  lines: (InvDiff & { name: string; cls: string; value: number; ok: boolean })[];
+  positions: number;
+  need: number;
+  value: number;
+  can_approve: boolean;
+  reasons: { code: string; title: string }[];
+};
+
+/** Katta farqlar: qayta sanash yoki rahbar tasdig'i (sabab bilan). Jahon amaliyoti — tolerans sinf bo'yicha. */
+export function ReviewView({ r, reason, onReason, onRecount, onApprove }: { r: Review; reason: string; onReason: (c: string) => void; onRecount: () => void; onApprove: () => void }) {
+  const bad = r.lines.filter((x) => !x.ok);
+  return (
+    <>
+      <Done ok={false} title={`${r.need} ta katta farq`}>
+        {r.positions} pozitsiyadan {r.positions - r.need} tasi toleransda. Farq summasi: <b className="num">{num(r.value, 0)}</b> so&apos;m.
+        <br />
+        Avval shu pozitsiyalarni qayta sanang — farq qolsa, rahbar sabab bilan tasdiqlaydi.
+      </Done>
+      <List>
+        {bad.map((x, i) => (
+          <Row
+            key={i}
+            icon="alert"
+            color={x.cls === "A" ? "red" : "orange"}
+            t={x.name}
+            tcls="wrap2"
+            s={`${x.cls} sinf · hisobda ${num(x.book, 3)} → sanaldi ${num(x.counted, 3)}${x.value ? ` · ${num(x.value, 0)} so'm` : ""}`}
+            val={<span className={`num ${Number(x.diff) < 0 ? "text-danger" : "text-warn"}`}>{`${Number(x.diff) > 0 ? "+" : ""}${num(x.diff, 3)}`}</span>}
+          />
+        ))}
+      </List>
+      {r.can_approve ? (
+        <>
+          <Sh t="Farq sababi (rahbar tasdig'i)" />
+          <List>
+            {r.reasons.map((x) => (
+              <Row key={x.code} icon={reason === x.code ? "check" : "circle-dot"} color={reason === x.code ? "blue" : "gray"} t={x.title} onClick={() => onReason(x.code)} />
+            ))}
+          </List>
+        </>
+      ) : (
+        <Sf>Katta farqni faqat rahbar (egasi, admin) tasdiqlay oladi. Qoralama saqlangan — rahbar shu sanashni ochib tasdiqlaydi.</Sf>
+      )}
+      <Btns>
+        <button className="btn sec" onClick={onRecount}>
+          Qayta sanash
+        </button>
+        {r.can_approve ? (
+          <button className="btn" disabled={!reason} onClick={onApprove}>
+            Tasdiqlab o&apos;tkazish
+          </button>
+        ) : null}
+      </Btns>
+    </>
+  );
+}
 
 const CLSC: Record<string, string> = { A: "red", B: "orange", C: "gray" };
 

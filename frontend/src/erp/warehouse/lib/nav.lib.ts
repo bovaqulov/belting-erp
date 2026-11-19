@@ -1,6 +1,6 @@
-// Ombor navigatsiyasi: kompyuterda chap menyu (2 guruh, 6 bo'lim), telefonda 4 tab + "Amallar" (qolgan bo'limlar ro'yxati).
+// Ombor navigatsiyasi: kompyuterda chap menyu (2 guruh, 8 bo'lim), telefonda 4 tab + "Amallar" (qolgan bo'limlar ro'yxati).
 // Holat URL'da: ?sec=inv (Joylashtirish — parametrsiz). Sof funksiyalar — test qilinadi.
-export type Sec = "place" | "inv" | "acc" | "move" | "off" | "cells";
+export type Sec = "place" | "inv" | "acc" | "pick" | "move" | "off" | "cells" | "kpi";
 /** Telefondagi "Amallar" — o'zi bo'lim emas, qolgan bo'limlar ro'yxati */
 export type View = Sec | "more";
 
@@ -8,14 +8,16 @@ export const SEC: Record<Sec, { t: string; icon: string; s: string }> = {
   place: { t: "Joylashtirish", icon: "pin", s: "Tovarni javonga qo'yish" },
   inv: { t: "Sanash", icon: "clipboard", s: "Inventarizatsiya va ABC sikl sanoq" },
   acc: { t: "Qabul", icon: "truck", s: "Yo'ldagi kirimni skaner bilan qabul qilish" },
+  pick: { t: "Yig'ish", icon: "cart", s: "Buyurtmani yo'l tartibida, skaner bilan yig'ib jo'natish" },
   move: { t: "Ko'chirish", icon: "swap", s: "Omborlar orasida" },
   off: { t: "Hisobdan chiqarish", icon: "trash", s: "Brak, kamomad, chiqindi — sabab bilan" },
-  cells: { t: "Joylar", icon: "pin", s: "Zona-javon-qavat yorliqlari" },
+  cells: { t: "Ombor xaritasi", icon: "rack-map", s: "Bino, blok, qator-qavat joylari va yorliqlar" },
+  kpi: { t: "Ko'rsatkichlar", icon: "chart-column", s: "Aniqlik, qabul, chiqim, bandlik, faol joylar" },
 };
 
 export const NAV: { title: string; items: Sec[] }[] = [
-  { title: "Jarayonlar", items: ["place", "inv", "acc", "move", "off"] },
-  { title: "Asboblar", items: ["cells"] },
+  { title: "Jarayonlar", items: ["place", "inv", "acc", "pick", "move", "off"] },
+  { title: "Asboblar", items: ["cells", "kpi"] },
 ];
 const ALL = NAV.flatMap((g) => g.items);
 /** bosh bo'lim (?sec= parametrsiz) */

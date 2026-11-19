@@ -18,6 +18,8 @@ export type Wh = {
   /** Joy tanlash (omborning javonlari): Cell — tanlandi, null — "Joysiz", undefined — bekor */
   pickCell: (parent?: number) => Promise<Cell | null | undefined>;
   go: (v: View) => void;
+  /** Foydalanuvchi ma'lumotini (omborlar ro'yxati) qayta yuklash — ombor tahrirlangan/o'chirilgandan keyin */
+  reloadMe: () => Promise<void>;
   whName: (id: number | null | undefined) => string;
   /** Saqlash omborlari (yo'ldagi — transit — emas) */
   stores: Warehouse[];

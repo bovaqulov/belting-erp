@@ -10,7 +10,7 @@ yo'q — barcha ma'lumot backend'dan (`../backend`, Django) `/app/api/*` orqali 
 |---|---|
 | `/app` | Bosh sahifa: kirish va bo'limlar |
 | `/app/jarvis` | Jarvis: chat, agentlar, xotira, bilimlar |
-| `/app/staff` | Xodimlar |
+| `/app/erp/staff` | Xodimlar (HR, ERP moduli) |
 | `/app/templates` | Hisobot shablonlari |
 | `/app/report` | Kunlik hisobot |
 | `/app/erp/sex` | Kesish sexi |

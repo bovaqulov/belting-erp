@@ -48,6 +48,12 @@ export type Deal = {
   pipeline?: string;
   /** kontakt shaxs (mijoz — kompaniya) */
   contact?: string | null;
+  /** narxlash (tovarlar bo'lsa summa shundan): chegirma %, ustama %, logistika so'm */
+  discount?: Num;
+  markup?: Num;
+  logistics?: Num;
+  /** yetkazish manzili (standart — mijoz manzili) */
+  location?: string | null;
   division?: string | null;
   /** 1C: mijoz buyurtmasi, ishlab chiqarish buyurtmasi, ishlab chiqarish */
   buyer_order?: string | null;
@@ -72,6 +78,24 @@ export type BoardStage = Stage & { count: number; amount: Num; weighted?: Num; r
 export type BoardResp = { counts: Record<string, number>; stages: BoardStage[] };
 export type DealsResp = { rows: Deal[]; total: number; amount: Num; counts: Record<string, number> };
 export type Doc = { id: number; number?: string | null; kind: string; date?: string | null; status?: string; state?: string | null; total: Num };
+/** Hujjat (to'liq): yaratilgan paytdagi qatorlar va narxlash nusxasi */
+export type DocFull = Doc & {
+  deal_id: number;
+  deal_title: string;
+  lines: (DealItem & { amount: Num })[];
+  meta: { customer?: string; inn?: string; location?: string; sub?: Num; discount?: Num; markup?: Num; logistics?: Num; restored?: boolean };
+  customer_id?: number | null;
+  /** Didox: ulanganmi (kalitlar), qoralama ID'si, holat (0 qoralama, 1 mijoz imzosi kutilmoqda, 3 imzolangan …) */
+  didox?: {
+    enabled: boolean;
+    id: string | null;
+    status: number | null;
+    status_text: string | null;
+    at: string | null;
+    url: string;
+    subtypes: { code: number; name: string }[];
+  };
+};
 export type DealItem = {
   item_id?: number | null;
   char_id?: number | null;
@@ -129,12 +153,78 @@ export type Lead = {
   no_answer?: number;
   next_call_at?: string | null;
   /** Telegram'dan ochilgan lid — sotuvchining chati */
-  tg?: { chat_id: number; username: string | null; unread: number } | null;
+  /** bog'langan chat (Telegram / WhatsApp / Instagram) */
+  tg?: { chat_id: number; username: string | null; unread: number; channel?: "tg" | "wa" | "ig" } | null;
 };
 export type GoalRow = { tg_id: number; name: string; plan: Num; sales: Num; pct: number | null; won_deals: number; won_amount: Num };
 export type Goals = { days: number; passed: number; can_edit: boolean; rows: GoalRow[] };
 export type ItemHit = { item_id: number; char_id?: number | null; name: string; char?: string | null; price?: Num; free?: Num; unit?: string | null };
-export type Customer = { id: number; name: string; inn?: string | null; phones?: string[]; owner_tg?: number | null };
+export type CustKind = "company" | "employee" | "trader" | "ip" | "person" | "state";
+export type Customer = {
+  id: number;
+  name: string;
+  /** turi (eski javoblarda yo'q — firma) */
+  kind?: CustKind;
+  inn?: string | null;
+  phones?: string[];
+  owner_tg?: number | null;
+  address?: string | null;
+  /** firma xodimi: lavozimi, firma nomi va STIRi */
+  position?: string | null;
+  company?: string | null;
+  company_inn?: string | null;
+};
+
+/** Mijoz turlari (backend models.CustomerKind) va har birining shakli: nom yorlig'i, STIR maydoni, manzil yorlig'i,
+ *  firma ma'lumotlari (xodim), majburiy telefon (savdogar). */
+export const CUST_KINDS: {
+  k: CustKind;
+  name: string;
+  short: string;
+  nameLabel: string;
+  /** STIR / JSHSHIR maydoni: yorliq va namuna (null — yo'q) */
+  inn: { label: string; ph: string } | null;
+  address: string;
+  employee?: boolean;
+  phoneRequired?: boolean;
+  /** tanlov plitkasi: ikonka va qisqa izoh */
+  icon: string;
+  hint: string;
+}[] = [
+  { k: "company", name: "Yuridik shaxs (firma)", short: "Firma", nameLabel: "Firma nomi", inn: { label: "STIR", ph: "9 raqam" }, address: "Manzil", icon: "building", hint: "MChJ, AJ, QK" },
+  { k: "employee", name: "Firma xodimi", short: "Firma xodimi", nameLabel: "Ismi", inn: null, address: "Manzil (yetkazish)", employee: true, icon: "users", hint: "lavozim + firma" },
+  { k: "trader", name: "Savdogar", short: "Savdogar", nameLabel: "Ismi", inn: null, address: "Savdo joyi (bozor, do'kon)", phoneRequired: true, icon: "store", hint: "bozor, do'kon" },
+  { k: "ip", name: "YaTT (yakka tadbirkor)", short: "YaTT", nameLabel: "Ismi / nomi", inn: { label: "STIR / JSHSHIR", ph: "9 yoki 14 raqam" }, address: "Manzil", icon: "briefcase", hint: "yakka tadbirkor" },
+  { k: "person", name: "Jismoniy shaxs", short: "Jismoniy shaxs", nameLabel: "F.I.Sh.", inn: { label: "JSHSHIR", ph: "14 raqam" }, address: "Manzil", icon: "user", hint: "shaxsiy xarid" },
+  { k: "state", name: "Davlat tashkiloti", short: "Davlat tashkiloti", nameLabel: "Tashkilot nomi", inn: { label: "STIR", ph: "9 raqam" }, address: "Manzil", icon: "bank", hint: "byudjet tashkiloti" },
+];
+/** Firma xodimi / kontakt shaxs lavozimlari (tanlov; ro'yxatda yo'q — «Boshqa» bilan qo'lda) */
+export const POSITIONS = [
+  "Rahbar",
+  "Ta'minotchi",
+  "Mexanik",
+  "Bosh mexanik",
+  "Buxgalter",
+  "Bosh muhandis",
+  "Energetik",
+  "Omborchi",
+  "Xarid bo'limi",
+  "Ishlab chiqarish boshlig'i",
+  "Texnolog",
+];
+
+export const custKind = (k: CustKind | null | undefined) => CUST_KINDS.find((x) => x.k === k) ?? CUST_KINDS[0];
+/** yangi mijozda STIR majburiy turlar (backend deals.INN_REQUIRED bilan bir xil) */
+export const innRequired = (k: CustKind) => k === "company" || k === "ip" || k === "state";
+
+/** Ro'yxatdagi ikkinchi qator: turi, xodim — lavozim va firma; aks holda STIR / telefon */
+export function custSub(c: Customer): string {
+  const k = custKind(c.kind);
+  const who = k.employee ? [c.position, c.company].filter(Boolean).join(", ") : "";
+  return [k.short + (who ? `: ${who}` : ""), !k.employee && c.inn && `${k.inn?.label ?? "STIR"} ${c.inn}`, (c.phones || [])[0] && "+" + c.phones![0]]
+    .filter(Boolean)
+    .join(" · ");
+}
 /** GET customers/table — qator */
 export type CustomerRow = Customer & {
   bought_n: number;
@@ -186,13 +276,27 @@ export type Report = {
 };
 export type Contact = { name: string; role: string; phone: string };
 /** GET customers/{id} — kartochka */
+/** Telefon qo'ng'irog'i (IP-telefoniya yoki qo'lda yozilgan) */
+export type Call = {
+  id: number;
+  phone: string;
+  direction: "in" | "out";
+  status: "answered" | "missed" | "busy";
+  started: string;
+  duration: number;
+  recording_url: string | null;
+  owner_tg: number | null;
+  note: string | null;
+  source: string;
+  deal_id: number | null;
+};
 export type CustomerCard = Customer & {
   contacts: Contact[];
   note: string;
   created: string | null;
   stats: { bought_n: number; bought_sum: string; last_buy: string | null; cycle: number | null; next_buy: string | null };
   deals: { id: number; title: string; stage: string; pipeline: string; kind: StageKind; amount: string; created: string; owner_tg: number | null; repeat: boolean }[];
-  tg: { id: number; title: string; username: string | null; unread: number }[];
+  tg: { id: number; title: string; username: string | null; unread: number; channel?: "tg" | "wa" | "ig" }[];
 };
 
 // ------------------------------------------------------------------ lug'atlar
@@ -201,6 +305,7 @@ export const SRC: Record<string, string> = {
   call: "Qo'ng'iroq",
   instagram: "Instagram",
   telegram: "Telegram",
+  whatsapp: "WhatsApp",
   olx: "OLX",
   site: "Sayt",
   email: "Email",
@@ -247,6 +352,7 @@ export const LSRC: Record<string, string> = {
   site: "Sayt",
   instagram: "Instagram",
   telegram: "Telegram",
+  whatsapp: "WhatsApp",
   manual: "Qo'lda",
   marketplace: "Marketplace",
   recommendation: "Tavsiya",
@@ -306,7 +412,7 @@ export const DEF: Query = {
 export const SYSV: View[] = [
   { id: "s-all", name: "Hammasi", owner_tg: null, query: {} },
   { id: "s-mine", name: "Mening bitimlarim", owner_tg: null, query: { owner: "me" } },
-  { id: "s-rot", name: "Chirigan", owner_tg: null, query: { rotten: true } },
+  { id: "s-rot", name: "Harakatsiz", owner_tg: null, query: { rotten: true } },
   { id: "s-ntk", name: "Vazifasiz", owner_tg: null, query: { notask: true } },
   { id: "s-week", name: "Bu hafta yopiladi", owner_tg: null, query: { closing: "week", view: "list", sort: "amount" } },
   { id: "s-late", name: "Yopilish muddati o'tgan", owner_tg: null, query: { closing: "overdue", view: "list" } },
@@ -375,12 +481,16 @@ const HUES = Object.values(C);
 export const hue = (s: string | null | undefined): string => HUES[[...String(s || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % 8];
 
 /** Necha kun o'tdi (butun) */
+/** Bitim nomi unikal raqam bilan: «#42 SPB 1650 remen» (backend: crm/models.deal_title). Eski «#N» prefiksi almashtiriladi. */
+export const dealTitle = (id: number, title: string): string =>
+  `#${id} ${title.trim().replace(/^#\d+\s*/, "") || "Yangi bitim"}`.slice(0, 255);
+
 export const days = (s: string | null | undefined, now = Date.now()): number | null =>
   s ? Math.floor((now - new Date(s).getTime()) / 864e5) : null;
 
 export const isLate = (s: string | null | undefined, now = Date.now()): boolean => !!s && new Date(s).getTime() < now;
 
-/** Chirigan bitim darajasi: "" | "rot" (sariq) | "rot2" (qizil — chirish muddatining 3 baravari) */
+/** Harakatsiz (uzoq tegilmagan) bitim darajasi: "" | "rot" (sariq) | "rot2" (qizil — chirish muddatining 3 baravari) */
 export function rotLevel(d: Deal, now = Date.now()): "" | "rot" | "rot2" {
   if (!d.rotten) return "";
   const idle = days(d.touched || d.updated, now);
@@ -402,6 +512,25 @@ export function boardTotals(stages: BoardStage[]): { open: BoardStage[]; closed:
 
 /** Tovar qatori summasi: miqdor × narx × (1 − chegirma%) */
 export const itemAmount = (r: DealItem): number => Number(r.qty || 0) * Number(r.price || 0) * (1 - Number(r.discount || 0) / 100);
+
+/** Tizim beradigan bitim nomi (backend deals.auto_title bilan bir xil): birinchi tovar va miqdori, ko'p bo'lsa «+N»;
+ *  tovarsiz — mijoz nomi. Raqam (#ID) — saqlanganda. */
+export function autoTitle(items: { name: string; qty?: Num; unit?: string | null }[], customer?: string | null): string {
+  const rows = items.filter((x) => x.name.trim());
+  if (!rows.length) return (customer || "Yangi bitim").slice(0, 255);
+  const x = rows[0];
+  const q = Number(String(x.qty ?? "").replace(/\s/g, "").replace(",", "."));
+  const qty = q ? ` — ${q} ${x.unit || "dona"}` : "";
+  return `${x.name.trim()}${qty}${rows.length > 1 ? ` +${rows.length - 1}` : ""}`.slice(0, 255);
+}
+
+/** Bitim narxlash (backend deals.priced bilan bir xil): tovarlar → chegirma → ustama → + logistika; har qadam alohida */
+export function priced(sub: number, p: { discount?: Num; markup?: Num; logistics?: Num }) {
+  const disc = (sub * Number(p.discount || 0)) / 100;
+  const mark = ((sub - disc) * Number(p.markup || 0)) / 100;
+  const log = Number(p.logistics || 0);
+  return { sub, disc, mark, log, total: Math.round(sub - disc + mark + log) };
+}
 
 /** Ertaga 10:00 — datetime-local qiymati */
 export function tomorrow10(now = new Date()): string {

@@ -68,3 +68,30 @@ export function stockCsv(rows: StockRow[], cost: boolean): string {
 export const ago = (x: { last: string | null; age: number }): string => (x.last ? `${x.age} kun oldin sanalgan` : "hali sanalmagan");
 
 export const EPS = 1e-9;
+
+/** Joy kodi → qator va qavat: "A-03-2" → {row: "A-03", floor: 2}; qavatsiz "A-03" → floor null; boshqa shakl — row = kod */
+export function cellPos(code: string): { row: string; floor: number | null } {
+  const p = code.split("-");
+  if (p.length >= 3 && /^\d+$/.test(p[p.length - 1])) return { row: p.slice(0, -1).join("-"), floor: Number(p[p.length - 1]) };
+  return { row: code, floor: null };
+}
+
+export type RackRow<C> = { row: string; floors: { floor: number | null; cell: C }[]; units: number };
+
+/** Blok joylari → stellaj qatorlari (qator kodi bo'yicha, qavatlar yuqoridan pastga — eng balandi tepada) */
+export function racks<C extends { code: string; units: number }>(cells: C[]): RackRow<C>[] {
+  const by = new Map<string, RackRow<C>>();
+  for (const c of cells) {
+    const { row, floor } = cellPos(c.code);
+    const r = by.get(row) ?? { row, floors: [], units: 0 };
+    r.floors.push({ floor, cell: c });
+    r.units += c.units;
+    by.set(row, r);
+  }
+  const out = [...by.values()].sort((a, b) => a.row.localeCompare(b.row, "uz", { numeric: true }));
+  for (const r of out) r.floors.sort((a, b) => (b.floor ?? 0) - (a.floor ?? 0));
+  return out;
+}
+
+/** Tuzilma darajasi bo'yicha jami: joylar soni va ulardagi birliklar */
+export const tally = <C extends { units: number }>(cs: C[]) => ({ cells: cs.length, units: cs.reduce((a, c) => a + c.units, 0) });

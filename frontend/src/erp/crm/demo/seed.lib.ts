@@ -1,9 +1,9 @@
 // Demo ma'lumotlari: Belting savdosi (remenlar, konveyer lentalari, rukavlar) — 3 voronka, ~36 bitim, zavod mijozlar,
 // 5 sotuvchi, lidlar, vazifalar, hujjatlar, oylik reja. Hammasi uydirma. Sanalar `now` ga nisbatan (doim "yangi").
 // Tasodif — doimiy urug'li PRNG: bir xil `now` → bir xil ma'lumot (testlar uchun).
-import type { DealItem, ItemHit, Lead, Meta, Stage, View } from "@/erp/crm/lib";
+import { dealTitle, type DealItem, type ItemHit, type Lead, type Meta, type Stage, type View } from "@/erp/crm/lib";
 
-export const DB_VERSION = 6;
+export const DB_VERSION = 11;
 
 export type DbStage = Stage & { rot_days?: number | null };
 export type DbDeal = {
@@ -12,6 +12,11 @@ export type DbDeal = {
   paid_sum?: number;
   sign_status?: "sent" | "signed" | null;
   docs_done?: boolean;
+  /** narxlash va yetkazish manzili (backend Deal bilan bir xil) */
+  discount?: number;
+  markup?: number;
+  logistics?: number;
+  location?: string | null;
   id: number;
   title: string;
   counterparty_id: number | null;
@@ -38,6 +43,12 @@ export type DbCustomer = {
   owner_tg: number | null;
   contacts?: { name: string; role: string; phone: string }[];
   note?: string;
+  address?: string | null;
+  /** turi va firma xodimi ma'lumotlari (backend Customer bilan bir xil) */
+  kind?: "company" | "employee" | "trader" | "ip" | "person" | "state";
+  position?: string | null;
+  company?: string | null;
+  company_inn?: string | null;
 };
 export type DbHist = { deal_id: number; ts: string; actor: number | null; from_stage: string | null; to_stage: string; src: string; reason?: string | null };
 export type DbAct = {
@@ -52,12 +63,38 @@ export type DbAct = {
   done_at: string | null;
   assignee: number | null;
 };
-export type DbDoc = { id: number; deal_id: number; number: string; kind: string; date: string; status: string; state: string | null; total: number };
+export type DbCall = {
+  id: number;
+  customer_id: number | null;
+  deal_id: number | null;
+  phone: string;
+  direction: "in" | "out";
+  status: "answered" | "missed" | "busy";
+  started: string;
+  duration: number;
+  recording_url: string | null;
+  owner_tg: number | null;
+  note: string | null;
+  source: string;
+};
+export type DbDoc = {
+  id: number;
+  deal_id: number;
+  number: string;
+  kind: string;
+  date: string;
+  status: string;
+  state: string | null;
+  total: number;
+  /** yaratilgan paytdagi qatorlar va narxlash nusxasi (backend Doc.lines / meta) */
+  lines?: (DealItem & { amount: string })[];
+  meta?: Record<string, string | boolean>;
+};
 export type DbLead = Lead & { junk_reason?: string | null };
 export type DbGoal = { owner_tg: number; month: string; amount: number };
 export type DbShip = { owner_tg: number; month: string; amount: number };
 /** Telegram (sotuvchi ↔ mijoz chatlari, demo) */
-export type DbTgChat = { id: number; seller_tg: number; title: string; username: string | null; unread: number; can_reply: boolean; customer_id?: number | null };
+export type DbTgChat = { id: number; seller_tg: number; title: string; username: string | null; unread: number; can_reply: boolean; customer_id?: number | null; channel?: "tg" | "wa" | "ig" };
 export type DbTgMsg = {
   id: number;
   chat: number;
@@ -91,6 +128,8 @@ export type Db = {
   views: View[];
   tg_chats: DbTgChat[];
   tg_msgs: DbTgMsg[];
+  /** telefon qo'ng'iroqlari (backend Call) — ixtiyoriy (eski saqlangan demo bazalarda yo'q) */
+  calls?: DbCall[];
   /** lid taqsimlash qoidalari (backend RoutingRule) */
   routing?: { kind: "product" | "region"; keywords: string; seller_tg: number }[];
 };
@@ -262,7 +301,7 @@ export function seed(now: number = Date.now()): Db {
     const first = STAGES.find((s) => s.pipeline === pipe && s.kind === "open")!;
     const deal: DbDeal = {
       id: dId,
-      title,
+      title: dealTitle(dId, title),
       counterparty_id: cust.id,
       owner_tg: owner,
       amount,
@@ -336,7 +375,7 @@ export function seed(now: number = Date.now()): Db {
   });
 
   // Telegram: sotuvchilar yozishmalari (Business bot orqali); Jasur — ulanmagan, Nodira — javob huquqisiz
-  const TG: [number, string, string | null, boolean, [number, boolean, string, string?][]][] = [
+  const TG: [number, string, string | null, boolean, [number, boolean, string, string?][], ("tg" | "wa" | "ig")?][] = [
     [ME, "Bobur Xasanov", "bobur_h", true, [[180, false, "Assalomu alaykum, SPB 1650 remen bormi?"], [170, true, "Va alaykum assalom, bor. Necha dona kerak?"], [25, false, "25 dona. Narxi qancha bo'ladi?"], [9, false, "", "photo"], [8, false, "Mana shu eski remenimiz rasmi"]]],
     [ME, "Sardor (Chinoz Un)", null, true, [[60 * 26, false, "Tijorat taklifini yuboring iltimos"], [60 * 25, true, "Yubordim, pochtangizni tekshiring"], [60 * 24, false, "Oldim, rahmat. Rahbarga ko'rsataman"]]],
     [ME, "Gulnora", "gulnora_qq", true, [[60 * 72, false, "Konveyer lentasi 800 mm bor ekanmi?"], [60 * 71, true, "Ha, omborda 120 m bor"], [60 * 70, true, "", "document"]]],
@@ -344,15 +383,28 @@ export function seed(now: number = Date.now()): Db {
     [1002, "Navoiy Konveyer — Rahim", null, true, [[60 * 30, true, "Ertaga yetkazib beramiz"], [60 * 29, false, "Kelishdik 👍"]]],
     [1003, "Qarshi Shakar — ta'minot", "qarshi_shakar", true, [[90, false, "EP-400/3 110 m tayyormi?"], [80, false, "Javob bering iltimos"]]],
     [1004, "Farg'ona Tekstil", null, false, [[60 * 5, false, "Narxlarni qayta ko'rib chiqsangiz bo'ladimi?"], [60 * 4, true, "Ertalab menejer bilan gaplashaman"]]],
+    // WhatsApp / Instagram (kompaniya raqami/akkaunti — sotuvchiga taqsimlangan)
+    [ME, "Jamshid +998 90 555 12 34", null, true, [[50, false, "Assalomu alaykum, 8M-1600 tishli remen kerak, 4 dona"], [12, false, "", "photo"]], "wa"],
+    [ME, "Andijon Mexanika — Dilshod", null, true, [[60 * 30, true, "Hisob-faktura yuborildi"], [60 * 28, false, "Rahmat, bugun to'laymiz"]], "wa"],
+    [ME, "Aziza", "aziza_textile", true, [[40, false, "Konveyer lenta narxini bilsam bo'ladimi? 500 mm"]], "ig"],
+    [1002, "Sherzod", "sherzod.uz", true, [[60 * 3, false, "Salom, katalog bormi?"]], "ig"],
   ];
-  for (const [seller, title, username, can_reply, ms] of TG) {
+  for (const [seller, title, username, can_reply, ms, channel] of TG) {
     const chat = id();
     let unread = 0;
     for (const [min, out, text, kind] of ms) {
       db.tg_msgs.push({ id: id(), chat, out, kind: kind ?? "text", text, date: new Date(now - min * 6e4).toISOString(), edited: false, deleted: false, via_crm: false });
       unread = out ? 0 : unread + 1;
     }
-    db.tg_chats.push({ id: chat, seller_tg: seller, title, username, unread, can_reply });
+    db.tg_chats.push({ id: chat, seller_tg: seller, title, username, unread, can_reply, channel: channel ?? "tg" });
+  }
+  // chatlar — sotuvchining bitimlaridagi mijozlarga (har mijozga ikkitadan: bitim kartochkasida «Mijoz bilan chat» tablari)
+  for (const seller of new Set(db.tg_chats.map((c) => c.seller_tg))) {
+    const custs = [...new Set(db.deals.filter((d) => d.owner_tg === seller && d.counterparty_id).map((d) => d.counterparty_id!))];
+    db.tg_chats.filter((c) => c.seller_tg === seller).forEach((c, i) => {
+      const cu = custs[Math.floor(i / 2)];
+      if (cu) c.customer_id = cu;
+    });
   }
 
   db.seq = seq;

@@ -1,9 +1,10 @@
 "use client";
 // Markaziy oyna (kompyuter) / pastdan oyna (telefon) va Promise bilan tanlov/so'rov — erp_crm.html modal()/choose().
 // Escape va fon bosilsa yopiladi; "Saqlash" onOk false qaytarsa — oyna ochiq qoladi; xato → toast.
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { C } from "./colors";
 import { toast } from "./env";
 import { Icon } from "./ui";
 
@@ -12,6 +13,7 @@ export function Modal({
   ok = "Saqlash",
   danger,
   wide,
+  size,
   onOk,
   onClose,
   children,
@@ -20,6 +22,8 @@ export function Modal({
   ok?: string;
   danger?: boolean;
   wide?: boolean;
+  /** xl — katta forma (1040px, ikki ustun uchun) */
+  size?: "xl";
   onOk?: () => Promise<boolean | void> | boolean | void;
   onClose: () => void;
   children: ReactNode;
@@ -63,7 +67,7 @@ export function Modal({
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`flex max-h-[min(88vh,88dvh)] w-full flex-col rounded-2xl bg-page shadow-2 max-[599px]:max-h-[92dvh] max-[599px]:rounded-t-[14px] max-[599px]:rounded-b-none ${wide ? "min-[600px]:w-[min(720px,100%)]" : "min-[600px]:w-[min(520px,100%)]"}`}
+        className={`flex max-h-[min(88vh,88dvh)] w-full flex-col rounded-2xl bg-page shadow-2 max-[599px]:max-h-[92dvh] max-[599px]:rounded-t-[14px] max-[599px]:rounded-b-none ${size === "xl" ? "min-[600px]:max-h-[min(92vh,92dvh)] min-[600px]:w-[min(1040px,100%)]" : wide ? "min-[600px]:w-[min(720px,100%)]" : "min-[600px]:w-[min(520px,100%)]"}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={hid}
@@ -108,7 +112,9 @@ export function Modal({
   );
 }
 
-export type Opt<V> = { value: V; label: string; sub?: string; color?: string | null };
+/** Tanlov qatori: `icon` — rangli kvadratda (`color` — C kaliti yoki rang), yo'q bo'lsa `color` — nuqta;
+ * `danger` — xavfli amal (o'chirish): qizil, chiziq bilan ajratilgan, ro'yxat oxirida */
+export type Opt<V> = { value: V; label: string; sub?: string; color?: string | null; icon?: string; danger?: boolean };
 type AskOpts = { label?: string; placeholder?: string; multiline?: boolean; ok?: string; value?: string };
 type Pending =
   | { k: "choose"; title: string; opts: Opt<unknown>[]; res: (v: unknown) => void }
@@ -134,21 +140,29 @@ export function useDialogs() {
         }}
       >
         {p.opts.map((o, i) => (
-          <button
-            key={i}
-            type="button"
-            className="opt"
-            onClick={() => {
-              p.res(o.value);
-              setP(null);
-            }}
-          >
-            {o.color ? <span className="dot" style={{ background: o.color }} /> : null}
-            <span>
-              <span>{o.label}</span>
-              {o.sub ? <span className="s" style={{ display: "block" }}>{o.sub}</span> : null}
-            </span>
-          </button>
+          <Fragment key={i}>
+            {o.danger && i > 0 && !p.opts[i - 1].danger ? <hr className="mx-3 my-1.5 border-0 border-t border-sep" /> : null}
+            <button
+              type="button"
+              className={`opt ${o.danger ? "text-danger" : ""}`}
+              onClick={() => {
+                p.res(o.value);
+                setP(null);
+              }}
+            >
+              {o.icon ? (
+                <span className="sq" style={{ background: C[o.color ?? (o.danger ? "red" : "blue")] ?? o.color ?? undefined }}>
+                  <Icon n={o.icon} />
+                </span>
+              ) : o.color ? (
+                <span className="dot" style={{ background: C[o.color] ?? o.color }} />
+              ) : null}
+              <span className="min-w-0">
+                <span className="block">{o.label}</span>
+                {o.sub ? <span className="s block">{o.sub}</span> : null}
+              </span>
+            </button>
+          </Fragment>
         ))}
         {!p.opts.length ? <div className="sf">Tanlov yo&apos;q</div> : null}
       </Modal>

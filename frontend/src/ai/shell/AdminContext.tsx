@@ -20,7 +20,7 @@ export const TABS: readonly (readonly [TabKey, string, string])[] = [
   ["system", "Tizim", "activity"],
 ];
 
-/** Panel qismlari (2026-11-13): /app/jarvis — faqat AI (chat, agentlar, xotira, bilimlar; graf — Bilimlar ichida), /app/staff — xodimlar,
+/** Panel qismlari (2026-11-13): /app/jarvis — faqat AI (chat, agentlar, xotira, bilimlar; graf — Bilimlar ichida), /app/erp/staff — xodimlar (ERP ichida),
  *  /app/templates — hisobot shablonlari, /app/dev — texnik (audit, tizim). Bitta tabli qismda tab paneli ko'rsatilmaydi. */
 export type Area = "jarvis" | "staff" | "templates" | "dev";
 export const AREAS: Record<Area, { title: string; icon: string; tabs: readonly TabKey[]; home?: string }> = {

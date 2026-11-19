@@ -1,4 +1,4 @@
-// /app/staff — xodimlar: ro'yxat, tuzilma (org chart), rollar, tasdiqlash. Mantiq: src/ai/users/.
+// /app/erp/staff — xodimlar: ro'yxat, tuzilma (org chart), rollar, tasdiqlash. Mantiq: src/ai/users/.
 import type { Metadata } from "next";
 
 import Shell from "@/ai/shell";

@@ -188,6 +188,25 @@ CRM_INTAKE_TOKEN = os.getenv("CRM_INTAKE_TOKEN", "").strip()
 CRM_TG_WEBHOOK_SECRET = (
     os.getenv("CRM_TG_WEBHOOK_SECRET") or hashlib.sha256(f"crm-tg:{SECRET_KEY}".encode()).hexdigest()[:48]
 )
+# CRM: WhatsApp va Instagram Direct — rasmiy Meta API (crm/meta.py; sozlash — docs/api/crm.md «WhatsApp va Instagram»).
+# Webhook: {JARVIS_PUBLIC_URL}/app/api/erp/crm/meta/webhook/ (oxirida «/») — imzo META_APP_SECRET bilan tekshiriladi (bo'sh — yopiq).
+META_APP_SECRET = os.getenv("META_APP_SECRET", "").strip()
+META_VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN") or hashlib.sha256(f"crm-meta:{SECRET_KEY}".encode()).hexdigest()[:32]
+META_GRAPH_VERSION = os.getenv("META_GRAPH_VERSION", "v21.0").strip()
+WA_TOKEN = os.getenv("WA_TOKEN", "").strip()  # WhatsApp Cloud API: tizim foydalanuvchisi (doimiy) tokeni
+WA_PHONE_ID = os.getenv("WA_PHONE_ID", "").strip()  # WhatsApp → API Setup → Phone number ID
+IG_TOKEN = os.getenv("IG_TOKEN", "").strip()  # Instagram API with Instagram Login: uzoq muddatli token
+IG_USER_ID = os.getenv("IG_USER_ID", "").strip()  # Instagram professional akkaunt ID'si
+# CRM: Didox (elektron hujjat aylanishi, crm/didox.py) — hujjat qoralamasi (PDF bilan); imzo — E-IMZO, Didox kabinetida.
+# Partner token — Didox menejeri beradi; STIR va parol — kompaniya Didox akkaunti (Profil → Akkaunt). Bo'sh — o'chiq.
+DIDOX_URL = os.getenv("DIDOX_URL", "https://api-partners.didox.uz").strip().rstrip("/")
+DIDOX_PARTNER_TOKEN = os.getenv("DIDOX_PARTNER_TOKEN", "").strip()
+DIDOX_TIN = os.getenv("DIDOX_TIN", "").strip()
+DIDOX_PASSWORD = os.getenv("DIDOX_PASSWORD", "").strip()
+# CRM: IP-telefoniya webhook'i (POST /app/api/erp/crm/calls/webhook/, sarlavha X-Calls-Token) — bo'sh — yopiq (crm/calls.py).
+# Operatorlar: ATS ichki raqami → sotuvchi Telegram ID'si, JSON: {"101": 5574861580}
+CRM_CALLS_TOKEN = os.getenv("CRM_CALLS_TOKEN", "").strip()
+CRM_CALLS_OPERATORS = os.getenv("CRM_CALLS_OPERATORS", "").strip()
 
 LOGGING = {
     "version": 1,

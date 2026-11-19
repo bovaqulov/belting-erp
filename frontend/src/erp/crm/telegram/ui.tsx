@@ -1,48 +1,146 @@
-// CRM Telegram paneli (faqat ko'rinish): chatlar ro'yxati, yozishma, javob maydoni, ulash yo'riqnomasi.
+// CRM yozishmalar paneli (faqat ko'rinish): kanal tablari (Telegram / WhatsApp / Instagram), chatlar ro'yxati, yozishma,
+// javob maydoni, ulash yo'riqnomasi.
 // Kompyuterda (xl+) kanban yonida doimiy ustun; kichik ekranda — o'ngdan chiquvchi panel (yopish tugmasi bilan).
-import { Fragment, type ReactNode, type RefObject } from "react";
+import { Fragment, type CSSProperties, type ReactNode, type RefObject } from "react";
 
 import { Empty, Icon } from "@/erp/kit/ui";
 import { AvaView } from "@/erp/crm/badges";
 import { SUM } from "@/erp/crm/tw";
 
-import { chatTime, dayKey, dayLabel, fileSize, KIND_LABEL, lastLine, msgTime, type TgChat, type TgChats, type TgMsg } from "./tg.lib";
+import { CHANNELS, chatTime, chOf, dayKey, dayLabel, fileSize, KIND_LABEL, lastLine, msgTime, type Ch, type TgChat, type TgChats, type TgMsg } from "./tg.lib";
 
 const IB =
   "grid size-8 flex-none cursor-pointer place-items-center rounded-lg border-0 bg-transparent p-0 text-hint hover:bg-fill hover:text-fg coarse:size-11 [&_svg.i]:size-[18px] focus-visible:outline-2 focus-visible:outline-focus";
 
-/** Panel qobig'i: sarlavha + mazmun */
+/** Kompyuterda (xl+) panel o'lchami: kenglik (sudrab) va yig'ilgan holat — TgPanel saqlaydi */
+export type TgSize = { w: number; min: boolean; onW: (w: number) => void; onMin: (v: boolean) => void; rail: ReactNode };
+export const TG_W = { def: 360, lo: 300, hi: 760, step: 24 };
+
+/** Chap chetdagi tutqich: sichqoncha/barmoq bilan sudrash, klaviatura (← → — 24px), ikki marta bosish — standart kenglik */
+function Resizer({ w, onW }: { w: number; onW: (w: number) => void }) {
+  const clamp = (x: number) => Math.round(Math.min(Math.max(x, TG_W.lo), Math.min(TG_W.hi, window.innerWidth * 0.6)));
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Panel kengligi (← → yoki sudrang)"
+      aria-valuenow={w}
+      aria-valuemin={TG_W.lo}
+      aria-valuemax={TG_W.hi}
+      tabIndex={0}
+      title="Sudrab kengligini o'zgartiring · ikki marta bosish — standart"
+      className="group absolute inset-y-0 -left-1.5 z-10 hidden w-3 cursor-col-resize touch-none xl:block focus-visible:outline-none"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        const el = e.currentTarget;
+        el.setPointerCapture(e.pointerId);
+        const x0 = e.clientX;
+        const w0 = w;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+        const move = (ev: PointerEvent) => onW(clamp(w0 + x0 - ev.clientX));
+        const up = () => {
+          el.removeEventListener("pointermove", move);
+          el.removeEventListener("pointerup", up);
+          el.removeEventListener("pointercancel", up);
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+        };
+        el.addEventListener("pointermove", move);
+        el.addEventListener("pointerup", up);
+        el.addEventListener("pointercancel", up);
+      }}
+      onDoubleClick={() => onW(TG_W.def)}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault();
+          onW(clamp(w + (e.key === "ArrowLeft" ? TG_W.step : -TG_W.step)));
+        }
+      }}
+    >
+      <span className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-transparent transition-colors group-hover:bg-link group-focus-visible:bg-link group-active:bg-link" />
+    </div>
+  );
+}
+
+/** Yig'ilgan panel (xl+): tor ustun — yoyish va kanal tugmalari (o'qilmaganlar bilan) */
+export function TgRail({ ch, r, onCh, onOpen }: { ch: Ch; r: TgChats | null; onCh: (c: Ch) => void; onOpen: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 py-2.5">
+      <button type="button" className={IB} onClick={onOpen} aria-label="Chatlar panelini yoyish" title="Yoyish">
+        <Icon n="panel-right-open" />
+      </button>
+      <div className="my-1 h-px w-6 bg-sep" />
+      {CHANNELS.map((x) => {
+        const n = r?.channels?.[x.k]?.unread ?? 0;
+        return (
+          <button
+            key={x.k}
+            type="button"
+            aria-label={`${x.name}${n ? `, ${n} ta o'qilmagan` : ""} — ochish`}
+            title={x.name}
+            onClick={() => {
+              onCh(x.k);
+              onOpen();
+            }}
+            className={`relative grid size-10 cursor-pointer place-items-center rounded-lg border-0 p-0 hover:bg-fill [&_svg.i]:size-5 focus-visible:outline-2 focus-visible:outline-focus ${x.k === ch ? "bg-fill" : "bg-transparent"}`}
+            style={{ color: x.color }}
+          >
+            <Icon n={x.icon} />
+            {n ? (
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums" style={{ background: x.color }} aria-hidden="true">
+                {n > 99 ? "99+" : n}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Panel qobig'i: sarlavha + mazmun; kompyuterda — kengligi o'zgaradi va yig'iladi (size) */
 export function TgShell({
   open,
+  ch = "tg",
   title,
   sub,
   actions,
   onBack,
   onClose,
+  size,
   children,
 }: {
   open: boolean;
+  /** joriy kanal (sarlavha ikonkasi) */
+  ch?: Ch;
   title: ReactNode;
   sub?: ReactNode;
   /** sarlavhadagi qo'shimcha tugmalar (chat: "Bitim ochish") */
   actions?: ReactNode;
   onBack?: () => void;
   onClose: () => void;
+  size?: TgSize;
   children: ReactNode;
 }) {
+  const min = !!size?.min;
   return (
     <aside
-      aria-label="Telegram yozishmalari"
-      className={`flex min-h-0 flex-col border-l border-sep bg-sec xl:w-[360px] xl:flex-none 2xl:w-[400px] max-xl:fixed max-xl:inset-y-0 max-xl:right-0 max-xl:z-40 max-xl:w-[min(420px,100vw)] max-xl:shadow-2 ${open ? "" : "max-xl:hidden"}`}
+      aria-label="Mijozlar bilan yozishmalar"
+      style={{ "--tgw": `${size?.w ?? TG_W.def}px` } as CSSProperties}
+      className={`relative flex min-h-0 flex-col border-l border-sep bg-sec xl:flex-none ${min ? "xl:w-14" : "xl:w-[var(--tgw)]"} max-xl:fixed max-xl:inset-y-0 max-xl:right-0 max-xl:z-40 max-xl:w-[min(420px,100vw)] max-xl:shadow-2 ${open ? "" : "max-xl:hidden"}`}
     >
+      {size && !min ? <Resizer w={size.w} onW={size.onW} /> : null}
+      {size && min ? <div className="hidden xl:block">{size.rail}</div> : null}
+      <div className={`flex min-h-0 flex-1 flex-col ${min ? "xl:hidden" : ""}`}>
       <div className="flex min-h-[52px] flex-none items-center gap-1.5 border-b border-sep px-2.5">
         {onBack ? (
           <button type="button" className={IB} onClick={onBack} aria-label="Chatlar ro'yxatiga qaytish" title="Orqaga">
             <Icon n="arrow-left" />
           </button>
         ) : (
-          <span className="grid size-8 flex-none place-items-center text-[#2aabee] [&_svg.i]:size-5">
-            <Icon n="send-tg" />
+          <span className="grid size-8 flex-none place-items-center [&_svg.i]:size-5" style={{ color: chOf(ch).color }}>
+            <Icon n={chOf(ch).icon} />
           </span>
         )}
         <div className="min-w-0 flex-1">
@@ -50,12 +148,63 @@ export function TgShell({
           {sub ? <div className="truncate text-xs text-hint">{sub}</div> : null}
         </div>
         {actions}
-        <button type="button" className={`${IB} xl:hidden`} onClick={onClose} aria-label="Telegram panelini yopish" title="Yopish">
+        {size ? (
+          <button type="button" className={`${IB} max-xl:hidden`} onClick={() => size.onMin(true)} aria-label="Chatlar panelini yig'ish" title="Yig'ish">
+            <Icon n="panel-right-close" />
+          </button>
+        ) : null}
+        <button type="button" className={`${IB} xl:hidden`} onClick={onClose} aria-label="Yozishmalar panelini yopish" title="Yopish">
           <Icon n="x" />
         </button>
       </div>
       {children}
+      </div>
     </aside>
+  );
+}
+
+/** Kanal tablari: Telegram / WhatsApp / Instagram (o'qilmaganlar soni bilan) */
+export function TgTabs({ ch, r, onCh }: { ch: Ch; r: TgChats | null; onCh: (c: Ch) => void }) {
+  return (
+    <div className="flex flex-none gap-0.5 rounded-lg bg-fill p-0.5" role="group" aria-label="Kanal">
+      {CHANNELS.map((x) => {
+        const n = r?.channels?.[x.k]?.unread ?? 0;
+        const on = x.k === ch;
+        return (
+          <button
+            key={x.k}
+            type="button"
+            aria-pressed={on}
+            aria-label={`${x.name}${n ? `, ${n} ta o'qilmagan` : ""}`}
+            title={x.name}
+            onClick={() => onCh(x.k)}
+            className={`relative grid h-8 w-9 cursor-pointer place-items-center rounded-md border-0 p-0 coarse:h-11 coarse:w-11 [&_svg.i]:size-[18px] focus-visible:outline-2 focus-visible:outline-focus ${on ? "bg-sec shadow-1" : "bg-transparent opacity-70 hover:opacity-100"}`}
+            style={{ color: x.color }}
+          >
+            <Icon n={x.icon} />
+            {n ? (
+              <span className="absolute -top-1 -right-1 min-w-4 rounded-full px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums" style={{ background: x.color }} aria-hidden="true">
+                {n > 99 ? "99+" : n}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** WhatsApp / Instagram ulanmagan: kompaniya raqami/akkaunti — administrator sozlaydi (Meta kalitlari) */
+export function TgMetaOff({ ch }: { ch: Ch }) {
+  const c = chOf(ch);
+  return (
+    <div className="flex-1 overflow-auto p-4 text-[13.5px] leading-[1.5]">
+      <Empty icon={c.icon} title={`${c.name} ulanmagan`}>
+        Kompaniyaning {ch === "wa" ? "WhatsApp raqami" : "Instagram akkaunti"} CRM&apos;ga hali ulanmagan. Ulangach, mijozlar yozgan xabarlar shu yerga
+        tushadi va mas&apos;ul sotuvchiga taqsimlanadi.
+      </Empty>
+      <p className={`${SUM} mt-1`}>Ulash — administrator: Meta (Facebook) ilovasi kalitlari serverga qo&apos;yiladi.</p>
+    </div>
   );
 }
 
@@ -89,12 +238,14 @@ export function TgConnect({ bot }: { bot: string }) {
 /** Chatlar ro'yxati */
 export function TgList({
   r,
+  ch = "tg",
   me,
   q,
   onQ,
   onOpen,
 }: {
   r: TgChats;
+  ch?: Ch;
   me: number;
   q: string;
   onQ: (v: string) => void;
@@ -102,14 +253,14 @@ export function TgList({
 }) {
   return (
     <>
-      {r.connection && !r.connection.can_reply ? (
+      {ch === "tg" && r.connection && !r.connection.can_reply ? (
         <div className="flex-none border-b border-sep bg-[color-mix(in_srgb,var(--warn)_14%,var(--sec))] px-3 py-2 text-xs leading-[1.4]" role="status">
           Faqat o&apos;qish: javob yozish uchun Telegram Business → Chat-botlar → «Xabarlarga javob berish» ni yoqing.
         </div>
       ) : null}
       <div className="relative flex-none px-2.5 py-2 [&_svg.i]:pointer-events-none [&_svg.i]:absolute [&_svg.i]:top-1/2 [&_svg.i]:left-[19px] [&_svg.i]:size-4 [&_svg.i]:-translate-y-1/2 [&_svg.i]:text-hint">
         <Icon n="search" />
-        <input className="inp w-full !pl-8" type="search" value={q} placeholder="Ism yoki @username" aria-label="Chat qidirish" onChange={(e) => onQ(e.target.value)} />
+        <input className="inp w-full !pl-8" type="search" value={q} placeholder={ch === "wa" ? "Ism yoki telefon" : "Ism yoki @username"} aria-label="Chat qidirish" onChange={(e) => onQ(e.target.value)} />
       </div>
       <ul className="m-0 min-h-0 flex-1 list-none overflow-auto p-0 pb-3">
         {r.chats.length ? (
@@ -131,7 +282,11 @@ export function TgList({
                   <span className="mt-0.5 flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate text-[13px] text-sub">{lastLine(c) || "—"}</span>
                     {c.unread ? (
-                      <span className={`min-w-5 flex-none rounded-full px-1.5 text-center text-xs leading-5 font-semibold text-white tabular-nums ${c.seller_tg === me ? "bg-[#2aabee]" : "bg-hint"}`} aria-label={`${c.unread} ta o'qilmagan`}>
+                      <span
+                        className={`min-w-5 flex-none rounded-full px-1.5 text-center text-xs leading-5 font-semibold text-white tabular-nums ${c.seller_tg === me ? "" : "bg-hint"}`}
+                        style={c.seller_tg === me ? { background: chOf(c.channel).color } : undefined}
+                        aria-label={`${c.unread} ta o'qilmagan`}
+                      >
                         {c.unread}
                       </span>
                     ) : null}
@@ -141,7 +296,7 @@ export function TgList({
             </li>
           ))
         ) : (
-          <li className={`${SUM} px-4 py-6 text-center`}>{q ? "Hech narsa topilmadi" : "Hozircha yozishma yo'q — mijoz yozganda shu yerda paydo bo'ladi."}</li>
+          <li className={`${SUM} px-4 py-6 text-center`}>{q ? "Hech narsa topilmadi" : `Hozircha ${chOf(ch).name} yozishmasi yo'q — mijoz yozganda shu yerda paydo bo'ladi.`}</li>
         )}
       </ul>
     </>
@@ -354,6 +509,7 @@ export function TgThreadView({
               </button>
             </div>
           ) : null}
+          {chat.channel === "ig" ? null : (
           <label className={`${IB} cursor-pointer`} title="Fayl yoki rasm biriktirish" aria-label="Fayl yoki rasm biriktirish">
             <Icon n="file-plus" />
             <input
@@ -366,9 +522,12 @@ export function TgThreadView({
               }}
             />
           </label>
-          <button type="button" className={IB} onClick={onLocation} disabled={sending} aria-label="Joylashuvni yuborish" title="Joylashuvni yuborish">
-            <Icon n="map" />
-          </button>
+          )}
+          {chat.channel === "ig" ? null : (
+            <button type="button" className={IB} onClick={onLocation} disabled={sending} aria-label="Joylashuvni yuborish" title="Joylashuvni yuborish">
+              <Icon n="map" />
+            </button>
+          )}
           <textarea
             className="inp max-h-32 !min-h-10 flex-1 !resize-none !h-auto !py-2 leading-[1.35] [field-sizing:content]"
             rows={1}
@@ -402,7 +561,11 @@ export function TgThreadView({
         </form>
       ) : (
         <div className="flex-none border-t border-sep px-3 py-2.5 text-center text-xs text-hint">
-          {chat.seller_tg !== me ? "Faqat o'qish" : "Bot javob yoza olmaydi — Telegram Business'da «Xabarlarga javob berish» ni yoqing"}
+          {chat.seller_tg !== me
+            ? "Faqat o'qish"
+            : (chat.channel ?? "tg") === "tg"
+              ? "Bot javob yoza olmaydi — Telegram Business'da «Xabarlarga javob berish» ni yoqing"
+              : `${chOf(chat.channel).name} ulanishi o'chirilgan — administrator Meta kalitlarini tekshirsin`}
         </div>
       )}
     </>
@@ -411,8 +574,8 @@ export function TgThreadView({
 
 /** Kichik ekranda panelni ochish tugmasi (asboblar panelida) */
 export const TgButton = ({ unread, onClick }: { unread: number; onClick: () => void }) => (
-  <button type="button" className="b xl:hidden" onClick={onClick} aria-label={`Telegram${unread ? `, ${unread} ta o'qilmagan` : ""}`}>
-    <Icon n="send-tg" /> Telegram
+  <button type="button" className="b xl:hidden" onClick={onClick} aria-label={`Chatlar${unread ? `, ${unread} ta o'qilmagan` : ""}`}>
+    <Icon n="message-circle" /> Chatlar
     {unread ? <b className="ml-0.5 min-w-5 rounded-full bg-[#2aabee] px-1.5 text-center text-xs leading-5 text-white tabular-nums">{unread}</b> : null}
   </button>
 );

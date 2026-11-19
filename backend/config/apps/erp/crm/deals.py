@@ -1,5 +1,5 @@
 """CRM mantig'i (frontend demo — `src/erp/crm/demo/server.lib.ts` — bilan bir xil): bitim qatori (tegilmagan, keyingi
-vazifa, chirigan), filtrlar, kanban, ro'yxat, bosqichga o'tkazish, tovarlar, hujjat, lidlar, oylik reja.
+vazifa, harakatsiz), filtrlar, kanban, ro'yxat, bosqichga o'tkazish, tovarlar, hujjat, lidlar, oylik reja.
 
 Vaqtlar — ISO (UTC, `Z`), summalar — satr ("2400000"), sana — "YYYY-MM-DD". `now` — testlar uchun berilishi mumkin.
 """
@@ -24,6 +24,7 @@ from .access import Me, sellers
 from .models import (
     Activity,
     Customer,
+    CustomerKind,
     Deal,
     Division,
     Doc,
@@ -38,6 +39,7 @@ from .models import (
     StageKind,
     Tunnel,
     TunnelAction,
+    deal_title,
 )
 
 PAGE = 20
@@ -141,6 +143,10 @@ def row(d: Deal, now: datetime) -> dict[str, Any]:
         "lost_reason": d.lost_reason or None,
         "pipeline": st.pipeline_id,
         "contact": d.contact or None,
+        "discount": money(d.discount),
+        "markup": money(d.markup),
+        "logistics": money(d.logistics),
+        "location": d.location or None,
         "division": d.division or None,
         "buyer_order": d.buyer_order or None,
         "prod_order": d.prod_order or None,
@@ -390,7 +396,7 @@ def act_json(a: Activity) -> dict[str, Any]:
 
 # ------------------------------------------------------------------ o'zgartirishlar
 @transaction.atomic
-def move_stage(me: Me, d: Deal, code: str, reason: str, now: datetime) -> None:
+def move_stage(me: Me, d: Deal, code: str, reason: str, now: datetime, src: str = "web") -> None:
     st = Stage.objects.filter(code=code).first()
     if st is None:
         raise ApiError(400, "Bunday bosqich yo'q")
@@ -407,7 +413,7 @@ def move_stage(me: Me, d: Deal, code: str, reason: str, now: datetime) -> None:
         actor=me.tg_id or None,
         from_stage=d.stage_id,
         to_stage=code,
-        src="web",
+        src=src,
         reason=reason if st.kind == StageKind.LOST else "",
     )
     d.stage = st
@@ -421,7 +427,17 @@ def move_stage(me: Me, d: Deal, code: str, reason: str, now: datetime) -> None:
 
 
 COPY_FIELDS = ("title", "customer", "owner_tg", "amount", "items", "source", "need", "contact", "division")
-COPY_FIELDS += ("buyer_order", "prod_order", "prod_no", "repeat", "close_date")
+COPY_FIELDS += (
+    "buyer_order",
+    "prod_order",
+    "prod_no",
+    "repeat",
+    "close_date",
+    "discount",
+    "markup",
+    "logistics",
+    "location",
+)
 
 
 def run_tunnels(me: Me, d: Deal, now: datetime, depth: int = 0) -> None:
@@ -437,6 +453,8 @@ def run_tunnels(me: Me, d: Deal, now: datetime, depth: int = 0) -> None:
             child = Deal.objects.create(
                 **{f: getattr(d, f) for f in COPY_FIELDS}, parent=d, stage=to, stage_since=now, created=now, updated=now
             )
+            child.title = deal_title(child.pk, child.title)
+            child.save(update_fields=["title"])
             StageHistory.objects.create(
                 deal=child, ts=now, actor=me.tg_id, from_stage="", to_stage=to.code, src="tunnel"
             )
@@ -470,6 +488,19 @@ def get_customer(me: Me, pk: Any) -> Customer:
     return c
 
 
+def auto_title(items: Any, customer: Customer | None) -> str:
+    """Tizim beradigan bitim nomi (raqam — deal_title): birinchi tovar va miqdori, ko'p bo'lsa «+N»; tovarsiz — mijoz nomi.
+    Frontend (new-deal) oldindan ko'rsatadigan nom bilan bir xil."""
+    rows = [x for x in items if isinstance(x, dict) and s(x.get("name")).strip()] if isinstance(items, list) else []
+    if rows:
+        x = rows[0]
+        q = num(x.get("qty"))
+        qty = f" — {q.normalize():f} {s(x.get('unit')) or 'dona'}" if q else ""
+        more = f" +{len(rows) - 1}" if len(rows) > 1 else ""
+        return f"{s(x.get('name')).strip()}{qty}{more}"[:255]
+    return customer.name[:255] if customer is not None else "Yangi bitim"
+
+
 @transaction.atomic
 def new_deal(me: Me, b: dict[str, Any], now: datetime, *, customer: Customer | None = None) -> Deal:
     first = Stage.objects.filter(pipeline_id="main", kind=StageKind.OPEN).first()
@@ -477,7 +508,7 @@ def new_deal(me: Me, b: dict[str, Any], now: datetime, *, customer: Customer | N
         raise ApiError(500, "CRM bosqichlari sozlanmagan (migratsiya).")
     owner = (int_or_none(b.get("owner_tg")) or me.tg_id) if me.is_head else me.tg_id
     d = Deal.objects.create(
-        title=s(b.get("title")).strip()[:255] or "Yangi bitim",
+        title=s(b.get("title")).strip()[:255] or auto_title(b.get("items"), customer),
         customer=customer,
         owner_tg=owner,
         amount=num(b.get("amount")),
@@ -489,6 +520,12 @@ def new_deal(me: Me, b: dict[str, Any], now: datetime, *, customer: Customer | N
         need=s(b.get("need")),
         **card_fields(b),
     )
+    d.title = deal_title(d.pk, d.title)
+    if not d.location and customer is not None and customer.address:  # joylashuv — mijoz manzilidan
+        d.location = customer.address
+    d.save(update_fields=["title", "location"])
+    if isinstance(b.get("items"), list) and b["items"]:  # tovarlar bilan — summa ulardan hisoblanadi
+        save_items(d, b, now)
     StageHistory.objects.create(deal=d, ts=now, actor=me.tg_id, from_stage="", to_stage=first.code, src="web")
     return d
 
@@ -520,7 +557,38 @@ def card_fields(b: dict[str, Any]) -> dict[str, Any]:
         out["sign_status"] = v
     if "docs_done" in b:
         out["docs_done"] = bool(b["docs_done"])
+    if "location" in b:
+        out["location"] = s(b["location"]).strip()[:300]
+    for f, hi, label in PRICING:
+        if f in b:
+            v = num(b[f])
+            if v < 0 or (hi is not None and v > hi):
+                raise ApiError(400, label)
+            out[f] = v
     return out
+
+
+# bitim narxlash maydonlari: (maydon, yuqori chegara, xato matni)
+PRICING: tuple[tuple[str, Decimal | None, str], ...] = (
+    ("discount", Decimal(100), "Chegirma 0–100% oralig'ida bo'lsin."),
+    ("markup", Decimal(1000), "Ustama 0–1000% oralig'ida bo'lsin."),
+    ("logistics", None, "Logistika summasi manfiy bo'lmasin."),
+)
+
+
+def goods_total(items: list[dict[str, Any]]) -> Decimal:
+    return sum((item_amount(x) for x in items), Decimal(0))
+
+
+def priced(d: Deal, sub: Decimal) -> Decimal:
+    """Tovarlar summasi → bitim summasi: chegirma, ustama, logistika."""
+    return (sub * (1 - d.discount / 100) * (1 + d.markup / 100) + d.logistics).quantize(Decimal(1))
+
+
+def recalc(d: Deal) -> None:
+    """Tovarlar bor bo'lsa — summa ulardan (narxlash bilan); yo'q bo'lsa — qo'lda kiritilgan summa qoladi."""
+    if d.items:
+        d.amount = priced(d, goods_total(d.items))
 
 
 def patch_deal(me: Me, d: Deal, b: dict[str, Any], now: datetime) -> None:
@@ -529,7 +597,7 @@ def patch_deal(me: Me, d: Deal, b: dict[str, Any], now: datetime) -> None:
             raise ApiError(403, "Mas'ulni faqat sotuv bo'limi rahbari o'zgartiradi")
         d.owner_tg = int_or_none(b["owner_tg"])
     if "title" in b:
-        d.title = s(b["title"]).strip()[:255] or d.title
+        d.title = deal_title(d.pk, s(b["title"]) or d.title)
     if "amount" in b:
         d.amount = num(b["amount"])
     if "probability" in b:
@@ -542,12 +610,19 @@ def patch_deal(me: Me, d: Deal, b: dict[str, Any], now: datetime) -> None:
     if "need" in b:
         d.need = s(b["need"])
     fields = card_fields(b)
+    signed_now = fields.get("sign_status") == SignStatus.SIGNED and d.sign_status != SignStatus.SIGNED
     if fields.get("sign_status") == SignStatus.SENT and d.sign_status != SignStatus.SENT:
         d.sign_sent_at = now  # imzo kuzatuvi: 1 kun ichida imzolanmasa — eslatma (SLA)
     for f, v in fields.items():
         setattr(d, f, v)
+    if any(f in fields for f, _, _ in PRICING):
+        recalc(d)
     d.updated = now
     d.save()
+    if signed_now:
+        from . import sales
+
+        sales.advance(me, d, "payment", now, "shartnoma imzolandi")
 
 
 def item_amount(x: dict[str, Any]) -> Decimal:
@@ -571,7 +646,7 @@ def save_items(d: Deal, b: dict[str, Any], now: datetime) -> dict[str, Any]:
         if isinstance(x, dict)
     ]
     d.items = items
-    d.amount = sum((item_amount(x) for x in items), Decimal(0)).quantize(Decimal(1))
+    d.amount = priced(d, goods_total(items)) if items else Decimal(0)
     d.updated = now
     d.save(update_fields=["items", "amount", "updated"])
     return {"items": items, "amount": money(d.amount)}
@@ -591,7 +666,17 @@ def make_doc(me: Me, d: Deal, kind: str, now: datetime) -> dict[str, Any]:
         kind=kind,
         date=timezone.localdate(now),
         status="posted" if kind == "quote" else "draft",
-        total=sum((item_amount(x) for x in items), Decimal(0)).quantize(Decimal(1)),
+        total=priced(d, goods_total(items)),
+        lines=[{**x, "amount": money(item_amount(x).quantize(Decimal(1)))} for x in items],
+        meta={
+            "customer": d.customer.name if d.customer else "",
+            "inn": d.customer.inn if d.customer else "",
+            "location": d.location,
+            "sub": money(goods_total(items).quantize(Decimal(1))),
+            "discount": money(d.discount),
+            "markup": money(d.markup),
+            "logistics": money(d.logistics),
+        },
     )
     Activity.objects.create(
         deal=d,
@@ -602,16 +687,88 @@ def make_doc(me: Me, d: Deal, kind: str, now: datetime) -> dict[str, Any]:
     )
     d.updated = now
     d.save(update_fields=["updated"])
-    return {
+    from . import sales
+
+    sales.advance(me, d, "offer", now, f"{'tijorat taklifi' if kind == 'quote' else 'buyurtma'} {doc.number} tuzildi")
+    return doc_json(doc)
+
+
+def doc_json(doc: Doc, full: bool = False) -> dict[str, Any]:
+    out: dict[str, Any] = {
         "id": doc.pk,
-        "deal_id": d.pk,
+        "deal_id": doc.deal_id,
         "number": doc.number,
-        "kind": kind,
+        "kind": doc.kind,
         "date": doc.date.isoformat(),
         "status": doc.status,
-        "state": None,
+        "state": doc.state or None,
         "total": money(doc.total),
     }
+    if full:
+        d = doc.deal
+        lines, meta = list(doc.lines or []), dict(doc.meta or {})
+        if not lines:  # eski hujjat (qatorlar nusxasisiz) — bitimning hozirgi katalog tovarlaridan
+            items = [x for x in d.items or [] if x.get("item_id")]
+            lines = [{**x, "amount": money(item_amount(x).quantize(Decimal(1)))} for x in items]
+            meta = {
+                "customer": d.customer.name if d.customer else "",
+                "inn": d.customer.inn if d.customer else "",
+                "location": d.location,
+                "sub": money(goods_total(items).quantize(Decimal(1))),
+                "discount": money(d.discount),
+                "markup": money(d.markup),
+                "logistics": money(d.logistics),
+                "restored": True,
+            }
+        from . import didox
+
+        out |= {
+            "lines": lines,
+            "meta": meta,
+            "deal_title": d.title,
+            "customer_id": d.customer_id,
+            # Didox: ulanganmi, qoralama ID'si va holati (matni bilan), kichik turlar
+            "didox": {
+                "enabled": didox.enabled(),
+                "id": doc.didox_id or None,
+                "status": doc.didox_status,
+                "status_text": didox.STATUS.get(doc.didox_status) if doc.didox_status is not None else None,
+                "at": iso(doc.didox_at),
+                "url": didox.CABINET,
+                "subtypes": [{"code": k, "name": v} for k, v in didox.SUBTYPES.items()],
+            },
+        }
+    return out
+
+
+def get_doc(me: Me, pk: int) -> Doc:
+    """Hujjat — faqat ko'ra oladigan bitimniki (aks holda 404)."""
+    doc = (
+        Doc.objects.select_related("deal", "deal__customer")
+        .filter(pk=pk, deal__in=me.deals(Deal.objects.all()))
+        .first()
+    )
+    if doc is None:
+        raise ApiError(404, "Hujjat topilmadi")
+    return doc
+
+
+@transaction.atomic
+def confirm_doc(me: Me, doc: Doc, now: datetime) -> dict[str, Any]:
+    """Buyurtma qoralamasini tasdiqlash (o'tkazish)."""
+    if doc.kind != "order":
+        raise ApiError(400, "Faqat buyurtma qoralamasi tasdiqlanadi.")
+    if doc.status != "draft":
+        raise ApiError(409, "Buyurtma allaqachon tasdiqlangan.")
+    doc.status, doc.state = "posted", "confirmed"
+    doc.save(update_fields=["status", "state"])
+    Activity.objects.create(
+        deal=doc.deal, kind="doc", ts=now, actor=me.tg_id, text=f"Buyurtma {doc.number} tasdiqlandi"
+    )
+    from . import sales
+
+    sales.advance(me, doc.deal, "contract", now, f"buyurtma {doc.number} tasdiqlandi")
+    return doc_json(doc, full=True)
 
 
 def add_activity(me: Me, d: Deal, b: dict[str, Any], now: datetime) -> dict[str, Any]:
@@ -650,8 +807,72 @@ def task_done(me: Me, pk: int, b: dict[str, Any], now: datetime) -> dict[str, An
 
 
 # ------------------------------------------------------------------ mijozlar
+# STIR / JSHSHIR uzunligi mijoz turiga qarab
+INN_RULES: dict[str, tuple[tuple[int, ...], str]] = {
+    CustomerKind.COMPANY: ((9,), "Firma STIRi 9 xonali bo'lsin."),
+    CustomerKind.STATE: ((9,), "Tashkilot STIRi 9 xonali bo'lsin."),
+    CustomerKind.PERSON: ((14,), "JSHSHIR 14 xonali bo'lsin."),
+    CustomerKind.IP: ((9, 14), "YaTT: STIR 9 yoki JSHSHIR 14 xonali bo'lsin."),
+}
+# yangi mijoz yaratishda STIR majburiy turlar (jismoniy shaxs JSHSHIRi, savdogar, firma xodimi — ixtiyoriy)
+INN_REQUIRED = (CustomerKind.COMPANY, CustomerKind.IP, CustomerKind.STATE)
+
+
+def norm_phones(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    return [("998" + p if len(p) == 9 else p)[:20] for p in (digits(x) for x in raw) if p]
+
+
+def cust_fields(b: dict[str, Any], c: Customer | None = None) -> dict[str, Any]:
+    """Mijoz turi va turga xos maydonlar (berilganlari) — tekshiruv bilan; c — mavjud mijoz (yangilashda).
+    Firma xodimi — firma nomi majburiy; savdogar — telefon majburiy; STIR uzunligi — turga qarab."""
+    kind = s(b["kind"]) if "kind" in b else (c.kind if c else CustomerKind.COMPANY)
+    if kind not in CustomerKind.values:
+        raise ApiError(400, "Mijoz turi noto'g'ri.")
+    out: dict[str, Any] = {"kind": kind} if "kind" in b else {}
+    if "inn" in b:
+        inn = digits(b["inn"])
+        lens, msg = INN_RULES.get(kind, ((9, 14), "STIR 9 yoki JSHSHIR 14 xonali bo'lsin."))
+        if inn and len(inn) not in lens:
+            raise ApiError(400, msg)
+        out["inn"] = inn
+    for f, n in (("position", 120), ("company", 255), ("address", 300)):
+        if f in b:
+            out[f] = s(b[f]).strip()[:n]
+    if "company_inn" in b:
+        ci = digits(b["company_inn"])
+        if ci and len(ci) != 9:
+            raise ApiError(400, "Firma STIRi 9 xonali bo'lsin.")
+        out["company_inn"] = ci
+    if "phones" in b:
+        if not isinstance(b["phones"], list):
+            raise ApiError(400, "Telefonlar ro'yxat ko'rinishida bo'lsin.")
+        out["phones"] = norm_phones(b["phones"])
+
+    def cur(f: str) -> Any:
+        return out[f] if f in out else (getattr(c, f) if c is not None else None)
+
+    if kind == CustomerKind.EMPLOYEE and not str(cur("company") or "").strip():
+        raise ApiError(400, "Firma xodimi: qaysi firmadan — firma nomini yozing.")
+    if kind == CustomerKind.TRADER and not cur("phones"):
+        raise ApiError(400, "Savdogar: telefon raqamini yozing.")
+    return out
+
+
 def cust_json(c: Customer) -> dict[str, Any]:
-    return {"id": c.pk, "name": c.name, "inn": c.inn or None, "phones": list(c.phones or []), "owner_tg": c.owner_tg}
+    return {
+        "id": c.pk,
+        "kind": c.kind,
+        "name": c.name,
+        "position": c.position or None,
+        "company": c.company or None,
+        "company_inn": c.company_inn or None,
+        "inn": c.inn or None,
+        "phones": list(c.phones or []),
+        "owner_tg": c.owner_tg,
+        "address": c.address or None,
+    }
 
 
 def find_customers(me: Me, text: str) -> list[dict[str, Any]]:
@@ -659,7 +880,7 @@ def find_customers(me: Me, text: str) -> list[dict[str, Any]]:
     if not t:
         return []
     dg = digits(t)
-    cond = Q(name__icontains=t) | Q(inn__icontains=t)
+    cond = Q(name__icontains=t) | Q(inn__icontains=t) | Q(company__icontains=t)
     if len(dg) >= 4:
         cond |= Q(phones__icontains=dg)
     return [cust_json(c) for c in me.customers(Customer.objects.all()).filter(cond)[:20]]
@@ -669,9 +890,18 @@ def new_customer(me: Me, b: dict[str, Any]) -> dict[str, Any]:
     name = s(b.get("name")).strip()
     if not name:
         raise ApiError(400, "Mijoz nomini yozing")
-    phones = [digits(p) for p in b.get("phones") or [] if digits(p)] if isinstance(b.get("phones"), list) else []
+    f = cust_fields({"phones": [], **b})
+    # yangi mijoz: telefon — har doim, STIR — yuridik shaxs / YaTT / davlat tashkilotida (egasi qarori 2026-11-17)
+    if not f.get("phones"):
+        raise ApiError(400, "Telefon raqamini yozing.")
+    kind = f.get("kind", CustomerKind.COMPANY)
+    if kind in INN_REQUIRED and not f.get("inn"):
+        raise ApiError(400, "STIR raqamini yozing.")
+    inn = f.get("inn", "")
+    if inn and (twin := me.customers(Customer.objects.filter(inn=inn)).first()):
+        raise ApiError(409, f"Bu STIR bilan mijoz bor: «{twin.name}» — ro'yxatdan tanlang.")
     owner = (int_or_none(b.get("owner_tg")) or me.tg_id) if me.is_head else me.tg_id
-    return cust_json(Customer.objects.create(name=name[:255], phones=phones, owner_tg=owner))
+    return cust_json(Customer.objects.create(name=name[:255], owner_tg=owner, **f))
 
 
 # ------------------------------------------------------------------ lidlar
@@ -699,7 +929,12 @@ def lead_json(lead: Lead, **extra: Any) -> dict[str, Any]:
         "next_call_at": iso(lead.next_call_at),
         "tg": None
         if lead.tg_chat is None
-        else {"chat_id": lead.tg_chat_id, "username": lead.tg_chat.username or None, "unread": lead.tg_chat.unread},
+        else {
+            "chat_id": lead.tg_chat_id,
+            "username": lead.tg_chat.username or None,
+            "unread": lead.tg_chat.unread,
+            "channel": lead.tg_chat.connection.channel,
+        },
         **extra,
     }
 
@@ -709,7 +944,7 @@ OPEN_LEADS = (LeadStatus.NEW, LeadStatus.WORK, LeadStatus.INTERESTED)
 
 def leads(me: Me, q: dict[str, str]) -> list[dict[str, Any]]:
     st = [x for x in (q.get("status") or ",".join(OPEN_LEADS)).split(",") if x]
-    qs = me.own(Lead.objects.select_related("tg_chat").filter(status__in=st))
+    qs = me.own(Lead.objects.select_related("tg_chat__connection").filter(status__in=st))
     owner = q.get("owner") or "" if me.is_head else ""
     if owner == "none":
         qs = qs.filter(owner_tg__isnull=True)

@@ -20,14 +20,16 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from config.apps.core.http import ApiError, api, json_body, ok
+from config.apps.erp.catalog import services as catalog
 from config.apps.staff.services import User
 
 from . import customers as CU
 from . import deals as D
+from . import meta as wa_ig
 from . import reports as RP
 from . import tg
 from .access import Me, is_sales_head
-from .models import Customer, TgChat, TgConnection, TgMessage
+from .models import Channel, Customer, TgChat, TgConnection, TgMessage
 
 log = logging.getLogger(__name__)
 PAGE = 50
@@ -78,7 +80,11 @@ def _chat_json(c: TgChat, u: User) -> dict[str, Any]:
         "last_text": c.last_text,
         "last_out": c.last_out,
         "unread": c.unread,
-        "can_send": c.connection.user_tg == u.tg_id and c.connection.can_reply and c.connection.is_enabled,
+        "channel": c.connection.channel,
+        "can_send": c.connection.user_tg == u.tg_id
+        and c.connection.can_reply
+        and c.connection.is_enabled
+        and (c.connection.channel == Channel.TG or wa_ig.enabled(c.connection.channel)),
         "customer": {"id": c.customer_id, "name": c.customer.name} if c.customer else None,
     }
 
@@ -138,21 +144,58 @@ def webhook(request: HttpRequest) -> HttpResponse:
     return JsonResponse({"ok": True})
 
 
+@csrf_exempt
+def meta_webhook(request: HttpRequest) -> HttpResponse:
+    """GET/POST /app/api/erp/crm/meta/webhook — WhatsApp Cloud API va Instagram (Meta ilova sozlamasidagi manzil).
+    GET — obunani tasdiqlash (hub.verify_token), POST — imzo (X-Hub-Signature-256, META_APP_SECRET) bilan."""
+    if request.method == "GET":
+        g = request.GET
+        token = g.get("hub.verify_token", "")
+        if g.get("hub.mode") == "subscribe" and hmac.compare_digest(token, settings.META_VERIFY_TOKEN):
+            return HttpResponse(g.get("hub.challenge", ""), content_type="text/plain")
+        return JsonResponse({"detail": "Ruxsat yo'q"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"detail": "Faqat GET/POST."}, status=405)
+    if not wa_ig.check_signature(request.body, request.headers.get("X-Hub-Signature-256", "")):
+        return JsonResponse({"detail": "Ruxsat yo'q"}, status=403)
+    try:
+        payload = json.loads(request.body)
+    except ValueError:
+        return JsonResponse({"detail": "Noto'g'ri JSON"}, status=400)
+    try:
+        wa_ig.handle(payload if isinstance(payload, dict) else {})
+    except Exception:  # Meta qayta-qayta yubormasin — xato logda
+        log.exception("meta webhook ishlanmadi")
+    return JsonResponse({"ok": True})
+
+
 @api(check=_crm, deny=CRM_DENY)
 def chats(request: HttpRequest, u: User) -> HttpResponse:
-    """GET tg/chats?q= — chatlar (oxirgi xabar bo'yicha) va o'z ulanish holati."""
+    """GET tg/chats?q=&ch=tg|wa|ig — chatlar (oxirgi xabar bo'yicha; ch bo'lmasa — barcha kanallar), o'z Telegram
+    ulanishi va kanallar holati (ulangan-ulanmagan, o'qilmaganlar — tab belgilari uchun)."""
     q = (request.GET.get("q") or "").strip()
-    qs = _chats(u)
+    ch = request.GET.get("ch") or ""
+    mine = _chats(u)
+    unread = {c: 0 for c in Channel.values}
+    for c, n in mine.filter(unread__gt=0).values_list("connection__channel", "unread"):
+        unread[c] = unread.get(c, 0) + n
+    qs = mine.filter(connection__channel=ch) if ch in Channel.values else mine
     if q:
         qs = qs.filter(
             Q(title__icontains=q) | Q(username__icontains=q.lstrip("@")) | Q(connection__user_name__icontains=q)
         )
-    conn = TgConnection.objects.filter(user_tg=u.tg_id).order_by("-is_enabled", "-updated_at").first()
+    conn = (
+        TgConnection.objects.filter(user_tg=u.tg_id, channel=Channel.TG).order_by("-is_enabled", "-updated_at").first()
+    )
     return ok(
         {
             "bot": tg.bot_username(),
             "head": is_sales_head(u),
             "connection": None if conn is None else {"enabled": conn.is_enabled, "can_reply": conn.can_reply},
+            "channels": {
+                c: {"enabled": tg.enabled() if c == Channel.TG else wa_ig.enabled(c), "unread": unread.get(c, 0)}
+                for c in Channel.values
+            },
             "chats": [_chat_json(c, u) for c in qs.order_by("-last_at")[:200]],
         }
     )
@@ -243,7 +286,7 @@ def deal_stage(request: HttpRequest, u: User, pk: int) -> HttpResponse:
     if D.s(b.get("stage")) == "later":  # «Keyinroq» — qayta bog'lanish sanasi majburiy
         from . import sales
 
-        sales.later(me, D.get_deal(me, pk), b.get("recall"), now)
+        sales.later(me, D.get_deal(me, pk), b.get("recall"), now, b.get("recall_time"), b.get("recall_note"))
     else:
         D.move_stage(me, D.get_deal(me, pk), D.s(b.get("stage")), D.s(b.get("reason")).strip(), now)
     return ok(D.detail(me, pk, now))
@@ -261,15 +304,44 @@ def deal_doc(request: HttpRequest, u: User, pk: int) -> HttpResponse:
     return ok(D.make_doc(me, D.get_deal(me, pk), D.s(json_body(request).get("kind")), timezone.now()))
 
 
+@api(("GET", "POST"), check=_crm, deny=CRM_DENY)
+def doc(request: HttpRequest, u: User, pk: int, act: str = "") -> HttpResponse:
+    """GET docs/{id} — hujjat (qatorlar, narxlash nusxasi, Didox holati). POST docs/{id}/…:
+    confirm — buyurtmani tasdiqlash; send {chat_id} — mijoz chatiga (PDF / Instagram — matn);
+    didox {subtype} — Didox'da qoralama; didox-status — Didox holatini yangilash."""
+    from . import docsend
+
+    me, now = Me.of(u), timezone.now()
+    d = D.get_doc(me, pk)
+    if request.method == "GET":
+        return ok(D.doc_json(d, full=True))
+    b = json_body(request)
+    if act == "confirm":
+        return ok(D.confirm_doc(me, d, now))
+    if act == "send":
+        return ok(docsend.to_chat(me, d, _chat(u, D.int_or_none(b.get("chat_id")) or 0), now))
+    if act == "didox":
+        return ok(docsend.to_didox(me, d, D.int_or_none(b.get("subtype")) or 6, now))
+    if act == "didox-status":
+        return ok(docsend.didox_refresh(me, d, now))
+    raise ApiError(404, "Amal topilmadi")
+
+
 @api(check=_crm, deny=CRM_DENY)
 def doc_pdf(request: HttpRequest, u: User, pk: int) -> HttpResponse:
-    raise ApiError(501, "PDF hali tayyor emas — hujjat shabloni 1C/savdo moduli ko'chirilganda qo'shiladi.")
+    """GET docs/{id}/pdf — hujjat PDF'i (yuklab olish)."""
+    from . import docsend
+
+    d = D.get_doc(Me.of(u), pk)
+    resp = HttpResponse(docsend.render(d), content_type="application/pdf")
+    resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(docsend.filename(d))}"
+    return resp
 
 
 @api(check=_crm, deny=CRM_DENY)
 def items(request: HttpRequest, u: User) -> HttpResponse:
-    """Katalog qidiruvi — katalog moduli hali ko'chirilmagan: bo'sh (tovar nomini qo'lda yozish mumkin)."""
-    return ok([])
+    """GET items?q= — katalog qidiruvi (variant bo'yicha qatorlar, narx va erkin qoldiq bilan) — catalog.services."""
+    return ok(catalog.search(request.GET.get("q") or ""))
 
 
 @api(("GET", "POST"), check=_crm, deny=CRM_DENY)
@@ -412,6 +484,33 @@ def deal_payment(request: HttpRequest, u: User, pk: int) -> HttpResponse:
     b = json_body(request)
     sales.add_payment(me, D.get_deal(me, pk), D.num(b.get("amount")), D.s(b.get("via")).strip()[:40] or "bank", now)
     return ok(D.detail(me, pk, now))
+
+
+@api(("GET", "POST"), check=_crm, deny=CRM_DENY)
+def calls(request: HttpRequest, u: User) -> HttpResponse:
+    """GET calls?customer= — mijoz qo'ng'iroqlari; POST calls — qo'lda yozish (crm/calls.py)."""
+    from . import calls as CL
+
+    me = Me.of(u)
+    if request.method == "POST":
+        return ok(CL.log_manual(me, json_body(request), timezone.now()))
+    return ok(CL.history(me, D.int_or_none(request.GET.get("customer")) or 0))
+
+
+@csrf_exempt
+def calls_webhook(request: HttpRequest) -> HttpResponse:
+    """POST erp/crm/calls/webhook — IP-telefoniya (sarlavha X-Calls-Token = CRM_CALLS_TOKEN; format — crm/calls.py)."""
+    from . import calls as CL
+
+    if request.method != "POST":
+        return JsonResponse({"detail": "Faqat POST."}, status=405)
+    token = settings.CRM_CALLS_TOKEN
+    if not token or not hmac.compare_digest(request.headers.get("X-Calls-Token", ""), token):
+        return JsonResponse({"detail": "Ruxsat yo'q"}, status=403)
+    try:
+        return ok(CL.from_pbx(json_body(request), timezone.now()))
+    except ApiError as e:
+        return JsonResponse({"detail": e.detail}, status=e.status)
 
 
 @csrf_exempt

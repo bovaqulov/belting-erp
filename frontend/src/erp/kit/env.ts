@@ -39,11 +39,21 @@ const ver = (v: string) => {
   }
 };
 
+/** Telegram tashqarisida (Android brauzer, skaner-telefon) — navigator.vibrate */
+const vib = (p: number | number[]) => {
+  try {
+    navigator.vibrate?.(p);
+  } catch {
+    /* tebranish yo'q */
+  }
+};
+const hf = () => etg()?.HapticFeedback;
 export const hap = {
-  tap: () => etg()?.HapticFeedback?.selectionChanged?.(),
-  soft: () => etg()?.HapticFeedback?.impactOccurred?.("light"),
-  ok: () => etg()?.HapticFeedback?.notificationOccurred?.("success"),
-  err: () => etg()?.HapticFeedback?.notificationOccurred?.("error"),
+  tap: () => (hf() ? hf()?.selectionChanged?.() : vib(8)),
+  soft: () => (hf() ? hf()?.impactOccurred?.("light") : vib(12)),
+  ok: () => (hf() ? hf()?.notificationOccurred?.("success") : vib(30)),
+  err: () => (hf() ? hf()?.notificationOccurred?.("error") : vib([80, 60, 80])),
+  warn: () => (hf() ? hf()?.notificationOccurred?.("warning") : vib([40, 40, 40])),
 };
 
 export const iconSvg = (n: string): string => svgMarkup(ICONS[n] ?? ICONS.file, "i");
@@ -78,22 +88,38 @@ export function toast(text: string, kind: "ok" | "bad" | "info" = "ok"): void {
 }
 
 let actx: AudioContext | undefined;
-/** Skaner signali: ovoz + ekran chaqnashi + tebranish */
-export function beep(ok: boolean): void {
+/** Ohanglar ketma-ketligi: [chastota Hz, davom s][] */
+function tones(seq: [number, number][], type: OscillatorType): void {
   try {
     actx = actx ?? new AudioContext();
-    const o = actx.createOscillator();
-    const g = actx.createGain();
-    o.frequency.value = ok ? 880 : 220;
-    o.type = ok ? "sine" : "square";
-    g.gain.value = 0.12;
-    o.connect(g);
-    g.connect(actx.destination);
-    o.start();
-    o.stop(actx.currentTime + (ok ? 0.07 : 0.4));
+    let t = actx.currentTime;
+    for (const [f, d] of seq) {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.frequency.value = f;
+      o.type = type;
+      g.gain.value = 0.12;
+      o.connect(g);
+      g.connect(actx.destination);
+      o.start(t);
+      o.stop(t + d);
+      t += d + 0.04;
+    }
   } catch {
     /* ovozsiz */
   }
+}
+/** Skaner signali: ovoz (yaxshi — bitta baland, xato — ikki past) + ekran chaqnashi + tebranish */
+export function beep(ok: boolean): void {
+  tones(
+    ok
+      ? [[880, 0.07]]
+      : [
+          [220, 0.18],
+          [180, 0.22],
+        ],
+    ok ? "sine" : "square",
+  );
   let f = document.querySelector<HTMLDivElement>("[data-flash]");
   if (!f) {
     f = document.createElement("div");
@@ -106,6 +132,18 @@ export function beep(ok: boolean): void {
   setTimeout(() => delete el.dataset.k, 300);
   if (ok) hap.ok();
   else hap.err();
+}
+
+/** Ogohlantirish (amal navbatga qo'yildi — internet yo'q): ikki o'rta ohang + tebranish */
+export function beepWarn(): void {
+  tones(
+    [
+      [520, 0.08],
+      [520, 0.08],
+    ],
+    "triangle",
+  );
+  hap.warn();
 }
 
 /** Kamera QR skaneri (faqat Telegram 6.4+). cb false qaytarsa — oyna yopiladi. */
@@ -151,9 +189,9 @@ export function download(url: string, name = "stiker.pdf"): void {
 /** Brauzerda sessiya yo'q (401) — <Login/> oynasini ochish hodisasi */
 export const LOGIN_EVENT = "erp:login";
 
-export async function api<T = unknown>(path: string, body?: unknown): Promise<T> {
+export async function api<T = unknown>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
   try {
-    return await baseApi<T>(path, body === undefined ? {} : { method: "POST", body });
+    return await baseApi<T>(path, body === undefined ? { headers } : { method: "POST", body, headers });
   } catch (e) {
     if (e instanceof ApiError && e.status === 401 && !initData()) {
       window.dispatchEvent(new Event(LOGIN_EVENT));

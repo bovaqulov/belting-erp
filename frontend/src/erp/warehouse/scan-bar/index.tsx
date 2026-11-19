@@ -7,7 +7,8 @@
 //   <ScanBar sc={sc} ph="…" />
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { beep, etg, scanQR } from "@/erp/kit/env";
+import { beep, beepWarn, etg, scanQR } from "@/erp/kit/env";
+import { Queued } from "@/erp/warehouse/api/outbox";
 
 import { ScanBarView, type Msg, type MsgAct } from "./ui";
 
@@ -15,6 +16,8 @@ export type { Msg, MsgAct };
 export type ScanMsgState = {
   msg: Msg;
   say: (ok: boolean | null, title: string, sub?: string, act?: MsgAct) => void;
+  /** xato yoki navbatga qo'yilgan amal (internet yo'q): ovoz + xabar */
+  fail: (e: unknown) => void;
   clear: () => void;
 };
 export type Scanner = ScanMsgState & { busy: boolean; submit: (code: string) => void; inp: React.RefObject<HTMLInputElement | null> };
@@ -23,7 +26,16 @@ export function useScanMsg(): ScanMsgState {
   const [msg, setMsg] = useState<Msg>(null);
   const say = useCallback((ok: boolean | null, title: string, sub?: string, act?: MsgAct) => setMsg({ ok, title, sub, act }), []);
   const clear = useCallback(() => setMsg(null), []);
-  return { msg, say, clear };
+  const fail = useCallback((e: unknown) => {
+    if (e instanceof Queued) {
+      beepWarn();
+      setMsg({ ok: null, title: "Navbatga qo'yildi", sub: e.message });
+      return;
+    }
+    beep(false);
+    setMsg({ ok: false, title: (e as Error)?.message || String(e) });
+  }, []);
+  return { msg, say, fail, clear };
 }
 
 export function useScanner(handler: (code: string) => Promise<void>, m: ScanMsgState): Scanner {
@@ -34,19 +46,16 @@ export function useScanner(handler: (code: string) => Promise<void>, m: ScanMsgS
   useLayoutEffect(() => {
     fn.current = handler;
   });
-  const { say } = m;
+  const { fail } = m;
   const submit = useCallback(
     (code: string) => {
       setBusy(true);
       chain.current = chain.current
         .then(() => fn.current(code))
-        .catch((e: unknown) => {
-          beep(false);
-          say(false, (e as Error).message || String(e));
-        })
+        .catch((e: unknown) => fail(e))
         .finally(() => setBusy(false));
     },
-    [say],
+    [fail],
   );
   useEffect(() => {
     if (!etg()) setTimeout(() => inp.current?.focus(), 50);

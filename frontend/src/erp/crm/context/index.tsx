@@ -7,6 +7,7 @@ import type { Opt } from "@/erp/kit/modal";
 
 import { post } from "@/erp/crm/api";
 import type { Customer, Me, Meta, Stage } from "@/erp/crm/lib";
+import type { Recall } from "@/erp/crm/recall";
 import type { TgChat } from "@/erp/crm/telegram/tg.lib";
 
 export type Crm = {
@@ -17,6 +18,8 @@ export type Crm = {
   users: Record<number, string>;
   choose: <V>(title: string, opts: Opt<V>[]) => Promise<V | null>;
   ask: (title: string, o?: { label?: string; placeholder?: string; multiline?: boolean; ok?: string }) => Promise<string | null>;
+  /** «Keyinroq»: qayta bog'lanish sanasi, soati va izohi (bekor — null) */
+  recall: () => Promise<Recall | null>;
   openDeal: (id: number) => void;
   /** mijoz kartochkasi */
   openCustomer: (id: number) => void;
@@ -47,13 +50,13 @@ export async function moveTo(crm: Crm, id: number, stage: string): Promise<boole
     );
     if (!reason) return false;
   }
-  let recall: string | null = null;
+  let recall: Recall | null = null;
   if (stage === "later") {
-    recall = await crm.ask("Qayta bog'lanish sanasi", { label: "Sana (kun.oy.yil)", placeholder: "15.12.2026", ok: "Saqlash" });
+    recall = await crm.recall();
     if (!recall) return false;
   }
   try {
-    await post(`/app/api/erp/crm/deals/${id}/stage`, { stage, reason, recall });
+    await post(`/app/api/erp/crm/deals/${id}/stage`, { stage, reason, ...recall });
     toast(`→ ${st.name}`);
     return true;
   } catch (e) {

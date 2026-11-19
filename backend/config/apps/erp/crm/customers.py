@@ -18,7 +18,7 @@ from django.utils import timezone
 from config.apps.core.http import ApiError
 
 from .access import Me
-from .deals import digits, int_or_none, iso, money, s
+from .deals import cust_fields, digits, int_or_none, iso, money, s
 from .models import Customer, Deal, StageKind, TgChat
 
 BOUGHT = ("shipping", "won")  # Savdo voronkasi: tovar olingan
@@ -100,6 +100,9 @@ def table(me: Me, q: dict[str, str], now: datetime) -> dict[str, Any]:
                 "id": c.pk,
                 "name": c.name,
                 "inn": c.inn or None,
+                "kind": c.kind,
+                "company": c.company or None,
+                "position": c.position or None,
                 "phones": list(c.phones or []),
                 "owner_tg": c.owner_tg,
                 "bought_n": c.bought_n,
@@ -138,6 +141,11 @@ def card(me: Me, pk: int, now: datetime) -> dict[str, Any]:
         "owner_tg": c.owner_tg,
         "contacts": list(c.contacts or []),
         "note": c.note or "",
+        "address": c.address or "",
+        "kind": c.kind,
+        "position": c.position or "",
+        "company": c.company or "",
+        "company_inn": c.company_inn or "",
         "created": iso(c.created),
         "stats": {
             "bought_n": len(dates),
@@ -162,8 +170,16 @@ def card(me: Me, pk: int, now: datetime) -> dict[str, Any]:
         ],
         # Telegram — faqat o'z chatlari (yozishmalar shaxsiy)
         "tg": [
-            {"id": x.pk, "title": x.title, "username": x.username or None, "unread": x.unread}
-            for x in TgChat.objects.people().filter(customer=c, connection__user_tg=me.tg_id)
+            {
+                "id": x.pk,
+                "title": x.title,
+                "username": x.username or None,
+                "unread": x.unread,
+                "channel": x.connection.channel,
+            }
+            for x in TgChat.objects.people()
+            .select_related("connection")
+            .filter(customer=c, connection__user_tg=me.tg_id)
         ],
     }
 
@@ -198,23 +214,16 @@ def update(me: Me, pk: int, b: dict[str, Any]) -> None:
             raise ApiError(400, "Mijoz nomi bo'sh bo'lmasin.")
         c.name = name
         fields.append("name")
-    if "inn" in b:
-        inn = digits(b["inn"])
-        if inn and len(inn) not in (9, 14):
-            raise ApiError(400, "STIR 9 xonali (yuridik) yoki JSHSHIR 14 xonali bo'lsin.")
-        c.inn = inn
-        fields.append("inn")
-    if "phones" in b:
-        if not isinstance(b["phones"], list):
-            raise ApiError(400, "Telefonlar ro'yxat ko'rinishida bo'lsin.")
-        c.phones = [("998" + p if len(p) == 9 else p)[:20] for p in (digits(x) for x in b["phones"]) if p]
-        fields.append("phones")
+    for f, v in cust_fields(b, c).items():  # turi, STIR, telefonlar, lavozim, firma, manzil — tekshiruv bilan
+        setattr(c, f, v)
+        fields.append(f)
     if "contacts" in b:
         c.contacts = _contacts(b["contacts"])
         fields.append("contacts")
     if "note" in b:
         c.note = s(b["note"])
         fields.append("note")
+
     if "owner_tg" in b and int_or_none(b["owner_tg"]) != c.owner_tg:
         if not me.is_head:
             raise ApiError(403, "Mijoz mas'ulini faqat sotuv bo'limi rahbari o'zgartiradi")

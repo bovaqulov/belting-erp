@@ -1,5 +1,5 @@
 "use client";
-// Ombor (/app/erp/ombor, erp_ombor.html dan): joylashtirish, sanash, qabul, ko'chirish, hisobdan chiqarish, joylar. Kompyuterda — chap menyu va ikki ustun, telefonda / Telegram'da — tablar,
+// Ombor (/app/erp/ombor, erp_ombor.html dan): joylashtirish, sanash, qabul, yig'ish, ko'chirish, hisobdan chiqarish, joylar. Kompyuterda — chap menyu va ikki ustun, telefonda / Telegram'da — tablar,
 // katta skaner xabari, pastki asosiy tugma. Ildiz: ishga tushish (rejim: haqiqiy/demo, foydalanuvchi), ko'rinish (?sec=).
 // API: /app/api/erp/* (Jarvis kontrakti, docs/api/warehouse.md) — api/ orqali; backend bo'lmasa demo/.
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -11,12 +11,16 @@ import { useWide } from "@/erp/kit/wide";
 import { Accept } from "@/erp/warehouse/accept";
 import { api, demoReset, whMode } from "@/erp/warehouse/api";
 import { Bag } from "@/erp/warehouse/bag";
+import { Move } from "@/erp/warehouse/move";
 import { Cells } from "@/erp/warehouse/cells";
 import { makeHelpers, WhCtx, type Wh } from "@/erp/warehouse/context";
 import { Count } from "@/erp/warehouse/count";
 import { DEMO_CODES } from "@/erp/warehouse/demo";
 import { deskView, HOME, parseView, viewQs, viewTitle, type Cell, type Me, type Sec, type View } from "@/erp/warehouse/lib";
+import { Kpi } from "@/erp/warehouse/kpi";
 import { More } from "@/erp/warehouse/more";
+import { Outbox } from "@/erp/warehouse/outbox";
+import { Pick } from "@/erp/warehouse/pick";
 import { Place } from "@/erp/warehouse/place";
 import { useSizeAsk } from "@/erp/warehouse/size-ask";
 
@@ -37,11 +41,11 @@ function Boot() {
     const me = await api<Me>("/app/api/erp/me");
     return { me, demo: mode === "demo" };
   }, []);
-  if (st.data) return <Main me={st.data.me} demo={st.data.demo} />;
+  if (st.data) return <Main me={st.data.me} demo={st.data.demo} reloadMe={st.reload} />;
   return <BootView err={st.err} net={st.net} onRetry={() => void st.reload()} />;
 }
 
-function Main({ me, demo }: { me: Me; demo: boolean }) {
+function Main({ me, demo, reloadMe }: { me: Me; demo: boolean; reloadMe: () => Promise<void> }) {
   const wide = useWide();
   const dialogs = useDialogs();
   const size = useSizeAsk();
@@ -65,7 +69,7 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
       const all = await api<Cell[]>("/app/api/erp/cells").catch(() => [] as Cell[]);
       const cs = all.filter((c) => !parent || c.parent_id === parent);
       if (!cs.length) {
-        toast("Joylar yaratilmagan — Joylar bo'limida yarating", "bad");
+        toast("Joylar yaratilmagan — «Ombor xaritasi» bo'limida yarating", "bad");
         return undefined;
       }
       const v = await choose<number>("Joy", [{ value: 0, label: "Joysiz" }, ...cs.map((c) => ({ value: c.id, label: c.code, sub: `${c.warehouse} · ${c.units} birlik` }))]);
@@ -76,8 +80,8 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
   );
 
   const wh: Wh = useMemo(
-    () => ({ me, wide, demo, choose: dialogs.choose, ask: dialogs.ask, askSize: size.askSize, pickCell, go, ...helpers }),
-    [me, wide, demo, dialogs.choose, dialogs.ask, size.askSize, pickCell, go, helpers],
+    () => ({ me, wide, demo, choose: dialogs.choose, ask: dialogs.ask, askSize: size.askSize, pickCell, go, reloadMe, ...helpers }),
+    [me, wide, demo, dialogs.choose, dialogs.ask, size.askSize, pickCell, go, reloadMe, helpers],
   );
 
   const section = (v: View) => {
@@ -88,8 +92,12 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
         return <Count />;
       case "acc":
         return <Accept />;
+      case "pick":
+        return <Pick />;
+      case "kpi":
+        return <Kpi />;
       case "move":
-        return <Bag mode="move" />;
+        return <Move />;
       case "off":
         return <Bag mode="off" />;
       case "cells":
@@ -113,6 +121,7 @@ function Main({ me, demo }: { me: Me; demo: boolean }) {
           location.replace(location.pathname);
         }}
       >
+        <Outbox />
         <div key={shown}>{section(shown)}</div>
       </WhLayout>
       {dialogs.node}

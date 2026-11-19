@@ -3,10 +3,11 @@
 import { useState } from "react";
 
 import { dt } from "@/erp/kit/fmt";
-import { Empty, List, Loaded, Row, useLoad } from "@/erp/kit/ui";
+import { Empty, Icon, List, Loaded, Row, useLoad } from "@/erp/kit/ui";
 import { api, P } from "@/erp/marketplace/api";
 import { useMk } from "@/erp/marketplace/context";
-import { CHN, leftText, STG, STG_COLOR, STG_ST, type Board, type BoardStage, type Order, type OrderCh } from "@/erp/marketplace/lib";
+import { pickingHtml, printWin } from "@/erp/marketplace/print";
+import { CHN, leftText, picking, STG, STG_COLOR, STG_ST, type Board, type BoardStage, type Order, type OrderCh } from "@/erp/marketplace/lib";
 import { OrderSheet } from "@/erp/marketplace/order";
 import { Tbl } from "@/erp/kit/table";
 import { WbOrders } from "@/erp/marketplace/wb";
@@ -44,17 +45,29 @@ function ChannelBoard({ ch }: { ch: Exclude<OrderCh, "wb"> }) {
     const n = k === "active" ? (cnt.new ?? 0) + (cnt.assembly ?? 0) : (cnt[k] ?? 0);
     return n ? `${STG[k]} · ${n}` : STG[k];
   };
+  // Tanlanma ro'yxati — joriy bosqichdagi buyurtmalar, tovar bo'yicha jamlangan (WB postavkadagi bilan bir xil)
+  const rows = st.data?.orders ?? [];
+  const printPicking = () => {
+    const name = `${CHN[ch]} · ${STG[stage]}`;
+    printWin(`Tanlanma ro'yxati — ${name}`, pickingHtml(name, rows.length, picking(rows)));
+  };
   return (
     <>
-      <div className="chips" role="group" aria-label="Bosqich">
-        {(Object.keys(STG) as BoardStage[]).map((k) => (
-          <button key={k} type="button" className={`chip ${stage === k ? "on" : ""}`} aria-pressed={stage === k} onClick={() => setStage(k)}>
-            {label(k)}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="chips min-w-0 basis-full md:basis-0 md:flex-1" role="group" aria-label="Bosqich">
+          {(Object.keys(STG) as BoardStage[]).map((k) => (
+            <button key={k} type="button" className={`chip ${stage === k ? "on" : ""}`} aria-pressed={stage === k} onClick={() => setStage(k)}>
+              {label(k)}
+            </button>
+          ))}
+        </div>
+        {rows.length ? (
+          <button type="button" className="b min-h-11" title="Omborda bir yurishda olish uchun — tovar bo'yicha" onClick={printPicking}>
+            <Icon n="list" /> Tanlanma ro&apos;yxati · {rows.length}
           </button>
-        ))}
+        ) : null}
       </div>
-      <div style={{ height: 10 }} />
-      <div style={{ height: 14 }} />
+      <div style={{ height: 24 }} />
       <Loaded st={st}>
         {(b) =>
           !b.orders.length ? (

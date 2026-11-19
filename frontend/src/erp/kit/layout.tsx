@@ -58,16 +58,18 @@ export const AppTop = ({ up, upLabel = "", title, sub, onUp, logo }: { up: strin
 /** Bo'lim tablari (telefon): pastki chiziq bilan — filtr chiplaridan ajralib tursin */
 export function AppTabs<K extends string>({ items, cur, onPick, label }: { items: [K, ReactNode, ReactNode?][]; cur: K; onPick: (k: K) => void; label: string }) {
   return (
-    <nav className="mx-4 mt-1 flex gap-0.5 overflow-x-auto border-b border-sep [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={label}>
+    // teng bo'linadi, aylanmaydi: tor ekranda nom «…» bilan qisqaradi (to'liq nomi — title)
+    <nav className="mx-4 mt-1 flex border-b border-sep" aria-label={label}>
       {items.map(([k, t, extra]) => (
         <button
           key={k}
           type="button"
-          className={`-mb-px inline-flex min-h-11 cursor-pointer items-center border-0 border-b-2 bg-transparent px-2.5 pt-2.5 pb-[9px] text-[14.5px] whitespace-nowrap ${cur === k ? "border-link font-semibold text-fg" : "border-transparent font-medium text-hint"}`}
+          title={typeof t === "string" ? t : undefined}
+          className={`-mb-px inline-flex min-h-11 min-w-0 flex-auto cursor-pointer items-center justify-center gap-1 border-0 border-b-2 bg-transparent px-1 pt-2.5 pb-[9px] text-[clamp(12.5px,3.7vw,14.5px)] whitespace-nowrap ${cur === k ? "border-link font-semibold text-fg" : "border-transparent font-medium text-hint"}`}
           aria-current={cur === k ? "page" : undefined}
           onClick={() => onPick(k)}
         >
-          {t}
+          <span className="min-w-0 truncate">{t}</span>
           {extra}
         </button>
       ))}
