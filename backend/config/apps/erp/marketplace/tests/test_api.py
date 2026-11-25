@@ -156,7 +156,14 @@ def test_modul_huquqi(client, user):
 def test_erp_me(c):
     me = c.get("/app/api/erp/me").json()
     wh = {k: me.pop(k) for k in ("warehouses", "firms", "kinds")}  # ombor appi qo'shadi
-    assert me == {"tg_id": 7, "name": "Omborchi", "roles": ["employee"], "is_head": False, "modules": ["marketplace"]}
+    assert me == {
+        "tg_id": 7,
+        "name": "Omborchi",
+        "roles": ["employee"],
+        "is_head": False,
+        "modules": ["marketplace"],
+        "perms": [],
+    }
     assert wh["warehouses"] and wh["firms"]
     assert all(k["can"] == [] for k in wh["kinds"])  # ombor moduli yo'q — hujjat yarata olmaydi
 

@@ -40,7 +40,7 @@ Birlik turi `kind`: `roll` | `piece` | `lot` (donali partiya, kodsiz) | `product
 | `POST cells` `{parent_id, codes[], block_id?}` | yangi yaratilganlar `[{id, code}]` (shu omborda borlari o'tkazib yuboriladi; boshqa omborda band kod — 400, hech narsa yaratilmaydi); `block_id` — hamma kod shu blok harfi bilan boshlansin, aks holda 400 |
 | `GET moves?unit_id \| item_id \| loc_id \| doc_id \| warehouse_id \| op, before_id, limit` | harakatlar jurnali (eng yangisi birinchi, ≤200): `[{id, at, op, op_title, unit_id, unit_code, item_id, char_id, firm, delta, qty_after, wh_from, wh_to, loc_from, loc_to, doc_id, doc_number, reason, author_name}]` |
 | `GET putaway?store_id, item_id, width_mm?, n?` | joylashtirish tavsiyasi (≤5): `[{id, code, reason, units, capacity}]` — 1) shu tovar turgan joy, 2) guruhiga mos xonadagi bo'sh joy, 3) boshqa bo'sh joy; qavat — bel balandligi (B, C) birinchi; bloklangan, to'la, eni sig'maydigan va saqlash bo'lmagan xonalar — chiqmaydi |
-| `GET cat/groups` | katalog tovar guruhlari (xona qoidasi uchun) |
+| `GET wh/groups` | katalog tovar guruhlari nomlari `[string]` (xona qoidasi uchun). `cat/*` — katalog API (docs/api/catalog.md), band qilinmaydi |
 | `POST purchase/incoming` `{supplier?, firm, expected?, items: [{item_id, char_id?, qty}]}` | kutilgan kirim (ASN, raqami `KR-26-0001`, «Yo'lda» omborida) — `incoming` shaklida; faqat ombor huquqi |
 | `DELETE purchase/incoming/{id}` | bekor qilish — `{ok}`; qisman qabul qilingan — 409, yakunlangan — 404 |
 | `GET kpi/dock?store_id, days=30` | qabuldan joylashgacha (dock-to-stock): `{days, placed, avg_h, median_h, within_2h (%), waiting, oldest_h}` |
@@ -78,8 +78,7 @@ Birlik turi `kind`: `roll` | `piece` | `lot` (donali partiya, kodsiz) | `product
 
 | Yo'l | Javob |
 |---|---|
-| `GET cat/items?q=` | `[{id, name, grp, kind: material\|product\|goods\|service, qty, unit}]` |
-| `GET cat/items/{id}` | `{id, name, grp, kind, unit, measured, attrs: {dims}, chars: [{id, name}]}` |
+| `GET cat/items?q=` · `GET cat/items/{id}` | katalog API (docs/api/catalog.md) — ombor shu maydonlarni ishlatadi: ro'yxat `{id, name, grp, kind, unit, qty}`, kartochka `{id, name, grp, kind, unit, measured, attrs: {dims}, chars: [{id, name}]}` |
 | `POST place` `{loc_id, item_id, firm, char_id, qty \| null, units: [{w, l} \| {w} \| {q}] \| null}` | boshlang'ich qoldiq hujjati darhol o'tkaziladi: `{number, item, loc, qty, unit, units: [batch_id], label: {url}}` |
 | `GET place/recent?loc_id=` | bugun men joylaganlar (yoki shu javondagilar): `[{id, name, loc, number, firm, date, qty, unit, author}]` |
 | `POST place/{id}/undo` | `{ok}` — faqat muallif |

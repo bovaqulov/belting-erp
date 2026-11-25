@@ -132,8 +132,43 @@ function Hr() {
   );
 }
 
+/** Sales — hujjatlar zanjiri: buyurtma → yuk xati, pastda to'lov belgisi. */
+function Sales() {
+  return (
+    <svg viewBox={VB} aria-hidden="true">
+      <rect x="22" y="14" width="46" height="60" rx="7" fill="currentColor" opacity=".45" />
+      <rect className={s.paper} x="30" y="26" width="30" height="5" rx="2.5" />
+      <rect className={s.paper} x="30" y="37" width="22" height="5" rx="2.5" />
+      <rect className={s.paper} x="30" y="48" width="26" height="5" rx="2.5" />
+      <path d="M74 44 H88" stroke="currentColor" strokeWidth="5" strokeLinecap="round" opacity=".7" />
+      <path d="M84 36 L93 44 L84 52" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" opacity=".7" />
+      <rect x="96" y="14" width="46" height="60" rx="7" fill="currentColor" opacity=".75" />
+      <rect className={s.paper} x="104" y="26" width="30" height="5" rx="2.5" />
+      <rect className={s.paper} x="104" y="37" width="30" height="5" rx="2.5" />
+      <circle cx="119" cy="80" r="12" fill="currentColor" />
+      <path className={s.paperStroke} d="M113 80 l4 4 l8 -9" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Money — kassa: banknotlar va tanga. */
+function Money() {
+  return (
+    <svg viewBox={VB} aria-hidden="true">
+      <rect x="26" y="30" width="78" height="44" rx="7" fill="currentColor" opacity=".45" />
+      <rect x="40" y="20" width="78" height="44" rx="7" fill="currentColor" opacity=".75" />
+      <circle className={s.paper} cx="79" cy="42" r="10" />
+      <rect className={s.paper} x="50" y="28" width="12" height="5" rx="2.5" />
+      <circle cx="124" cy="74" r="14" fill="currentColor" />
+      <path className={s.paperStroke} d="M124 66 v16 M119 70 h8 a3 3 0 0 1 0 6 h-6 a3 3 0 0 0 0 6 h8" fill="none" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export const ERP_ART: Record<string, () => React.JSX.Element> = {
   crm: Crm,
+  sales: Sales,
+  money: Money,
   warehouse: Warehouse,
   manufacturing: Manufacturing,
   accounting: Accounting,

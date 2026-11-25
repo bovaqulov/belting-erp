@@ -29,7 +29,7 @@ export interface Rec {
 
 export interface RecDetail extends Rec {
   inn: string | null;
-  bitrixUrl: string | null;
+  crmUrl: string | null; // CRM mijoz kartochkasi (/app/erp/crm/?customer=<id>)
   orgUrl: string | null;
   checkins: { id: number; note: string; ts: string; tg_id: number; name: string | null }[];
 }
@@ -39,8 +39,7 @@ export interface Me {
   name: string | null;
   role: string;
   full: boolean;
-  bxUser: string | null;
-  portal: string;
+  ownerId: string | null; // xaritadagi `owner` bilan solishtiriladi (mas'ul — CRM xodimi, tg_id)
 }
 
 export interface Meta {
@@ -55,7 +54,7 @@ export interface Territory {
   kind: "draw" | "radius" | "auto" | "import";
   color: string;
   geometry: GeoJSON.Geometry;
-  owner_bx: string | null;
+  owner: string | null;
   grp: string | null;
   meta: Record<string, unknown>;
   n: number;

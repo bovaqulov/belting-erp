@@ -1,3 +1,3 @@
-"""Moliya — To'lovlar, qarzlar, kassa (1C bilan).
+"""Moliya (Accounting) — shartnomalar va kontragentlar, maoshlar (docs/api/accounting.md). Mahsulotlar — katalog appida.
 
-Frontend: src/erp/finance/. Eski manba (jarvis): office/erp/, static/erp_moliya.html. Holat: skelet (modellar va API keyingi bosqichda)."""
+Frontend: src/erp/finance/. Eski manba (jarvis): office/erp/, static/erp_moliya.html. To'lovlar, qarzlar, kassa (1C) — keyin."""

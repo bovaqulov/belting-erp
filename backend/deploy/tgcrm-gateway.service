@@ -1,0 +1,27 @@
+# TelegramCRM shlyuzi — systemd (Linux). O'rnatish:
+#   sudo cp backend/deploy/tgcrm-gateway.service /etc/systemd/system/
+#   (User, WorkingDirectory, uv yo'lini serverga moslang)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now tgcrm-gateway
+#   journalctl -u tgcrm-gateway -f
+# BITTA nusxa: ikkinchisi Redis qulfini ololmay chiqadi (bitta sessiya ikki joyda — Telegram uni o'chiradi).
+[Unit]
+Description=Belting TelegramCRM gateway (Telethon)
+After=network-online.target redis.service postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=belting
+WorkingDirectory=/srv/belting_erp/backend
+ExecStart=/usr/local/bin/uv run --frozen python manage.py tg_gateway
+# SIGTERM — sessiyalar bazaga saqlanib, toza to'xtaydi
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+# qulf boshqa nusxada bo'lsa — darhol qayta urinmasin
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Install]
+WantedBy=multi-user.target

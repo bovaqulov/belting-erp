@@ -194,12 +194,12 @@ export function TerritoryView({
                 <em title="Mijozlar soni">{num(t.n)}</em>
                 {p.full && <b title="Savdo (12 oy), so'm">{money(t.sales)}</b>}
                 {p.full ? (
-                  <select className="gm-input small" aria-label={`${t.name} mas'uli`} disabled={busy} value={t.owner_bx ?? ""} onChange={(e) => onPatch(t.id, { owner: e.target.value || null })}>
+                  <select className="gm-input small" aria-label={`${t.name} mas'uli`} disabled={busy} value={t.owner ?? ""} onChange={(e) => onPatch(t.id, { owner: e.target.value || null })}>
                     <option value="">mas&apos;ulsiz</option>
                     {p.owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                   </select>
                 ) : (
-                  <span className="gm-muted small">{ownerName(t.owner_bx)}</span>
+                  <span className="gm-muted small">{ownerName(t.owner)}</span>
                 )}
                 {p.full && <button type="button" className="gm-x" disabled={busy} onClick={() => onDelete(t)} aria-label={`${t.name} hududini o'chirish`}>×</button>}
               </div>

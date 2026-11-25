@@ -43,10 +43,9 @@ const STATUS: [CellStatus, string][] = [
 ];
 
 export function Cells() {
-  const { wide, stores, me, reloadMe, choose } = useWh();
-  const [picked, setWh] = useState(stores[0]?.id);
-  // tanlangan ombor o'chirilsa — ro'yxatdagi birinchisi
-  const wh = stores.some((x) => x.id === picked) ? picked : stores[0]?.id;
+  const { wide, stores, me, reloadMe, choose, store: cur } = useWh();
+  // ombor — kirishda tanlangani (bitta bo'lsa — o'sha)
+  const wh = cur?.id ?? stores[0]?.id;
   const [path, setPath] = useState<Path>(TOP);
   const [sel, setSel] = useState<Cell | null>(null);
   const [modal, setModal] = useState<Modals>(null);
@@ -57,7 +56,7 @@ export function Cells() {
     return { cells, s };
   }, [wh]);
   /** katalog tovar guruhlari — xonaga joylashtirish qoidasi uchun */
-  const grps = useLoad(() => api<string[]>(`${E}/cat/groups`).catch(() => [] as string[]), []);
+  const grps = useLoad(() => api<string[]>(`${E}/wh/groups`).catch(() => [] as string[]), []);
 
   const v = useMemo(() => {
     const cells = (st.data?.cells ?? []).filter((c) => c.parent_id === wh);
@@ -402,7 +401,7 @@ export function Cells() {
       return true;
     }
     const other = (st.data?.cells ?? []).find((x) => x.code === code);
-    toast(other ? `${code} — «${other.warehouse}» omborida: yuqoridagi tabdan o'sha omborni tanlang` : `${code} — bunday kod topilmadi`, "bad");
+    toast(other ? `${code} — «${other.warehouse}» omborida: o'sha omborga o'ting (Ombor → omborni almashtirish)` : `${code} — bunday kod topilmadi`, "bad");
     return false;
   };
 
@@ -410,8 +409,6 @@ export function Cells() {
     <CellsView
       wide={wide}
       st={st}
-      stores={stores}
-      wh={wh}
       store={store ? { ...store, code: v.code || store.code } : null}
       back={rack ? rack.code : blk ? (blk.full ?? blk.code) : "Ombor xaritasi"}
       bldBoxes={bldBoxes}
@@ -441,10 +438,6 @@ export function Cells() {
           </>
         ) : null
       }
-      onWh={(w) => {
-        setWh(w);
-        go(TOP);
-      }}
       onSel={setSel}
       onModal={(m) => (m === null ? close() : open(m))}
       onStoreMenu={() => void storeMenu()}

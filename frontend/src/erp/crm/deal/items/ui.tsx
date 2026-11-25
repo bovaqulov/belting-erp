@@ -65,6 +65,7 @@ export function ItemsView({
   onEdit,
   onRemove,
   onDoc,
+  onSales,
 }: {
   rows: DealItem[];
   closed: boolean;
@@ -76,6 +77,8 @@ export function ItemsView({
   onEdit: (i: number, f: ItemField, v: string) => void;
   onRemove: (i: number) => void;
   onDoc: (kind: "quote" | "order") => void;
+  /** savdo moduli: bitimdan buyurtma (1C kabi hujjatlar zanjiri) — /app/erp/savdo */
+  onSales?: () => void;
 }) {
   return (
     <div className={BOX}>
@@ -145,6 +148,11 @@ export function ItemsView({
               <button type="button" className="b pri" disabled={busy} onClick={() => onDoc("order")}>
                 <Icon n="cart" /> Buyurtma tuzish
               </button>
+              {onSales ? (
+                <button type="button" className="b" disabled={busy} onClick={onSales}>
+                  <Icon n="file-text" /> Savdo hujjati
+                </button>
+              ) : null}
             </div>
           )}
         </>

@@ -17,7 +17,7 @@ from django.db import transaction
 
 from . import hooks, ledger
 from . import stock as S
-from .models import Cell, Doc, DocStatus, Pick, Unit, Warehouse, WhKind
+from .models import Cell, Doc, DocStatus, Firm, Pick, Unit, Warehouse, WhKind
 
 Bad = S.Bad
 NotFound = S.NotFound
@@ -38,6 +38,46 @@ def free(item_ids: Iterable[int]) -> dict[tuple[int, int | None], Decimal]:
 
 def stock_of(item_id: int) -> Decimal:
     return sum((v for (i, _c), v in S.totals([item_id]).items() if i == item_id), Decimal(0))
+
+
+def item_totals(item_ids: Iterable[int]) -> dict[int, tuple[Decimal, int]]:
+    """Katalog ro'yxati uchun: tovar → (tirik qoldiq, birliklar soni) — barcha omborlar."""
+    out: dict[int, tuple[Decimal, int]] = {}
+    for item_id, qty in S.live().filter(item_id__in=list(item_ids)).values_list("item_id", "qty"):
+        q, n = out.get(item_id, (Decimal(0), 0))
+        out[item_id] = (q + qty, n + 1)
+    return out
+
+
+def item_units(item_id: int) -> list[dict[str, Any]]:
+    """Katalog kartochkasi uchun: tovarning tirik birliklari — ombor, firma, joy, kod, o'lcham, miqdor, variant ID."""
+    return [
+        {
+            "id": u.pk,
+            "warehouse": u.warehouse.name,
+            "firm": u.firm,
+            "loc": u.loc.code if u.loc else None,
+            "code": u.code,
+            "width_mm": S.mm(u.width_mm),
+            "length_mm": S.mm(u.length_mm),
+            "qty": S.fl(u.qty),
+            "char_id": u.char_id,
+        }
+        for u in S.live().select_related("warehouse", "loc").filter(item_id=item_id).order_by("warehouse__name", "pk")
+    ]
+
+
+def firms() -> list[dict[str, Any]]:
+    """Firmalar (tovar egasi, shartnoma tomoni): [{id, code, name}]."""
+    return [{"id": f.pk, "code": f.code, "name": f.name} for f in Firm.objects.order_by("code")]
+
+
+def warehouses() -> list[dict[str, Any]]:
+    """Saqlash omborlari (yo'ldagi emas): [{id, name, code, kind}] — savdo hujjatlari (yuk xati) uchun."""
+    return [
+        {"id": w.pk, "name": w.name, "code": w.code, "kind": w.kind}
+        for w in Warehouse.objects.filter(active=True).exclude(kind=WhKind.TRANSIT).order_by("id")
+    ]
 
 
 def candidates(item_id: int, limit: int = 8) -> list[dict[str, Any]]:
@@ -451,3 +491,8 @@ def demo_seed() -> dict[str, Any]:
     from . import demo
 
     return demo.seed()
+
+
+def dashboard_summary() -> dict[str, Any]:
+    """Analitika uchun ombor paneli (qiymati bilan): qoldiq, kam qoldiq, sanash aniqligi, yig'ish navbati, bugungi hujjatlar."""
+    return S.dashboard(see_cost=True)

@@ -7,6 +7,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 
+from config.apps.audit import services as audit
 from config.apps.core.telegram import send_message
 
 from . import runtime
@@ -62,6 +63,7 @@ def run_schedule(schedule_id: int) -> None:
         run.ok, run.error = False, str(e)[:2000]
     run.finished_at = s.last_run_at = timezone.now()
     run.save()
+    _audit(run, s.agent.key, None, "schedule")
     s.save(update_fields=["last_run_at"])
 
 
@@ -85,5 +87,13 @@ def run_task(task_id: int) -> None:
     t.finished_at = run.finished_at = timezone.now()
     t.save(update_fields=["result", "status", "finished_at"])
     run.save()
+    _audit(run, t.agent.key, t.created_by.tg_id if t.created_by else None, "task")
     if t.created_by:
         send_message(t.created_by.tg_id, f"✅ {t.agent.name}: «{t.title}» — {t.get_status_display()}\n\n{t.result}")
+
+
+def _audit(run: AgentRun, dept: str, tg_id: int | None, source: str) -> None:
+    audit.log(
+        "answer", tg_id=tg_id, dept=dept,
+        detail={"source": source, "tools": run.tools, "ok": run.ok, "error": run.error[:300], "chars": len(run.output)},
+    )  # fmt: skip

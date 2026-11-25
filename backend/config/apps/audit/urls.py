@@ -1,5 +1,10 @@
-"""Audit API (/app/api/...) — keyingi bosqichda."""
+"""Audit API: /app/api/audit, /app/api/voice/{id}."""
 
-from django.urls import URLPattern
+from django.urls import path
 
-urlpatterns: list[URLPattern] = []
+from . import views as v
+
+urlpatterns = [
+    path("audit", v.audit),
+    path("voice/<int:pk>", v.voice),
+]

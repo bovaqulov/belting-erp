@@ -1,4 +1,4 @@
-// /app/erp/logistics — Logistika: yetkazib berish xizmatlari (EMU, Yandex Go, Bito, Fargo). Mantiq: src/erp/logistics/.
+// /app/erp/logistics — Logistika: jo'natmalar (EMU, Yandex Go, Bito, Fargo). Mantiq: src/erp/logistics/.
 import type { Metadata } from "next";
 
 import LogisticsApp from "@/erp/logistics";

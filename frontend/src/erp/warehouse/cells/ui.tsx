@@ -1,10 +1,11 @@
-// Ombor xaritasi (faqat ko'rinish): bitta sahifada binolar → tanlangan binoning xonalari → tanlangan xonaning stellajlari →
-// tanlangan stellajning qator × qavat to'ri (har qator — ustun, qavatlari yuqoridan pastga). Amallar — narsaning o'zida: plitkada ⋯ (tahrirlash, PDF, o'chirish),
-// tablar yonida ⋯ (ombor), punktir plitka — qo'shish. Joy bosilsa — tafsilot (kompyuterda o'ngda, telefonda ro'yxat o'rnida).
+// Ombor xaritasi (faqat ko'rinish): bir vaqtda bitta daraja — binolar → bino ichidagi xonalar → xona ichidagi stellajlar →
+// stellajning qator × qavat to'ri (har qator — ustun, qavatlari yuqoridan pastga). Yuqoriga — yo'l (Binolar › AO1 › A).
+// Ro'yxat — Telegram sozlamalari uslubidagi qatorlar, oxirida «+ qo'shish»; amallar (⋯: tahrirlash, PDF, o'chirish) — ochilgan
+// bino/xona/stellaj sarlavhasida, ombor amallari — tablar yonida. Joy bosilsa — tafsilot (kompyuterda o'ngda, telefonda ro'yxat o'rnida).
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Modal } from "@/erp/kit/modal";
-import { C, Icon, Loaded, Seg, Sf } from "@/erp/kit/ui";
+import { Icon, Loaded, Seg, Sf } from "@/erp/kit/ui";
 import { Btns, Split } from "@/erp/warehouse/common";
 import { bldCode, blkCode, cellCode, cellPos, floorLetter, MAX_FLOORS, MAX_ROWS, rackCode, type Cell, type CellKind, type Purpose, type RackRow, type Warehouse, type WhKind } from "@/erp/warehouse/lib";
 
@@ -36,79 +37,93 @@ export type Grid = {
   rack?: { code: string; rows: number; floors: number; capacity?: number | null; cells: Cell[] };
 };
 
-const BOX =
-  "flex h-full min-h-[112px] w-full cursor-pointer flex-col rounded-[14px] border-0 bg-sec p-3.5 text-left text-inherit [font:inherit] hover:shadow-[inset_0_0_0_1px_var(--link)] active:opacity-75";
 /** ⋯ tugmasi: telefonda bosish maydoni ≥44px */
 const MORE =
   "flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border-0 bg-transparent text-sub [font:inherit] hover:bg-fill active:opacity-75 coarse:size-11";
-/** Bo'lim sarlavhasi: katta nom, soni va o'ngda yashil «+» (qo'shish) */
-function Head({ t, count, add, onAdd }: { t: string; count?: ReactNode; add?: string; onAdd?: () => void }) {
+/** Ro'yxat qatori (Telegram sozlamalari uslubi) */
+const ROW =
+  "flex min-h-[60px] w-full cursor-pointer items-center gap-3 border-0 border-b border-sep bg-transparent px-3 py-2 text-left text-inherit [font:inherit] last:border-b-0 hover:bg-fill active:bg-fill";
+
+/** Ochiq daraja sarlavhasi: nom, izoh va ⋯ (ochilgan bino/xona/stellaj amallari) */
+function Head({ t, s, menu }: { t: string; s?: ReactNode; menu?: () => void }) {
   return (
-    <div className="mx-4 mt-6 mb-3 flex min-h-11 items-center gap-3">
-      <h2 className="m-0 flex min-w-0 flex-1 items-baseline gap-2 text-[20px] leading-tight font-bold">
-        <span className="truncate">{t}</span>
-        {count ? <span className="num shrink-0 text-[15px] font-semibold text-hint">{count}</span> : null}
-      </h2>
-      {add && onAdd ? (
-        <button
-          type="button"
-          className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 text-white shadow-[0_3px_10px_-3px_rgba(52,199,89,.7)] hover:brightness-110 active:scale-95 coarse:size-11 [&_svg.i]:size-[22px]"
-          style={{ background: C.green }}
-          aria-label={add}
-          title={add}
-          onClick={onAdd}
-        >
-          <Icon n="plus" />
+    <div className="mx-4 mt-3 mb-2.5 flex min-h-11 items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <h2 className="m-0 truncate text-[20px] leading-tight font-bold">{t}</h2>
+        {s ? <p className="m-0 truncate text-[13px] text-hint">{s}</p> : null}
+      </div>
+      {menu ? (
+        <button type="button" className={MORE} aria-label={`${t}: amallar`} onClick={menu}>
+          <Icon n="more-horizontal" />
         </button>
       ) : null}
     </div>
   );
 }
 
-/** To'lganlik chizig'i: band / jami (foiz) — rang 90%+ — to'q sariq */
-function Fill({ used, total }: { used: number; total: number }) {
-  const pct = total ? Math.round((used / total) * 100) : 0;
+/** Yo'l: ‹ Binolar › AO1 › A — bosilsa o'sha darajaga qaytadi */
+function Crumbs({ items }: { items: { label: string; onClick: () => void }[] }) {
+  if (!items.length) return null;
   return (
-    <span className="mt-2 flex items-center gap-2" title={`${used} / ${total} joy band`}>
-      <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-fill" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="To'lganlik">
-        <span className={`block h-full rounded-full ${pct >= 90 ? "bg-[#f09a37]" : "bg-st-done"}`} style={{ width: `${pct}%` }} />
-      </span>
-      <span className="num shrink-0 text-xs text-hint">{pct}%</span>
-    </span>
+    <nav className="mx-3 mt-3 flex min-w-0 flex-wrap items-center gap-x-0.5 text-[15px]" aria-label="Yo'l">
+      {items.map((c, i) => (
+        <span key={i} className="flex min-w-0 items-center gap-0.5">
+          {i ? <Icon n="chevron-right" cls="size-4 shrink-0 text-hint" /> : null}
+          <button
+            type="button"
+            className="flex min-h-9 cursor-pointer items-center gap-0.5 truncate rounded-lg border-0 bg-transparent px-1.5 text-link [font:inherit] hover:bg-fill coarse:min-h-11"
+            onClick={c.onClick}
+          >
+            {i ? (
+              <span className="code font-semibold">{c.label}</span>
+            ) : (
+              <>
+                <Icon n="chevron-left" cls="size-4 shrink-0" />
+                {c.label}
+              </>
+            )}
+          </button>
+        </span>
+      ))}
+    </nav>
   );
 }
 
-function Boxes({ items }: { items: Box[] }) {
+/** Bino / xona / stellaj ro'yxati: kod, nom, izoh (to'lganlik), birliklar; oxirida — qo'shish */
+function Rows({ items, add, onAdd }: { items: Box[]; add?: string; onAdd?: () => void }) {
+  if (!items.length && !(add && onAdd)) return null;
   return (
-    <div className="mx-4 grid grid-cols-2 gap-2.5 min-[560px]:grid-cols-3 min-[1180px]:grid-cols-4">
-      {items.map((b) => (
-        <div key={b.key} className="relative">
-          <button
-            type="button"
-            aria-expanded={b.on === undefined ? undefined : b.on}
-            className={`${BOX} ${b.dim && !b.on ? "opacity-70" : ""} ${b.on ? "shadow-[inset_0_0_0_2px_var(--link)]" : ""}`}
-            onClick={b.onClick}
-          >
-            <span className="flex items-start justify-between gap-2">
-              {b.code ? <span className="code text-[26px] leading-none font-bold">{b.code}</span> : <Icon n="layers" />}
-              <span className="text-right">
-                <span className="num block text-[21px] leading-none font-bold">{b.units}</span>
-                <small className="text-xs text-hint">birlik</small>
+    <div className="mx-4 max-w-[760px] overflow-hidden rounded-[14px] bg-sec">
+      {items.map((b) => {
+        const pct = b.fill?.total ? Math.round((b.fill.used / b.fill.total) * 100) : null;
+        return (
+          <button key={b.key} type="button" className={ROW} onClick={b.onClick}>
+            <span className={`flex h-10 min-w-11 shrink-0 items-center justify-center rounded-[10px] bg-fill px-1.5 ${b.dim ? "text-hint" : ""}`}>
+              {b.code ? <span className="code text-[17px] font-bold">{b.code}</span> : <Icon n="layers" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={`block truncate font-semibold ${b.dim ? "text-sub" : ""}`}>{b.t}</span>
+              <span className="block truncate text-[13px] text-hint">
+                {b.s}
+                {pct !== null ? <span className={pct >= 90 ? "text-st-work" : ""}> · {pct}% band</span> : null}
               </span>
             </span>
-            <span className={`mt-auto min-w-0 pt-3 ${b.menu ? "pr-9 coarse:pr-11" : ""}`}>
-              <span className="block truncate font-semibold">{b.t}</span>
-              <span className="block truncate text-[13px] text-hint">{b.s}</span>
-              {b.fill && b.fill.total ? <Fill used={b.fill.used} total={b.fill.total} /> : null}
+            <span className="shrink-0 text-right">
+              <span className={`num block text-[17px] leading-tight font-bold ${b.units ? "" : "text-hint"}`}>{b.units}</span>
+              <span className="block text-xs text-hint">birlik</span>
             </span>
+            <Icon n="chevron-right" cls="size-4 shrink-0 text-hint" />
           </button>
-          {b.menu ? (
-            <button type="button" className={`${MORE} absolute right-1.5 bottom-1.5`} aria-label={`${b.t}: amallar`} onClick={b.menu}>
-              <Icon n="more-horizontal" />
-            </button>
-          ) : null}
-        </div>
-      ))}
+        );
+      })}
+      {add && onAdd ? (
+        <button type="button" className={`${ROW} min-h-[52px] text-link`} onClick={onAdd}>
+          <span className="flex h-10 min-w-11 shrink-0 items-center justify-center">
+            <Icon n="plus" />
+          </span>
+          <span className="font-semibold">{add}</span>
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -244,7 +259,7 @@ function Find({ onFind }: { onFind: (code: string) => boolean }) {
       <input
         className="h-11 min-w-0 flex-1 border-0 bg-transparent text-fg outline-none [font:inherit] placeholder:text-hint"
         value={q}
-        placeholder="Kod yoki skaner: AO1-A-01-03-C, AO1-A-01, AO1-A…"
+        placeholder="Joy kodi yoki skaner (AO1-A-01-03-C)"
         aria-label="Kod bo'yicha qidirish"
         autoCapitalize="characters"
         enterKeyHint="search"
@@ -682,8 +697,6 @@ function WizardModal({ form, onCancel, onSubmit }: { form: WizForm; onCancel: ()
 export function CellsView({
   wide,
   st,
-  stores,
-  wh,
   store,
   back,
   bldBoxes,
@@ -696,7 +709,6 @@ export function CellsView({
   sel,
   modal,
   detail,
-  onWh,
   onSel,
   onModal,
   onStoreMenu,
@@ -710,8 +722,6 @@ export function CellsView({
 }: {
   wide: boolean;
   st: St;
-  stores: Warehouse[];
-  wh: number | undefined;
   /** tanlangan ombor (tahrirlash oynasi uchun) */
   store: Warehouse | null;
   /** telefonda joy tafsilotidan qaytish tugmasi matni */
@@ -731,7 +741,6 @@ export function CellsView({
   sel: Cell | null;
   modal: Modals;
   detail: ReactNode;
-  onWh: (id: number) => void;
   onSel: (c: Cell | null) => void;
   onModal: (m: Modals) => void;
   onStoreMenu: () => void;
@@ -771,66 +780,73 @@ export function CellsView({
       </>
     );
 
+  // bir vaqtda bitta daraja (eng chuqur ochilgani); yuqoriga — yo'l (‹ Binolar › AO1 › A) orqali.
+  // Tanlangan plitkani qayta bosish — tanlovni bekor qiladi (index.tsx toggle), yo'l shu bilan ishlaydi.
+  const s1 = bldBoxes.find((b) => b.on);
+  const s2 = blkBoxes?.find((b) => b.on);
+  const s3 = rackBoxes?.find((b) => b.on);
+  const short = (b: Box) => b.code ?? b.t;
+  const full = (b: Box) => (b.code ? `${b.code} · ${b.t}` : b.t);
+  const count = (bs: Box[], w: string) => {
+    const k = bs.filter((b) => !b.dim).length;
+    return k ? `${k} ${w}` : undefined;
+  };
+  const crumbs = [
+    ...(s1 ? [{ label: "Binolar", onClick: s1.onClick }] : []),
+    ...(s1 && s2 ? [{ label: short(s1), onClick: s2.onClick }] : []),
+    ...(s1 && s2 && s3 && grid ? [{ label: short(s2), onClick: s3.onClick }] : []),
+  ];
+
+  const level = grid ? (
+    <section aria-label={`${grid.title} — joylar`}>
+      <Head t={grid.title} s={grid.sub} menu={s3?.menu} />
+      {grid.rack ? (
+        <Elevation rack={grid.rack} sel={sel} onSel={(c) => onSel(c)} />
+      ) : grid.rows.length ? (
+        <Racks rows={grid.rows} sel={sel} onSel={onSel} rowTitle={grid.rowTitle} onRowMenu={grid.rowMenu ? onRowMenu : undefined} />
+      ) : (
+        <Sf>Bu yerda joy yo&apos;q.</Sf>
+      )}
+    </section>
+  ) : rackBoxes && s2 ? (
+    <section aria-label={`${blockCode ?? "Xonaga biriktirilmagan"} — stellajlar`}>
+      <Head t={blockCode ? full(s2) : "Xonaga biriktirilmagan"} s={count(rackBoxes, "stellaj")} menu={s2.menu} />
+      <Rows items={rackBoxes} add={blockCode ? "Stellaj qo'shish" : undefined} onAdd={() => onModal("rack")} />
+      {!rackBoxes.length ? <Sf>Stellaj — qatorlar × qavatlar (masalan 4 × 7 = 28 joy). Joy kodi: xona-stellaj-qator-qavat, masalan A-1-03-2.</Sf> : null}
+    </section>
+  ) : blkBoxes && s1 ? (
+    <section aria-label={`${buildingName ?? "Binoga biriktirilmagan"} — xonalar`}>
+      <Head t={buildingName ? full(s1) : "Binoga biriktirilmagan"} s={count(blkBoxes, "xona")} menu={s1.menu} />
+      <Rows items={blkBoxes} add={buildingName ? "Xona qo'shish" : undefined} onAdd={() => onModal("blk")} />
+      {!blkBoxes.length ? <Sf>Xona — binodagi xona yoki zona (masalan A — konveyer lentalar). Joy kodlari xona harfi bilan boshlanadi.</Sf> : null}
+    </section>
+  ) : (
+    <section aria-label="Binolar">
+      <Head t="Binolar" s={count(bldBoxes, "bino")} />
+      <Rows items={bldBoxes} add="Bino qo'shish" onAdd={() => onModal("bld")} />
+      {!bldBoxes.length ? <Sf>Avval omborning binolarini qo&apos;shing, keyin binoga xonalar (A, B …), xonaga stellajlar (qator × qavat).</Sf> : null}
+    </section>
+  );
+
   const main = (
     <Loaded st={st}>
       {() => (
         <>
           <Find onFind={onFind} />
-          <Head t="Binolar" count={bldBoxes.filter((b) => !b.dim).length || undefined} add="Bino qo'shish" onAdd={() => onModal("bld")} />
-          <Boxes items={bldBoxes} />
-          {!bldBoxes.length ? <Sf>Avval omborning binolarini qo&apos;shing, keyin binoga xonalar (A, B …), xonaga stellajlar (qator × qavat).</Sf> : null}
-          {blkBoxes ? (
-            <section aria-label={`${buildingName ?? "Binoga biriktirilmagan"} — xonalar`}>
-              <Head
-                t={`Xonalar — ${buildingName ?? "binoga biriktirilmagan"}`}
-                count={blkBoxes.filter((b) => !b.dim).length || undefined}
-                add={buildingName ? "Xona qo'shish" : undefined}
-                onAdd={() => onModal("blk")}
-              />
-              <Boxes items={blkBoxes} />
-              {!blkBoxes.length ? <Sf>Xona — binodagi xona yoki zona (masalan A — konveyer lentalar). Joy kodlari xona harfi bilan boshlanadi.</Sf> : null}
-            </section>
-          ) : null}
-          {rackBoxes ? (
-            <section aria-label={`${blockCode ?? "Xonaga biriktirilmagan"} — stellajlar`}>
-              <Head
-                t={`Stellajlar — ${blockCode ? `${blockCode} xona` : "xonaga biriktirilmagan"}`}
-                count={rackBoxes.filter((b) => !b.dim).length || undefined}
-                add={blockCode ? "Stellaj qo'shish" : undefined}
-                onAdd={() => onModal("rack")}
-              />
-              <Boxes items={rackBoxes} />
-              {!rackBoxes.length ? <Sf>Stellaj — qatorlar × qavatlar (masalan 4 × 7 = 28 joy). Joy kodi: xona-stellaj-qator-qavat, masalan A-1-03-2.</Sf> : null}
-            </section>
-          ) : null}
-          {grid ? (
-            <section aria-label={`${grid.title} — joylar`}>
-              <Head t={grid.title} count={grid.sub} />
-              {grid.rack ? (
-                <Elevation rack={grid.rack} sel={sel} onSel={(c) => onSel(c)} />
-              ) : grid.rows.length ? (
-                <Racks rows={grid.rows} sel={sel} onSel={onSel} rowTitle={grid.rowTitle} onRowMenu={grid.rowMenu ? onRowMenu : undefined} />
-              ) : (
-                <Sf>Bu yerda joy yo&apos;q.</Sf>
-              )}
-            </section>
-          ) : null}
+          <Crumbs items={crumbs} />
+          {level}
         </>
       )}
     </Loaded>
   );
 
-  // ombor tablari va ombor amallari (⋯) — bir qatorda, yopishqoq
-  const tabs = stores.length ? (
-    <div className="sticky top-0 z-15 flex items-center bg-page [:root:has(#topbar:not(.hidden))_&]:top-[52px]">
-      <div className="min-w-0 flex-1">
-        <Seg<string> items={stores.map((x) => [String(x.id), x.name])} cur={String(wh ?? "")} onPick={(k) => onWh(Number(k))} />
-      </div>
-      {store ? (
-        <button type="button" className={`${MORE} mr-3 -ml-2`} aria-label={`«${store.name}» omborining amallari`} onClick={onStoreMenu}>
-          <Icon n="more-horizontal" />
-        </button>
-      ) : null}
+  // joriy ombor nomi va uning amallari (⋯) — bir qatorda, yopishqoq
+  const tabs = store ? (
+    <div className="sticky top-0 z-15 flex min-h-12 items-center gap-2 bg-page pl-4 [:root:has(#topbar:not(.hidden))_&]:top-[52px]">
+      <span className="min-w-0 flex-1 truncate font-semibold">{store.name}</span>
+      <button type="button" className={`${MORE} mr-3`} aria-label={`«${store.name}» omborining amallari`} onClick={onStoreMenu}>
+        <Icon n="more-horizontal" />
+      </button>
     </div>
   ) : null;
   return (

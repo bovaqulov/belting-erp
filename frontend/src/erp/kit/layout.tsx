@@ -27,11 +27,32 @@ export const DemoStrip = ({ text, onReset }: { text: string; onReset: () => void
 export { FIRM_LOGO };
 const Firm = ({ cls = "" }: { cls?: string }) => <span className={`${FIRM_LOGO} ${cls}`} role="img" aria-label="Belting rezina" />;
 
+/** sarlavha ostidagi tanlov tugmasi */
+const PICK =
+  "-ml-1 flex max-w-full cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent px-1 py-0.5 text-[15px] font-medium tracking-normal text-link coarse:min-h-11 [&_svg.i]:size-4 [&_svg.i]:flex-none";
+
 const UP = "grid size-11 flex-none cursor-pointer place-items-center rounded-[10px] border-0 bg-transparent p-0 text-link hover:bg-fill [&_svg.i]:size-[22px]";
 
 /** Telefon sarlavhasi: chapda qaytish (havola yoki ilova ichida — onUp), katta sarlavha va izoh */
 /** up=null va onUp yo'q — qaytish tugmasi ko'rsatilmaydi */
-export const AppTop = ({ up, upLabel = "", title, sub, onUp, logo }: { up: string | null; upLabel?: string; title: string; sub?: string; onUp?: () => void; logo?: boolean }) => (
+export const AppTop = ({
+  up,
+  upLabel = "",
+  title,
+  sub,
+  onUp,
+  logo,
+  pick,
+}: {
+  up: string | null;
+  upLabel?: string;
+  title: string;
+  sub?: string;
+  onUp?: () => void;
+  logo?: boolean;
+  /** sarlavha ostida tanlov tugmasi (masalan joriy ombor — bosilsa almashtiriladi) */
+  pick?: { label: string; onClick?: () => void };
+}) => (
   <div className={`flex items-start gap-1 pt-2.5 ${up || onUp ? "px-2" : "px-3"}`}>
     {onUp ? (
       <button type="button" className={UP} onClick={onUp} aria-label={upLabel} title={upLabel}>
@@ -45,6 +66,16 @@ export const AppTop = ({ up, upLabel = "", title, sub, onUp, logo }: { up: strin
     <div className="large min-w-0 flex-1 pt-0.5 pl-1">
       {title}
       {sub ? <small>{sub}</small> : null}
+      {pick ? (
+        pick.onClick ? (
+          <button type="button" className={PICK} onClick={pick.onClick} aria-label={`${pick.label} — almashtirish`}>
+            <span className="truncate">{pick.label}</span>
+            <Icon n="chevrons-up-down" />
+          </button>
+        ) : (
+          <small>{pick.label}</small>
+        )
+      ) : null}
     </div>
     {/* firma logosi — sarlavha qatorida o'ngda, ixcham */}
     {logo ? (
@@ -73,6 +104,35 @@ export function AppTabs<K extends string>({ items, cur, onPick, label }: { items
           {extra}
         </button>
       ))}
+    </nav>
+  );
+}
+
+/** Pastki menyu (telefon): suzuvchi yumaloq panel, tanlangan bo'lim — och fonli «tabletka». data-bnav — base.css shu
+ *  bo'lsa kontent va #mainbtn ni menyu balandligicha ko'taradi. Pastki xavfsiz zona: brauzer (env) yoki Telegram to'liq
+ *  ekrani (--tg-safe-area-inset-bottom). */
+export function BottomTabs<K extends string>({ items, cur, onPick, label }: { items: [K, string, string][]; cur: K; onPick: (k: K) => void; label: string }) {
+  return (
+    <nav
+      data-bnav=""
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(10px,env(safe-area-inset-bottom),var(--tg-safe-area-inset-bottom,0px))]"
+      aria-label={label}
+    >
+      <div className="pointer-events-auto mx-auto flex max-w-[560px] gap-0.5 rounded-[30px] border border-sep bg-sec/92 p-1 shadow-[0_8px_28px_-6px_rgba(0,0,0,.45)] backdrop-blur-[16px] backdrop-saturate-180">
+        {items.map(([k, t, icon]) => (
+          <button
+            key={k}
+            type="button"
+            title={t}
+            className={`flex min-h-[54px] min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-[26px] border-0 px-0.5 text-fg [font:inherit] [&_svg.i]:size-6 ${cur === k ? "bg-fill" : "bg-transparent active:bg-fill"}`}
+            aria-current={cur === k ? "page" : undefined}
+            onClick={() => onPick(k)}
+          >
+            <Icon n={icon} />
+            <span className={`max-w-full truncate text-[11px] leading-tight ${cur === k ? "font-semibold" : "font-medium"}`}>{t}</span>
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }

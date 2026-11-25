@@ -336,7 +336,7 @@ describe("demo ombor backend", () => {
     const blk = Object.fromEntries(st.blocks.map((x) => [x.code, x]));
     const rackA = st.racks.find((x) => x.code === "AO1-A-01")!;
     expect([blk.A.purpose, blk.A.groups, rackA.cell_kind, rackA.capacity]).toEqual(["storage", [], "shelf", null]);
-    expect(get<string[]>(db, "/cat/groups")).toContain("Konveyer lentalar");
+    expect(get<string[]>(db, "/wh/groups")).toContain("Konveyer lentalar");
     expect(post<WhBlock>(db, `/wh/blocks/${blk.A.id}`, { groups: ["Konveyer lentalar"], purpose: "storage" }).groups).toEqual(["Konveyer lentalar"]);
     expect(handle(db, "POST", `${A}/wh/blocks/${blk.A.id}`, { purpose: "nope" }, NOW).status).toBe(400);
 

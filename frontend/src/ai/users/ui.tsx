@@ -51,6 +51,7 @@ export function UsersView({
   onAgent,
   onHeadForm,
   onInvite,
+  onRoles,
   onCopyInvite,
   canAdmin,
   onApprove,
@@ -71,6 +72,7 @@ export function UsersView({
   onHeadForm: () => void;
   /** xodim taklif qilish oynasi */
   onInvite: () => void;
+  onRoles: () => void;
   onCopyInvite: (link: string) => void;
   /** ega/admin — taklif va boshliq tayinlash tugmalari */
   canAdmin: boolean;
@@ -79,6 +81,8 @@ export function UsersView({
   onRevoke: (code: string) => void;
 }) {
   const { users, PERMS, depts, byId } = ctx;
+  const roleName = Object.fromEntries((ctx.roles?.roles ?? []).map((r) => [r.key, r.name]));
+  const sub = (u: AdminUser) => ["@" + (u.username || "-"), ...(u.roles ?? []).map((k) => roleName[k]).filter(Boolean)].join(" · ");
   const { active, pending, blocked, owner, admins, leaders } = groupUsers(users, depts);
 
   // eski [data-id] onclick: e.stopPropagation(); openEditor(id)
@@ -103,7 +107,7 @@ export function UsersView({
         <div className={cx(s.ob, s.person, h && s.head)} {...tapProps(open(u.tg_id))}>
           <Avatar u={u} crown={!!h} />
           <div className={s.t}>{u.name || u.tg_id}</div>
-          <div className={s.s}>@{u.username || "-"}</div>
+          <div className={s.s}>{sub(u)}</div>
           {h && <PermIcons h={h} PERMS={PERMS} />}
           {/* xodimga biriktirilgan agentlar (Jarvis → Agentlar, kind=staff) */}
           {agents
@@ -228,7 +232,7 @@ export function UsersView({
           <Avatar u={u} crown={!!h} />
           <div className={s.main}>
             <div className={s.t}>{u.name || u.tg_id}</div>
-            <div className={s.s}>@{u.username || "-"}</div>
+            <div className={s.s}>{sub(u)}</div>
             {h && <PermIcons h={h} PERMS={PERMS} />}
           </div>
           <span className={cx(s.badge, h ? s.head : lead ? s.rahbar : s[u.role])}>
@@ -282,6 +286,9 @@ export function UsersView({
             <Icon name="list" /> Ro&apos;yxat
           </button>
         </div>
+        <button className={s.fab} title="Rollar va ruxsatlar" aria-label="Rollar va ruxsatlar" onClick={onRoles}>
+          <Icon name="shield-check" />
+        </button>
         {canAdmin && (
           <>
             <button className={s.fab} title="Xodim taklif qilish" aria-label="Xodim taklif qilish" onClick={onInvite}>
@@ -359,7 +366,7 @@ export function UsersView({
                 <div key={i.code} className={s.item}>
                   <Sq icon="link" color={d.color} />
                   <div className={s.main}>
-                    <div className={s.t}>{d.name}</div>
+                    <div className={s.t}>{[d.name, ...(i.roles ?? []).map((k) => roleName[k]).filter(Boolean)].join(" · ")}</div>
                     <div className={s.s}>
                       {i.name || byId[i.created_by]?.name || i.created_by} · {i.uses}/{i.max_uses} ·{" "}
                       {i.expires.slice(0, 10)} gacha

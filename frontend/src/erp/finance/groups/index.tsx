@@ -7,7 +7,7 @@ import { Empty, Icon, List, Row, Sf, Sh, Sheet } from "@/erp/kit/ui";
 import { CNT } from "@/erp/finance/tw";
 import { post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
-import { DIMS, groupDesc, KCOL, KIND, type Dims, type Group, type GroupAttrs, type Kind } from "@/erp/finance/lib";
+import { DIMS, FAMILIES, groupDesc, KCOL, KIND, type Dims, type Group, type GroupAttrs, type Kind } from "@/erp/finance/lib";
 
 type Edit = Partial<Group> | null;
 
@@ -82,6 +82,7 @@ function GroupForm({ g, onClose }: { g: Partial<Group>; onClose: () => void }) {
   const [name, setName] = useState(g.name ?? "");
   const [ru, setRu] = useState(g.name_ru ?? "");
   const [kind, setKind] = useState<Kind | "">(a.kind ?? "");
+  const [fam, setFam] = useState(a.family ?? "");
   // "-" — ota kategoriyadagidek (ichki) / dona (asosiy); "" — dona (ichkida aniq tanlov)
   const [dims, setDims] = useState<Dims | "" | "-">(a.dims ?? "-");
   const [belt, setBelt] = useState(!!a.belt);
@@ -102,7 +103,7 @@ function GroupForm({ g, onClose }: { g: Partial<Group>; onClose: () => void }) {
       done="Saqlash"
       onClose={onClose}
       onDone={async () => {
-        const attrs: GroupAttrs = { kind: kind || undefined, belt: belt || undefined };
+        const attrs: GroupAttrs = { family: fam || undefined, kind: kind || undefined, belt: belt || undefined };
         if (dims !== "-") attrs.dims = dims || undefined;
         await post("/app/api/erp/cat/groups", { id: g.id, parent_id: g.parent_id, name, name_ru: ru, attrs, sort: g.sort });
         toast("Saqlandi");
@@ -121,6 +122,17 @@ function GroupForm({ g, onClose }: { g: Partial<Group>; onClose: () => void }) {
       </List>
       <Sh t="Shu kategoriyadagi tovar odatda" />
       <List>
+        <div className="field">
+          <label htmlFor="acc-gf">Texnik oila</label>
+          <select id="acc-gf" value={fam} onChange={(e) => setFam(e.target.value)}>
+            <option value="">{parent ? "ota kategoriyadagidek" : "—"}</option>
+            {FAMILIES.map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.title}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="field">
           <label htmlFor="acc-gk">Turi</label>
           <select id="acc-gk" value={kind} onChange={(e) => setKind(e.target.value as Kind | "")}>

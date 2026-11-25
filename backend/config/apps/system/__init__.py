@@ -1,3 +1,3 @@
 """Tizim — Tizim holati: jarayonlar, navbat, loglar.
 
-Frontend: src/ai/system/. Eski manba (jarvis): web/system_api.py. Holat: skelet (modellar va API keyingi bosqichda)."""
+Frontend: src/ai/system/. Eski manba (jarvis): web/system_api.py. Holat: tayyor (testlar — tests/)."""

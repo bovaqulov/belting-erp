@@ -44,12 +44,14 @@ DOMAIN_APPS = [
     "config.apps.erp.purchasing",
     "config.apps.erp.sales",
     "config.apps.erp.finance",
+    "config.apps.erp.money",
     "config.apps.erp.crm",
     "config.apps.erp.logistics",
     "config.apps.erp.marketplace",
     "config.apps.conveyor",  # konveyer lenta chizmasi (LentaCUD)
     "config.apps.geomap",  # mijozlar xaritasi
     "config.apps.analytics",
+    "config.apps.tgcrm",  # TelegramCRM — Telethon (foydalanuvchi akkauntlari) orqali alohida tizim (docs/tgcrm/PLAN.md)
 ]
 
 INSTALLED_APPS = [
@@ -152,12 +154,21 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_BEAT_SCHEDULE = {
+    # TelegramCRM: muddati kelgan vazifalar — bajaruvchiga eslatma (har 5 daqiqa)
+    "tgcrm-reminders": {"task": "config.apps.tgcrm.tasks.remind_tasks", "schedule": 300.0},
+    # TelegramCRM: shlyuz o'chganmi, uzoq aloqasiz akkauntlar — ogohlantirish (har 5 daqiqa)
+    "tgcrm-health": {"task": "config.apps.tgcrm.tasks.health_check", "schedule": 300.0},
     # agent jadvallari: har daqiqa vaqti kelganlarini navbatga qo'yadi
     "jarvis-schedules-tick": {"task": "config.apps.jarvis.tasks.tick", "schedule": 60.0},
     # marketplace: ulangan kanallar buyurtmalari har 5 daqiqada (FBS muddatlari qisqa — Uzum 2 soat)
     "mp-orders-sync": {"task": "config.apps.erp.marketplace.tasks.sync_orders", "schedule": 300.0},
     # CRM robotlari: muddat kelgan buyurtma → «Muddati BUGUN», javobsiz lid va muddati o'tgan vazifa eslatmalari
     "crm-robots": {"task": "config.apps.erp.crm.tasks.robots", "schedule": 300.0},
+    # GeoMaps: CRM mijozlari → xarita (har 3 soat); joyni aniqlashtirish — orginfo.uz + Nominatim (har 10 daqiqa)
+    "geomap-refresh": {"task": "config.apps.geomap.tasks.refresh", "schedule": 3 * 3600.0},
+    "geomap-locate": {"task": "config.apps.geomap.tasks.locate_pass", "schedule": 600.0},
+    # narx siyosati: AppSheet narxlari → katalog (har 30 daqiqa; kalitlarsiz — o'tkaziladi)
+    "catalog-prices": {"task": "config.apps.erp.catalog.tasks.sync_prices", "schedule": 1800.0},
 }
 
 # ---------------------------------------------------------------- Telegram, Jarvis
@@ -207,6 +218,18 @@ DIDOX_PASSWORD = os.getenv("DIDOX_PASSWORD", "").strip()
 # Operatorlar: ATS ichki raqami → sotuvchi Telegram ID'si, JSON: {"101": 5574861580}
 CRM_CALLS_TOKEN = os.getenv("CRM_CALLS_TOKEN", "").strip()
 CRM_CALLS_OPERATORS = os.getenv("CRM_CALLS_OPERATORS", "").strip()
+# TelegramCRM (Telethon, MTProto): my.telegram.org → API development tools. Bo'sh — ulanish o'chiq.
+# Sessiya kaliti (auth_key) bazada shu kalit bilan shifrlanadi (Fernet); bo'sh — SECRET_KEY'dan hosil (faqat dev).
+TGCRM_API_ID = int(os.getenv("TGCRM_API_ID", "0").strip() or 0)
+TGCRM_API_HASH = os.getenv("TGCRM_API_HASH", "").strip()
+TGCRM_SESSION_KEY = os.getenv("TGCRM_SESSION_KEY", "").strip()
+TGCRM_MEDIA_DIR = BASE_DIR / "data" / "tgcrm"
+TGCRM_MEDIA_MAX_MB = int(
+    os.getenv("TGCRM_MEDIA_MAX_MB", "2048") or 2048
+)  # media keshi chegarasi (eskilari o'chiriladi)
+# AI yordamchi: 1C qoldig'i (eski Jarvis bazasi, faqat o'qish) va uning eskirish chegarasi
+JARVIS_ONEC_DB_URL = os.getenv("JARVIS_ONEC_DB_URL", "").strip()
+TGCRM_STOCK_MAX_AGE_H = int(os.getenv("TGCRM_STOCK_MAX_AGE_H", "24") or 24)
 
 LOGGING = {
     "version": 1,

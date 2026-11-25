@@ -92,12 +92,12 @@ export const PRESETS: { label: string; mine?: boolean; filter: (bx: string | nul
   { label: "Muddati o'tgan qarz", filter: () => ({ match: "all", search: "", rules: [{ kind: "cond", field: "overdue", op: "gt", value: 0 }] }) },
   { label: "90+ kun xaridsiz", filter: () => ({ match: "all", search: "", rules: [{ kind: "cond", field: "status", op: "in", value: ["sust", "yo'qotilgan"] }] }) },
   { label: "Ochiq bitimli", filter: () => ({ match: "all", search: "", rules: [{ kind: "cond", field: "deals", op: "gt", value: 0 }] }) },
-  { label: "Mening mijozlarim", mine: true, filter: (bx) => ({ match: "all", search: "", rules: bx ? [{ kind: "cond", field: "owner", op: "in", value: [bx] }] : [] }) },
+  { label: "Mening mijozlarim", mine: true, filter: (id) => ({ match: "all", search: "", rules: id ? [{ kind: "cond", field: "owner", op: "in", value: [id] }] : [] }) },
   { label: "Joyi taxminiy", filter: () => ({ match: "all", search: "", rules: [{ kind: "cond", field: "q", op: "in", value: ["region", "district"] }] }) },
 ];
 
-export default function FilterPanel({ filter, onChange, enumOptions, bxUser, total, shown }: {
-  filter: Filter; onChange: (f: Filter) => void; enumOptions: EnumOptions; bxUser: string | null; total: number; shown: number;
+export default function FilterPanel({ filter, onChange, enumOptions, ownerId, total, shown }: {
+  filter: Filter; onChange: (f: Filter) => void; enumOptions: EnumOptions; ownerId: string | null; total: number; shown: number;
 }) {
   return (
     <div className="gm-panel-body">
@@ -105,11 +105,11 @@ export default function FilterPanel({ filter, onChange, enumOptions, bxUser, tot
         onChange={(e) => onChange({ ...filter, search: e.target.value })} />
       <div className="gm-presets">
         {PRESETS.map((p) => {
-          // "Mening mijozlarim" Bitrix foydalanuvchisi bog'lanmagan bo'lsa bo'sh filtr berardi (hech narsa o'zgarmasdi)
-          const off = p.mine && !bxUser;
+          // "Mening mijozlarim" — mas'ul (CRM xodimi) ma'lum bo'lmasa bo'sh filtr berardi (hech narsa o'zgarmasdi)
+          const off = p.mine && !ownerId;
           return (
-            <button key={p.label} type="button" className="gm-chip" disabled={off} title={off ? "Telegram akkauntingiz Bitrix foydalanuvchisiga bog'lanmagan" : undefined}
-              onClick={() => onChange({ ...p.filter(bxUser), search: filter.search })}>{p.label}</button>
+            <button key={p.label} type="button" className="gm-chip" disabled={off} title={off ? "Mas'ul xodim aniqlanmadi" : undefined}
+              onClick={() => onChange({ ...p.filter(ownerId), search: filter.search })}>{p.label}</button>
           );
         })}
       </div>

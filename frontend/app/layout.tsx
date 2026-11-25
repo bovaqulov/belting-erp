@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "@/shared/styles/globals.css";
+import { TgFullscreen } from "@/shared/telegram/fullscreen";
 
 export const metadata: Metadata = { title: "Agent" };
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {/* WebApp obyekti sahifa kodi ishga tushishidan oldin bo'lishi kerak (initData, mavzu) */}
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+        <TgFullscreen />
         {children}
       </body>
     </html>

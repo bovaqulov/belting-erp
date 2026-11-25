@@ -13,7 +13,7 @@ import { api, demoReset, whMode } from "@/erp/warehouse/api";
 import { Bag } from "@/erp/warehouse/bag";
 import { Move } from "@/erp/warehouse/move";
 import { Cells } from "@/erp/warehouse/cells";
-import { makeHelpers, WhCtx, type Wh } from "@/erp/warehouse/context";
+import { makeHelpers, savedStore, saveStore, storesOf, WhCtx, type Wh } from "@/erp/warehouse/context";
 import { Count } from "@/erp/warehouse/count";
 import { DEMO_CODES } from "@/erp/warehouse/demo";
 import { deskView, HOME, parseView, viewQs, viewTitle, type Cell, type Me, type Sec, type View } from "@/erp/warehouse/lib";
@@ -24,7 +24,7 @@ import { Pick } from "@/erp/warehouse/pick";
 import { Place } from "@/erp/warehouse/place";
 import { useSizeAsk } from "@/erp/warehouse/size-ask";
 
-import { BootView, WhLayout } from "./ui";
+import { BootView, StorePick, WhLayout } from "./ui";
 
 
 export default function WarehouseApp() {
@@ -41,16 +41,28 @@ function Boot() {
     const me = await api<Me>("/app/api/erp/me");
     return { me, demo: mode === "demo" };
   }, []);
-  if (st.data) return <Main me={st.data.me} demo={st.data.demo} reloadMe={st.reload} />;
+  const [cur, setCur] = useState<number | null>(savedStore);
+  const pick = useCallback((id: number | null) => {
+    saveStore(id);
+    setCur(id);
+    window.scrollTo(0, 0);
+  }, []);
+  if (st.data) {
+    const all = storesOf(st.data.me);
+    // bitta ombor — tanlov so'ralmaydi; saqlangani o'chirilgan bo'lsa — qayta so'raladi
+    const id = all.length === 1 ? all[0].id : all.some((w) => w.id === cur) ? cur : null;
+    if (all.length > 1 && id === null) return <StorePick stores={all} onPick={pick} />;
+    return <Main key={id ?? 0} me={st.data.me} demo={st.data.demo} reloadMe={st.reload} cur={id} onSwitch={all.length > 1 ? () => pick(null) : undefined} />;
+  }
   return <BootView err={st.err} net={st.net} onRetry={() => void st.reload()} />;
 }
 
-function Main({ me, demo, reloadMe }: { me: Me; demo: boolean; reloadMe: () => Promise<void> }) {
+function Main({ me, demo, reloadMe, cur, onSwitch }: { me: Me; demo: boolean; reloadMe: () => Promise<void>; cur: number | null; onSwitch?: () => void }) {
   const wide = useWide();
   const dialogs = useDialogs();
   const size = useSizeAsk();
   const [view, setView] = useState<View>(() => parseView(location.search));
-  const helpers = useMemo(() => makeHelpers(me), [me]);
+  const helpers = useMemo(() => makeHelpers(me, cur), [me, cur]);
   const shown: View = wide ? deskView(view) : view;
 
   const go = useCallback((v: View) => {
@@ -80,8 +92,8 @@ function Main({ me, demo, reloadMe }: { me: Me; demo: boolean; reloadMe: () => P
   );
 
   const wh: Wh = useMemo(
-    () => ({ me, wide, demo, choose: dialogs.choose, ask: dialogs.ask, askSize: size.askSize, pickCell, go, reloadMe, ...helpers }),
-    [me, wide, demo, dialogs.choose, dialogs.ask, size.askSize, pickCell, go, reloadMe, helpers],
+    () => ({ me, wide, demo, choose: dialogs.choose, ask: dialogs.ask, askSize: size.askSize, pickCell, go, reloadMe, switchStore: onSwitch ?? (() => {}), ...helpers }),
+    [me, wide, demo, dialogs.choose, dialogs.ask, size.askSize, pickCell, go, reloadMe, onSwitch, helpers],
   );
 
   const section = (v: View) => {
@@ -111,6 +123,8 @@ function Main({ me, demo, reloadMe }: { me: Me; demo: boolean; reloadMe: () => P
     <WhCtx.Provider value={wh}>
       <WhLayout
         view={shown}
+        store={helpers.store?.name}
+        onSwitch={onSwitch}
         wide={wide}
         demo={demo}
         demoText={wide ? `namunaviy ma'lumot, faqat shu brauzerda. Sinov kodlari: ${DEMO_CODES}` : "namunaviy ma'lumot"}

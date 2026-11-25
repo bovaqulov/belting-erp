@@ -1,9 +1,11 @@
-# Accounting API — Shartnomalar va Maoshlar (taklif)
+# Accounting API — Shartnomalar va Maoshlar
 
 Accounting (`/app/erp/moliya`, frontend `frontend/src/erp/finance/`) — 3 qism: **Mahsulotlar** (`docs/api/catalog.md`),
 **Shartnomalar**, **Maoshlar**. Jarvis'da shartnoma uchun faqat `erp.contract` jadvali bor (UI/API yo'q), maosh uchun —
 hech narsa. Quyidagi kontrakt — frontend va demo backend (`src/erp/finance/demo/contracts.lib.ts`, `payroll.lib.ts`)
-shunga yozilgan; backend (`backend/config/apps/erp/finance/`) shu shakllarni qaytarishi kerak.
+shunga yozilgan; backend — `backend/config/apps/erp/finance/` (`contracts.py`, `payroll.py`, `views.py`; testlar —
+`tests/test_api.py`). Firma — ombor appidan (`warehouse.services.firms`). Ruxsat: shartnomalar — Accounting (buxgalteriya
+bo'limi, ega/admin, Rahbariyat), maoshlar — faqat ega/admin.
 
 Xato: `{ "detail": "matn" }` — 400 qoida, 403 ruxsat, 404 topilmadi.
 

@@ -153,15 +153,10 @@ function Ev({
             </span>
           ) : null}
           {task ? (
-            <input
-              type="checkbox"
-              className="ck ml-auto"
-              title="Bajarildi"
-              aria-label="Bajarildi"
-              checked={done}
-              disabled={done}
-              onChange={() => onDone(a)}
-            />
+            // telefonda bosish maydoni 44px (belgilagichning o'zi 26px)
+            <label className="-my-2 -mr-2 ml-auto grid cursor-pointer place-items-center coarse:size-11">
+              <input type="checkbox" className="ck" title="Bajarildi" aria-label="Bajarildi" checked={done} disabled={done} onChange={() => onDone(a)} />
+            </label>
           ) : null}
         </div>
         <div className={`mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] ${task && done ? "text-hint line-through" : ""}`}>{txt}</div>

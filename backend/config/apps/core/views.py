@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from .http import ApiError, api, ok
 from .models import LoginToken
-from .registry import me_fields
+from .registry import me_fields, panel_fields
 
 if TYPE_CHECKING:
     from config.apps.staff.models import User
@@ -26,7 +26,10 @@ MAGIC_MAX_AGE = 600
 
 @api(("GET",))
 def me(request: HttpRequest, user: User) -> JsonResponse:
-    return ok(user.me_dict(settings.JARVIS_COMPANY))
+    data = user.me_dict(settings.JARVIS_COMPANY)
+    for name, fn in panel_fields.items():  # domen applari qo'shgan maydonlar (hisobotlar, konveyer, xarita)
+        data[name] = fn(user)
+    return ok(data)
 
 
 @api(("GET",))
@@ -39,6 +42,7 @@ def erp_me(request: HttpRequest, user: User) -> JsonResponse:
         "roles": roles,
         "is_head": False,
         "modules": user.modules(),
+        "perms": user.perm_list(),
         "warehouses": [],
         "firms": [],
         "kinds": [],

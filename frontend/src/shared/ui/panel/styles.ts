@@ -39,7 +39,7 @@ const s = {
   sp: m("sp", "flex-1"),
   "icon-btn": m(
     "icon-btn",
-    `grid size-9 flex-none cursor-pointer place-items-center rounded-full border-0 bg-transparent text-link hover:bg-[rgba(127,127,127,.12)] active:scale-[.92] [&.pn-spin_svg]:animate-[spin_.7s_linear] ${FOCUS}`,
+    `grid size-9 coarse:size-11 flex-none cursor-pointer place-items-center rounded-full border-0 bg-transparent text-link hover:bg-[rgba(127,127,127,.12)] active:scale-[.92] [&.pn-spin_svg]:animate-[spin_.7s_linear] ${FOCUS}`,
   ),
   tabs: m(
     "tabs",
@@ -114,7 +114,7 @@ const s = {
     "mini-btn",
     `cursor-pointer rounded-lg border-0 bg-btn px-2.5 py-1.5 text-sm text-btn-fg disabled:cursor-default disabled:opacity-55 [&.pn-danger]:!bg-danger/14 [&.pn-danger]:!text-danger [&.pn-sec]:!bg-[rgba(127,127,127,.15)] [&.pn-sec]:!text-fg ${FOCUS}`,
   ),
-  fab: m("fab", `grid size-10 flex-none cursor-pointer place-items-center rounded-full border-0 bg-btn text-btn-fg shadow-[0_4px_14px_rgba(0,0,0,.3)] ${FOCUS}`),
+  fab: m("fab", `grid size-10 coarse:size-11 flex-none cursor-pointer place-items-center rounded-full border-0 bg-btn text-btn-fg shadow-[0_4px_14px_rgba(0,0,0,.3)] ${FOCUS}`),
   actions: m("actions", "mx-4 mt-[18px] flex gap-2.5"),
   toolbar: m("toolbar", "mx-4 mt-4 flex items-center gap-2.5"),
   // ko'rish rejimida yashiriladigan amallar (belgi)
@@ -197,7 +197,7 @@ const s = {
   ),
   seg: m(
     "seg",
-    "flex rounded-[9px] bg-[rgba(127,127,127,.16)] p-0.5 [&_button]:flex [&_button]:flex-1 [&_button]:cursor-pointer [&_button]:items-center [&_button]:justify-center [&_button]:gap-1.5 [&_button]:rounded-[7px] [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-sm [&_button]:text-fg [&_button.pn-on]:bg-sec [&_button.pn-on]:shadow-[0_1px_3px_rgba(0,0,0,.25)] [&_svg.i]:size-4 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:-outline-offset-2 [&_button:focus-visible]:outline-accent",
+    "flex rounded-[9px] bg-[rgba(127,127,127,.16)] p-0.5 [&_button]:flex [&_button]:flex-1 [&_button]:cursor-pointer [&_button]:items-center [&_button]:justify-center [&_button]:gap-1.5 [&_button]:rounded-[7px] [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-3 [&_button]:py-1.5 coarse:[&_button]:min-h-11 [&_button]:text-sm [&_button]:text-fg [&_button.pn-on]:bg-sec [&_button.pn-on]:shadow-[0_1px_3px_rgba(0,0,0,.25)] [&_svg.i]:size-4 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:-outline-offset-2 [&_button:focus-visible]:outline-accent",
   ),
   on: m("on"),
   empty: m("empty", "px-4 py-10 text-center text-hint"),
@@ -246,7 +246,7 @@ const s = {
   /** brauzerda yopish tugmasi (Telegram'da — BackButton) */
   "sheet-x": m(
     "sheet-x",
-    `absolute top-2 right-2.5 grid size-[34px] cursor-pointer place-items-center rounded-full border-0 bg-[rgba(127,127,127,.16)] p-0 text-hint [.tg_&]:hidden [&_svg.i]:size-[18px] ${FOCUS}`,
+    `absolute top-2 right-2.5 grid size-[34px] coarse:size-11 cursor-pointer place-items-center rounded-full border-0 bg-[rgba(127,127,127,.16)] p-0 text-hint [.tg_&]:hidden [&_svg.i]:size-[18px] ${FOCUS}`,
   ),
   toast: m(
     "toast",

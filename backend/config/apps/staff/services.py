@@ -24,6 +24,7 @@ __all__ = [
     "apply_pending_heads",
     "department_keys",
     "department_name",
+    "departments_info",
     "has_reports",
     "member_counts",
     "pending_count",
@@ -80,6 +81,14 @@ def department_keys() -> set[str]:
 
 def department_name(key: str) -> str | None:
     return Department.objects.filter(key=key).values_list("name", flat=True).first()
+
+
+def departments_info() -> dict[str, dict[str, Any]]:
+    """Bo'lim kaliti → {key, name, name_ru, icon, color} (tartib bilan)."""
+    return {
+        d["key"]: d
+        for d in Department.objects.order_by("position", "id").values("key", "name", "name_ru", "icon", "color")
+    }
 
 
 def member_counts() -> dict[str, int]:

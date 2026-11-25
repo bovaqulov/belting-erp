@@ -1,5 +1,5 @@
 "use client";
-// Ko'rsatkichlar: filtrlangan mijozlar xulosasi (GeoApp) + 1C bo'yicha umumiy ko'rsatkichlar (/totals — faqat rahbariyat/admin).
+// Ko'rsatkichlar: filtrlangan mijozlar xulosasi (GeoApp) + CRM bo'yicha umumiy ko'rsatkichlar (/totals — faqat rahbariyat/admin).
 import { useEffect, useState } from "react";
 
 import { api } from "@/geomap/lib/api";

@@ -1,18 +1,19 @@
 // Accounting — 3 ta alohida qism (egasi qarori 2026-11-14): Mahsulotlar, Shartnomalar, Maoshlar. Ochilganda — 3 kartochka
 // (hub), har biri o'z bo'limlari bilan. Holat URL'da: ?a=contracts&sec=list (hub — parametrsiz).
 export type Area = "products" | "contracts" | "payroll";
-export type Sec = "items" | "groups" | "contracts" | "month" | "staff";
+export type Sec = "items" | "groups" | "pricing" | "contracts" | "month" | "staff";
 export type View = { hub: true } | { hub: false; area: Area; sec: Sec };
 
 export const AREAS: { key: Area; t: string; sub: string; color: string; secs: { key: Sec; t: string; icon: string }[] }[] = [
   {
     key: "products",
     t: "Mahsulotlar",
-    sub: "Tovarlar katalogi, kategoriyalar, remen belgisi va kengliklar",
+    sub: "Tovarlar katalogi, kategoriyalar, standart belgi, narx siyosati (AppSheet)",
     color: "#2fa37a",
     secs: [
       { key: "items", t: "Tovarlar", icon: "package" },
       { key: "groups", t: "Kategoriyalar", icon: "layers" },
+      { key: "pricing", t: "Narx siyosati", icon: "coins" },
     ],
   },
   {

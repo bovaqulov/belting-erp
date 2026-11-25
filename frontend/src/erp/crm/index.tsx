@@ -126,7 +126,7 @@ function CrmMain({ me, meta, demo }: { me: Me; meta: Meta; demo: boolean }) {
   // Esc — bitim panelini yopish (oyna ochiq bo'lmasa)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || document.querySelector(".mdl")) return;
+      if (e.key !== "Escape" || e.defaultPrevented || document.querySelector(".mdl, .dd")) return;
       if (dealId) closeDeal();
       else if (customerId) closeCustomer();
     };

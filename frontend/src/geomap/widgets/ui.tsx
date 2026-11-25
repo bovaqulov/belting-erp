@@ -1,4 +1,4 @@
-// Ko'rsatkichlar paneli (faqat ko'rinish): mijozlar, savdo, qarz, bitimlar; 1C jami (rahbariyat), holat / viloyat /
+// Ko'rsatkichlar paneli (faqat ko'rinish): mijozlar, savdo, qarz (bo'lsa), bitimlar; CRM jami (rahbariyat), holat / viloyat /
 // mas'ul bo'yicha taqsimot (bosilsa — filtr).
 import { Bars, Empty, Section, Stat } from "@/geomap/kit";
 import { money, num, STATUS_COLOR, STATUS_LABEL } from "@/geomap/lib/fields";
@@ -14,14 +14,14 @@ export function WidgetsView({ s, tot, regionName, full, onPickRegion, onPickOwne
     <div className="gm-panel-body">
       <div className="gm-stats">
         <Stat label="Mijozlar" value={num(s.n)} sub={`${num(s.located)} tasi xaritada`} />
-        <Stat label="Savdo (12 oy)" value={money(s.sales)} sub="so'm; xaritadagi mijozlar, 1C" />
-        {full && <Stat label="Qarz" value={money(s.debt)} sub={`so'm; xaritadagi mijozlar, 1C${asOf ? ` (${asOf} holatiga)` : ""}; ${num(s.overdue)} tasida muddati o'tgan`} />}
-        <Stat label="Ochiq bitimlar" value={num(s.deals)} sub="Bitrix, sotuv voronkasi" />
+        <Stat label="Savdo (12 oy)" value={money(s.sales)} sub="so'm; xaritadagi mijozlar, CRM xaridlari" />
+        {full && s.debt > 0 && <Stat label="Qarz" value={money(s.debt)} sub={`so'm; xaritadagi mijozlar${asOf ? ` (${asOf} holatiga)` : ""}; ${num(s.overdue)} tasida muddati o'tgan`} />}
+        <Stat label="Ochiq bitimlar" value={num(s.deals)} sub="CRM, sotuv voronkasi" />
       </div>
       {full && tot && (
         <p className="gm-muted small">
-          Jami 1C (xaritaga tushmagan kontragentlar bilan): savdo {money(tot.sales_12m)} so&apos;m ({num(tot.sales_docs)} hujjat, 12 oy);
-          qarz {money(tot.debt)} so&apos;m ({num(tot.debtors)} kontragent{asOf ? `, ${asOf} holatiga` : ""}).
+          Jami CRM (xaritaga tushmagan mijozlar bilan): savdo {money(tot.sales_12m)} so&apos;m ({num(tot.sales_docs)} xarid, 12 oy)
+          {tot.debt > 0 ? <>; qarz {money(tot.debt)} so&apos;m ({num(tot.debtors)} mijoz{asOf ? `, ${asOf} holatiga` : ""})</> : null}.
         </p>
       )}
       {s.approx > 0 && <p className="gm-muted small">{num(s.approx)} ta mijozning joyi taxminiy — tuman markazi yoki viloyat markazida. Manzil aniqlashtirilgan sari kamayadi.</p>}

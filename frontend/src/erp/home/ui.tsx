@@ -19,10 +19,12 @@ export interface Module {
 
 export const MODULES: Module[] = [
   { key: "crm", title: "CRM", sub: "Mijozlar, voronkalar, bitimlar va vazifalar", color: "#d4537e", href: "/app/erp/crm" },
+  { key: "sales", title: "Sales", sub: "Buyurtma, hisob, yuk xati, schyot-faktura, to'lov, qarzlar", color: "#2f7de1", href: "/app/erp/savdo" },
   { key: "warehouse", title: "Warehouse", sub: "Qoldiq, kirim-chiqim, joylash va sanash", color: "#3e88f7", href: "/app/erp/ombor" },
   { key: "manufacturing", title: "Manufacturing", sub: "Kesish sexi: zakazlar, taxta, lenta sarfi", color: "#e8961f", href: "/app/erp/sex" },
   { key: "marketplace", title: "Marketplace", sub: "WB, Ozon, Uzum: buyurtmalar, tovarlar, narx, qoldiq", color: "#f0603a", href: "/app/erp/marketplace" },
   { key: "logistics", title: "Logistics", sub: "Yetkazish: EMU, Yandex Go, Bito, Fargo", color: "#12a4a0", href: "/app/erp/logistics" },
+  { key: "money", title: "Money", sub: "Kassa va bank: kirim, chiqim, o'tkazish, qoldiq, pul oqimi", color: "#1f9d6b", href: "/app/erp/pul" },
   { key: "accounting", title: "Accounting", sub: "Mahsulotlar, shartnomalar va maoshlar", color: "#2fa37a", href: "/app/erp/moliya" },
   { key: "hr", title: "HR", sub: "Xodimlar: taklif qilish, tuzilma (iyerarxiya) va rollar", color: "#8b6cf0", href: "/app/erp/staff" },
 ];

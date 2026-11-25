@@ -11,13 +11,12 @@ export function initPrefs(u: AdminUser, opts: PrefOpts | null): Record<string, s
 }
 
 export type PhoneLoad = { st: "loading" } | { st: "ok"; o: PhoneOpts } | { st: "err"; msg: string };
-export type PhoneSel = { yext: string; mzu: string; bxu: string };
+export type PhoneSel = { yext: string; mzu: string };
 
 export function phoneSel(u: AdminUser, o: PhoneOpts): PhoneSel {
   const cur = u.phone || {};
   return {
     yext: pickValue(cur.yeastar_ext, o.yeastar.map((x) => x.ext)),
     mzu: o.moizvonki_enabled === false ? "" : pickValue(cur.mz_user, o.moizvonki.map((x) => x.id)),
-    bxu: pickValue(cur.bx_user, (o.bitrix || []).map((x) => x.id)),
   };
 }

@@ -13,12 +13,17 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   // faqat `next dev`: cloudflared tezkor tunnel (manzil har safar o'zgaradi) orqali HMR va dev resurslari
-  allowedDevOrigins: ["*.trycloudflare.com"],
+  allowedDevOrigins: ["*.trycloudflare.com", "erp.beltdev.uz"],
   // faqat `next dev`: API backend'ga proksi (eksport bilan rewrites ishlatilmaydi)
   ...(isDev && {
     async rewrites() {
       // basePath manbaga avtomatik qo'shiladi: /app/api/* → backend /app/api/*
       return [{ source: "/api/:path*", destination: `${BACKEND}/app/api/:path*` }];
+    },
+    // domen ildizi (https://erp.beltdev.uz/) → ochiq tanishtiruv sahifasi (basePath tashqarisiga ichki rewrite mumkin emas);
+    // prod'da shu yo'naltirishni veb-server qiladi
+    async redirects() {
+      return [{ source: "/", destination: "/app/about/", basePath: false, permanent: false }];
     },
   }),
 };

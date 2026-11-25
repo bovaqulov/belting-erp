@@ -19,6 +19,7 @@ export function InviteSheet({ ctx }: { ctx: UsersCtx }) {
   const first = depts.find((d) => !d.sees_all) ?? depts[0];
   const [v, setV] = useState<InviteForm>({ dept: first?.key ?? "", role: "employee", name: "", max_uses: "1", days: "7" });
   const [link, setLink] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
   const [busy, run] = useBusy();
   const roles = me?.user.role === "owner" ? ["employee", "admin"] : ["employee"];
 
@@ -27,7 +28,14 @@ export function InviteSheet({ ctx }: { ctx: UsersCtx }) {
       try {
         const r = await api<Invite & { link: string }>("/app/api/invites", {
           method: "POST",
-          body: { dept: v.dept, role: v.role, name: v.name.trim(), max_uses: Number(v.max_uses), days: Number(v.days) },
+          body: {
+            dept: v.dept,
+            role: v.role,
+            roles: picked,
+            name: v.name.trim(),
+            max_uses: Number(v.max_uses),
+            days: Number(v.days),
+          },
         });
         setLink(r.link);
         render(); // ro'yxatda "Faol taklif havolalari"
@@ -50,6 +58,9 @@ export function InviteSheet({ ctx }: { ctx: UsersCtx }) {
       v={v}
       depts={depts}
       roles={roles}
+      accessRoles={ctx.roles}
+      picked={picked}
+      onPick={(key, on) => setPicked((cur) => (on ? [...cur, key] : cur.filter((k) => k !== key)))}
       busy={busy}
       link={link}
       onSet={(k, val) => setV((s) => ({ ...s, [k]: val }))}

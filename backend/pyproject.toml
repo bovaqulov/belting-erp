@@ -5,8 +5,10 @@ requires-python = ">=3.12"
 dependencies = [
     "celery[redis]>=5.7.0",
     "claude-agent-sdk>=0.2.178",
+    "cryptography>=50.0.2",
     "django>=6.1.3",
     "fpdf2>=2.9.0",
+    "h3>=4.5.1",
     "httpx>=0.28.1",
     "psycopg[binary]>=3.3.9",
     "pypdf>=7.0.1",
@@ -14,7 +16,10 @@ dependencies = [
     "python-dotenv>=1.2.4",
     "pyyaml>=6.0.3",
     "redis>=8.1.0",
+    "reportlab>=4.0",
     "segno>=1.6.6",
+    "shapely>=2.2.0",
+    "telethon>=1.46.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -49,13 +54,24 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S", "B011"]
+# Jarvis'dan aynan ko'chirilgan LentaCUD mantig'i (golden bo'yicha TS bilan bir xil natija — uslub uchun o'zgartirilmaydi)
+"config/apps/conveyor/lenta/**" = ["B905", "E402", "F841", "PERF401", "RUF007", "RUF046", "RUF059", "S112", "S324"]
+"config/apps/geomap/geo/**" = ["S324", "RUF034", "B905", "RUF007"]  # Jarvis geomap'dan ko'chirilgan
+"config/apps/conveyor/tests/lenta/**" = ["B905", "E402", "F841", "PERF401", "RUF007", "RUF046", "RUF059", "S112", "S324"]
 
 [tool.ruff.format]
 quote-style = "double"
 
 # ---------------------------------------------------------------- ty (tiplar)
 [tool.ty.src]
-exclude = ["data", "**/migrations"]
+# conveyor/lenta — Jarvis'dan aynan ko'chirilgan (dict|None ga obuna kabi dinamik kod; golden testlar bilan himoyalangan)
+exclude = [
+    "data",
+    "**/migrations",
+    "config/apps/conveyor/lenta",
+    "config/apps/conveyor/tests/lenta",
+    "config/apps/geomap/geo",  # Jarvis geomap'dan ko'chirilgan (regex/None dinamik kod; tests/test_geo.py bilan himoyalangan)
+]
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
@@ -64,3 +80,4 @@ python_files = ["test_*.py"]
 addopts = "-q"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+markers = ["slow: uzoq (golden ma'lumot bo'yicha to'liq chizma) — `-m 'not slow'` bilan o'tkazib yuboriladi"]

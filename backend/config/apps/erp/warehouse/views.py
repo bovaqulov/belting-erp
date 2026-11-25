@@ -336,46 +336,6 @@ def label_units(request: HttpRequest, user: User) -> HttpResponse:
 
 
 # ---------------------------------------------------------------- joylashtirish
-@wh()
-def cat_items(request: HttpRequest, user: User) -> HttpResponse:
-    s = request.GET.get("q", "").strip().casefold()
-    info = stock.cat()
-    tot: dict[int, float] = {}
-    for (i, _c), q in stock.totals(info).items():
-        tot[i] = tot.get(i, 0.0) + float(q)
-    rows = [
-        {
-            "id": it["id"],
-            "name": it["name"],
-            "grp": it["grp"],
-            "kind": it["kind"],
-            "unit": it["unit"],
-            "qty": round(tot.get(it["id"], 0.0), 4),
-        }
-        for it in info.values()
-        if it["active"] and (not s or any(s in (x or "").casefold() for x in (it["name"], it["sku"], it["grp"])))
-    ]
-    rows.sort(key=lambda r: r["name"])
-    return ok(rows[:200])
-
-
-@wh()
-def cat_item(request: HttpRequest, user: User, pk: int) -> HttpResponse:
-    it = stock.item(pk)
-    return ok(
-        {
-            "id": it["id"],
-            "name": it["name"],
-            "grp": it["grp"],
-            "kind": it["kind"],
-            "unit": it["unit"],
-            "measured": bool(it["dims"]),
-            "attrs": {"dims": it["dims"]},
-            "chars": [{"id": cid, "name": c["name"]} for cid, c in it["chars"].items()],
-        }
-    )
-
-
 @wh(("POST",))
 def place(request: HttpRequest, user: User) -> HttpResponse:
     return ok(stock.place(json_body(request), user))

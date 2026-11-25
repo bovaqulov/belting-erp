@@ -17,6 +17,7 @@ from django.http.response import HttpResponseBase
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from config.apps.audit import services as audit
 from config.apps.core.auth import resolve_user
 from config.apps.core.http import ApiError, json_body
 
@@ -73,6 +74,10 @@ def _finish(session: ChatSession, agent: Agent, text: str, tools: list[str], err
     AgentRun.objects.create(
         agent=agent, source=AgentRun.Source.CHAT, user=session.user, ok=not error, output=text[:20000], error=error,
         tools=tools, finished_at=timezone.now(),
+    )  # fmt: skip
+    audit.log(
+        "answer", tg_id=getattr(session.user, "tg_id", None), dept=agent.key,
+        detail={"source": "chat", "tools": tools, "ok": not error, "error": error[:300], "chars": len(text)},
     )  # fmt: skip
 
 

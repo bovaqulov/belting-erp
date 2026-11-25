@@ -1,6 +1,7 @@
 // Xodim taklif qilish oynasi (faqat ko'rinish): bo'lim, rol, izoh, necha kishi, muddat → havola (nusxa, Telegram'da ulashish).
 import s from "@/shared/ui/panel/styles";
 import { Icon, ROLE_NAMES, SectionHeader, Sq } from "@/shared/ui/panel/ui";
+import { permSummary, type RolesResp } from "@/ai/users/roles/roles.lib";
 import type { UDept } from "@/ai/users/users.lib";
 
 export type InviteForm = { dept: string; role: string; name: string; max_uses: string; days: string };
@@ -15,6 +16,9 @@ export function InviteView({
   v,
   depts,
   roles,
+  accessRoles,
+  picked,
+  onPick,
   busy,
   link,
   onSet,
@@ -26,6 +30,10 @@ export function InviteView({
   depts: UDept[];
   /** ega — xodim va admin; admin — faqat xodim */
   roles: string[];
+  /** rollar katalogi (yuklanmagan bo'lsa — null, bo'lim ko'rinmaydi) */
+  accessRoles: RolesResp | null;
+  picked: string[];
+  onPick: (key: string, on: boolean) => void;
   busy: boolean;
   /** yaratilgan havola (bo'lsa — natija ko'rinadi) */
   link: string | null;
@@ -88,10 +96,29 @@ export function InviteView({
               </label>
             ))}
           </div>
-          <SectionHeader>Rol va muddat</SectionHeader>
+          {accessRoles ? (
+            <>
+              <SectionHeader>Rollar</SectionHeader>
+              <div className={s.list}>
+                {accessRoles.roles.map((r) => (
+                  <label key={r.key} className={`${s.item} ${s.tap}`}>
+                    <div className={s.main}>
+                      <div className={s.t}>{r.name}</div>
+                      <div className={s.s} style={{ whiteSpace: "normal" }}>
+                        {permSummary(r.perms, accessRoles.perms, 6)}
+                      </div>
+                    </div>
+                    <input type="checkbox" className={s.chk} checked={picked.includes(r.key)} onChange={(e) => onPick(r.key, e.target.checked)} />
+                  </label>
+                ))}
+              </div>
+              <div className={s.sf}>Xodim havolani bosishi bilan shu rollarni oladi (ixtiyoriy).</div>
+            </>
+          ) : null}
+          <SectionHeader>Daraja va muddat</SectionHeader>
           <div className={`${s.list} ${s.plain}`}>
             <div className={s.field}>
-              <label>Rol</label>
+              <label>Daraja</label>
               <select value={v.role} onChange={(e) => onSet("role", e.target.value)}>
                 {roles.map((r) => (
                   <option key={r} value={r}>
@@ -133,7 +160,7 @@ export function InviteView({
               <input value={v.name} placeholder="Kim uchun (ixtiyoriy)" maxLength={200} onChange={(e) => onSet("name", e.target.value)} />
             </div>
           </div>
-          <div className={s.sf}>Admin — xodimlarni boshqaradi; xodim — o&apos;z bo&apos;limi ishini ko&apos;radi. Rolni keyin xodim kartasida o&apos;zgartirish mumkin.</div>
+          <div className={s.sf}>Admin — xodimlarni boshqaradi; xodim — o&apos;z bo&apos;limi ishini ko&apos;radi. Daraja va rollarni keyin xodim kartasida o&apos;zgartirish mumkin.</div>
           <div className={s.actions}>
             <button className={s.btn} disabled={busy || !v.dept} onClick={onCreate}>
               <Icon name="link" /> {busy ? "Yaratilmoqda…" : "Havola yaratish"}

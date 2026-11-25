@@ -1,5 +1,9 @@
 // Tovarlar katalogi: turlar va sof mantiq (Jarvis erp/catalog/manage.py bilan bir xil natija). Remen belgisi va avtomatik
 // nom — formadagi oldindan ko'rish ham, demo backend ham shu funksiyalardan (bir manba).
+// Texnik oilalar (xalqaro standartlar: ISO 5296/13050/17396, 4184, 9982, 14890, 21183) — backend reestridan eksport
+// qilingan specs.json (`manage.py catalog_specs --export-json`); belgi, nom va hisob — backend `cat/preview`.
+import SPECS from "./specs.json";
+
 export type Kind = "material" | "product" | "goods" | "service";
 export type Dims = "w" | "wl" | "l";
 export type Family = "timing" | "v" | "rib";
@@ -20,7 +24,46 @@ export const dimsLabel = (d: Dims | null | undefined): string => DIMS.find(([k])
 /** Dyuymli tishli profillar: belgi "<uzunlik><profil>" (210XL), qolganlari "<uzunlik>-<profil>" (1040-8M) */
 export const INCH = new Set(["MXL", "XL", "L", "H", "XH", "XXH", "DL", "DH"]);
 
-export type GroupAttrs = { kind?: Kind; dims?: Dims; unit?: string; belt?: boolean };
+export type GroupAttrs = { family?: string; kind?: Kind; dims?: Dims; unit?: string; belt?: boolean };
+
+// ------------------------------------------------------------------ texnik oilalar (specs.json)
+export type FieldType = "choice" | "code" | "num" | "int" | "text" | "bool";
+export type SpecField = { key: string; label: string; type: FieldType; options?: [string, string][]; unit?: string; req?: boolean; ph?: string; hint?: string; min?: number; max?: number };
+export type FamilyDef = { key: string; title: string; std: string; group: string; kind: Kind; dims: Dims | null; fields: SpecField[] };
+export type SpecVal = string | number | boolean;
+export type Spec = Record<string, SpecVal>;
+export type SpecLine = { key?: string; label: string; value: string };
+export type Analog = { id: number; name: string; brand: string | null; unit?: string; qty?: number | null; same_brand?: boolean };
+/** Forma jonli ko'rinishi (POST /cat/preview) */
+export type Preview = {
+  errors: Record<string, string>;
+  designation?: string | null;
+  name?: string | null;
+  name_ru?: string | null;
+  computed?: SpecLine[];
+  hs_hint?: string | null;
+  dup?: { id: number; name: string } | null;
+  analogs?: Analog[];
+};
+export type DupGroup = { why: string; items: { id: number; name: string; brand: string | null; sku: string | null; unit: string; qty: number | null }[] };
+
+export const FAMILIES = SPECS.families as unknown as FamilyDef[];
+/** Tishli profillar (forma tavsiyasi): [kod, tizim] */
+export const TIMING_PROFILES = SPECS.timing_profiles as [string, string][];
+export const famOf = (k: string | null | undefined): FamilyDef | undefined => FAMILIES.find((f) => f.key === k);
+export const famTitle = (k: string | null | undefined): string => famOf(k)?.title ?? "";
+
+/** Forma qiymatlaridan spec: bo'sh maydon yuborilmaydi (server ham tozalaydi) */
+export function specOut(fam: FamilyDef | undefined, v: Record<string, SpecVal>): Spec {
+  const out: Spec = {};
+  for (const f of fam?.fields ?? []) {
+    const x = v[f.key];
+    if (f.type === "bool") {
+      if (x === true) out[f.key] = true;
+    } else if (x !== undefined && x !== null && String(x).trim() !== "") out[f.key] = String(x).trim();
+  }
+  return out;
+}
 export type Group = { id: number; parent_id: number | null; name: string; name_ru: string | null; attrs: GroupAttrs; sort: number; items: number };
 
 export type ItemRow = {
@@ -37,6 +80,12 @@ export type ItemRow = {
   grp: string | null;
   parent_grp: string | null;
   material_id: number | null;
+  family?: string | null;
+  designation?: string | null;
+  /** amaldagi narx (QQSsiz): AppSheet yoki qo'lda; price_by — fixed | width (eni bo'yicha) | ribs (qovurg'a) */
+  price_now?: number | null;
+  price_from?: "appsheet" | "manual" | null;
+  price_by?: "fixed" | "width" | "ribs" | "" | null;
   chars: number;
   qty: number;
   units: number;
@@ -65,7 +114,64 @@ export type Item = {
   products: { id: number; name: string }[];
   stock: StockRow[];
   price: Price | null;
+  // texnik qism (backend specs.py); demo rejimda qisman
+  family?: string | null;
+  family_title?: string | null;
+  std?: string | null;
+  spec?: Spec;
+  spec_view?: SpecLine[];
+  computed?: SpecLine[];
+  designation?: string | null;
+  hs_code?: string | null;
+  hs_hint?: string | null;
+  barcode?: string | null;
+  legacy?: string[];
+  base?: string | null;
+  analogs?: Analog[];
+  pricing?: ItemPricing;
 };
+
+// ------------------------------------------------------------------ narx siyosati (AppSheet)
+export type PriceRow = { label: string; width: number | null; price: number; price_vat: number };
+export type ItemPricing = {
+  source: "appsheet" | "manual" | "none";
+  vat_pct: number;
+  rows: PriceRow[];
+  linked: null | {
+    mark: string;
+    name: string;
+    origin: string | null;
+    mode: "fixed" | "width" | "ribs";
+    synced: string;
+    price: number | null;
+    price_vat: number | null;
+    lens: Record<string, number> | null;
+    note: string | null;
+    /** faqat rahbariyat */
+    cost?: { net: number | null; margin: number; cost_unit: number | null; unit: string | null; rate: number; fixed: number };
+  };
+};
+export type Policy = {
+  vat_pct: number;
+  default_width: number;
+  max_disc_lead: number;
+  max_disc_head: number;
+  max_disc_seller: number;
+  synced: string | null;
+  sync_note: string | null;
+  stale: boolean;
+  configured: boolean;
+  sources: number;
+  sources_linked: number;
+  items_linked: number;
+  can_edit: boolean;
+  usd_rate?: number;
+  fixed_add?: number;
+  round_to?: number;
+  learn?: boolean;
+};
+export type Unmatched = { id: number; mark: string; name: string | null; kind: string | null; family: string | null; brand: string | null; price: number | null };
+export const PRICE_BY: Record<string, string> = { width: "eni bo'yicha", ribs: "qovurg'a bo'yicha" };
 
 /** Profil → oila: poliklinli (PJ, PK…), klinli (SPA, B, 3V…), qolgani tishli */
 export function family(profile: string): Family {
@@ -119,7 +225,7 @@ export function groupAttrs(groups: Group[], id: number | string | null | undefin
 
 /** Kategoriya tavsifi: "Tayyor mahsulot · dona · remen belgisi" */
 export function groupDesc(a: GroupAttrs): string {
-  return [a.kind ? KIND[a.kind] : "", a.dims ? dimsLabel(a.dims) : a.kind && a.kind !== "service" ? "dona" : "", a.belt ? "remen belgisi" : ""].filter(Boolean).join(" · ");
+  return [a.family ? famTitle(a.family) : "", a.kind ? KIND[a.kind] : "", a.dims ? dimsLabel(a.dims) : a.kind && a.kind !== "service" ? "dona" : "", a.belt ? "remen belgisi" : ""].filter(Boolean).join(" · ");
 }
 
 /** Tanlov ro'yxati: ota kategoriyalar va ularning ichkilari ("› ") tartib bilan */
@@ -133,7 +239,8 @@ export function groupOptions(groups: Group[]): { value: number; label: string }[
 /** Tovar narxi: dona — bitta narx; mm — 1 mm kenglik narxi × kenglik. Qadam (mm) — kenglik qadamga yuqoriga yaxlitlanadi
  *  (qadam 5: 6–10 mm bir xil narx). overrides — kenglik bo'yicha qo'lda qo'yilgan narx (hisobdan ustun). */
 export type PriceMode = "piece" | "mm";
-export type Price = { mode: PriceMode; price: number | null; step_mm: number | null; overrides: Record<string, number> };
+/** source: appsheet — narx AppSheet'dan (bog'langan bo'lsa odatiy), manual — qo'lda narx ustun */
+export type Price = { mode: PriceMode; price: number | null; step_mm: number | null; overrides: Record<string, number>; source?: "appsheet" | "manual" | null };
 export const PRICE_MODE: Record<PriceMode, string> = { piece: "Dona narxi", mm: "1 mm narxi" };
 export const emptyPrice = (): Price => ({ mode: "piece", price: null, step_mm: null, overrides: {} });
 
@@ -152,8 +259,11 @@ export function priceFor(p: Price | null | undefined, width: number | null): num
   return Math.round(p.price * roundStep(width, p.step_mm));
 }
 
-/** Narx qisqacha: "412 000 so'm/dona", "14 000 so'm/mm · qadam 5 mm" */
-export function priceLabel(p: Price | null | undefined, fmt: (n: number) => string): string {
+/** Narx birligi: dona rejimida — tovar birligi (dona, m², m), mm rejimida — 1 mm eni */
+export const priceUnit = (p: Price | null | undefined, unit: string | null | undefined): string => (p?.mode === "mm" ? "1 mm eni" : un(unit) || "dona");
+
+/** Narx qisqacha: "412 000 so'm/dona", "95 000 so'm/m²", "14 000 so'm/mm · qadam 5 mm" */
+export function priceLabel(p: Price | null | undefined, fmt: (n: number) => string, unit: string | null = "dona"): string {
   if (!p || p.price === null) return Object.keys(p?.overrides ?? {}).length ? "kenglik bo'yicha" : "belgilanmagan";
-  return p.mode === "mm" ? `${fmt(p.price)} so'm/mm${p.step_mm ? ` · qadam ${p.step_mm} mm` : ""}` : `${fmt(p.price)} so'm/dona`;
+  return p.mode === "mm" ? `${fmt(p.price)} so'm/mm${p.step_mm ? ` · qadam ${p.step_mm} mm` : ""}` : `${fmt(p.price)} so'm/${un(unit) || "dona"}`;
 }

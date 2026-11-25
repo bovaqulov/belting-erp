@@ -24,6 +24,7 @@ import {
   type View,
 } from "@/erp/finance/lib";
 import { Month, Staff } from "@/erp/finance/payroll";
+import { Pricing } from "@/erp/finance/pricing";
 import { Products } from "@/erp/finance/products";
 
 import { AccLayout, BootView } from "./ui";
@@ -123,6 +124,8 @@ function Main({ me, first, demo }: { me: Me; first: Group[]; demo: boolean }) {
       <Products />
     ) : view.sec === "groups" ? (
       <Groups />
+    ) : view.sec === "pricing" ? (
+      <Pricing />
     ) : view.sec === "contracts" ? (
       <Contracts />
     ) : view.sec === "month" ? (

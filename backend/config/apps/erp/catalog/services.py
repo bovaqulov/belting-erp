@@ -3,7 +3,6 @@ nom bo'yicha topish va demo katalog (dev baza uchun)."""
 
 from __future__ import annotations
 
-import math
 import re
 from collections.abc import Iterable
 from decimal import Decimal
@@ -17,19 +16,17 @@ from .models import Char, Group, Item, Kind
 
 
 def price_of(item: Item, char: Char | None = None) -> Decimal | None:
-    """Sotuv narxi: dona — `price`; mm — 1 mm narxi × kenglik (qadamga yuqoriga yaxlitlanadi); kenglik bo'yicha qo'lda
-    narx (`overrides`) — hisobdan ustun."""
-    p: dict[str, Any] = item.price or {}
-    if p.get("price") in (None, "") and not p.get("overrides"):
-        return None
-    if char is not None and char.width_mm and (o := (p.get("overrides") or {}).get(str(char.width_mm))) is not None:
-        return Decimal(str(o))
-    base = Decimal(str(p.get("price") or 0))
-    if p.get("mode") == "mm" and char is not None and char.width_mm:
-        step = int(p.get("step_mm") or 0)
-        w = math.ceil(char.width_mm / step) * step if step > 0 else char.width_mm
-        return (base * w).quantize(Decimal(1))
-    return base
+    """Sotuv narxi (QQSsiz) — narx siyosati bo'yicha (pricing.py: qo'lda kenglik narxi → AppSheet → qo'lda)."""
+    from . import pricing
+
+    return pricing.price_of(item, char)
+
+
+def max_discount(lead: bool, head: bool) -> Decimal:
+    """Narx siyosati: chegirma chegarasi, % (rahbariyat / sotuv bo'limi rahbari / sotuvchi)."""
+    from . import pricing
+
+    return pricing.max_discount(lead, head)
 
 
 def _hit(item: Item, char: Char | None, free: dict[tuple[int, int | None], Decimal]) -> dict[str, Any]:
@@ -332,10 +329,17 @@ def by_code(code: str) -> list[dict[str, Any]]:
     hits = [
         it
         for it in Item.objects.filter(active=True)
-        if (it.attrs or {}).get("barcode") == code or (it.sku and it.sku.upper() == up)
+        if (a := it.attrs or {}).get("barcode") == code
+        or code in (a.get("barcodes") or [])
+        or (it.sku and it.sku.upper() == up)
     ]
-    if not hits:
-        hits = [it for it in Item.objects.filter(active=True) if (it.attrs or {}).get("legacy") == code]
+    if not hits:  # 1C kodi: «0Н-00001204» yoki baza bilan «BR:0Н-00001204»
+        hits = [
+            it
+            for it in Item.objects.filter(active=True)
+            if (a := it.attrs or {}).get("legacy") == code
+            or any(c == code or c.split(":", 1)[-1] == code for c in a.get("legacy_codes") or [])
+        ]
     info = items_info([it.pk for it in hits])
     return [info[it.pk] for it in hits]
 

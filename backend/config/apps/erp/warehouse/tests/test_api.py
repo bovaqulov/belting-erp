@@ -541,7 +541,7 @@ def test_zones_capacity_putaway(c, seed):
         "shelf",
         None,
     )
-    assert "Konveyer lentalar" in c.get(f"{A}/cat/groups").json()
+    assert "Konveyer lentalar" in c.get(f"{A}/wh/groups").json()
     r = post(c, f"{A}/wh/blocks/{blk['A']['id']}", {"groups": ["Konveyer lentalar"], "purpose": "storage"}).json()
     assert r["groups"] == ["Konveyer lentalar"]
     assert post(c, f"{A}/wh/blocks/{blk['A']['id']}", {"purpose": "nope"}).status_code == 400

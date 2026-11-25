@@ -63,5 +63,7 @@ if grep -q '^BUSINESS_CONNECTION_BOT_TOKEN=.' .env.local; then
     echo "crm webhook: qayta urinish ($i)"; sleep 5
   done
 fi
+  # TG CRM — Business bot menyusidagi Web App tugmasi (manzil tunnel bilan o'zgaradi)
+  uv run --quiet python manage.py tgcrm_menu_button --url "$URL" || echo "TG CRM menyu tugmasi o'rnatilmadi"
 echo "Tayyor: $URL/app/  (to'xtatish — Ctrl+C)"
 [[ -n "$PID" ]] && wait $PID

@@ -16,6 +16,10 @@ HEAD, S1, S2 = 100, 201, 202
 
 @pytest.fixture
 def team(depts):
+    from config.apps.erp.catalog.pricing import policy
+
+    # narx siyosati (sinov): sotuvchi — 10% gacha, sotuv rahbari — 20% gacha chegirma
+    policy().__class__.objects.filter(pk=1).update(max_disc_seller=10, max_disc_head=20)
     head = User.objects.create_user(HEAD, "Rahbar", "employee")
     set_departments(head, [depts["sotuv"].key])
     sellers = []
@@ -683,3 +687,53 @@ def test_ketma_ketlik_avtomatik(client, team):
         and ("payment", "production", "web") in hist
         and ("production", "ready", "auto") in hist
     )
+
+
+def test_chegirma_siyosati(client, team):
+    """Narx siyosati: sotuvchi — 10% gacha, sotuv rahbari — 20% gacha (team fiksturasi), oshsa — 403; avval saqlangan
+    chegirma (siyosat keyin o'zgargan bo'lsa ham) qayta saqlashga xalaqit bermaydi."""
+    d = deal(S1)
+    as_(client, team["s1"])
+    line = {"item_id": 1, "name": "SPB 1650", "qty": 1, "price": 100000}
+    assert post(client, f"{C}/deals/{d.pk}/items", {"items": [{**line, "discount": 15}]}).status_code == 403
+    r = post(client, f"{C}/deals/{d.pk}", {"discount": 12})
+    assert r.status_code == 403 and "10" in r.json()["detail"]
+    assert post(client, f"{C}/deals/{d.pk}", {"discount": 10}).status_code == 200
+    as_(client, team["head"])
+    assert post(client, f"{C}/deals/{d.pk}/items", {"items": [{**line, "discount": 15}]}).status_code == 200
+    as_(client, team["s1"])  # rahbar qo'ygan 15% — sotuvchi qatorni o'zgartirmay saqlay oladi
+    assert (
+        post(
+            client,
+            f"{C}/deals/{d.pk}/items",
+            {"items": [{**line, "discount": 15}, {"name": "X", "qty": 1, "price": 1}]},
+        ).status_code
+        == 200
+    )
+
+
+def test_hujjat_takror_bosish(client, team):
+    """Buyurtma qayta bosilsa — yuborilmagan qoralama yangilanadi; o'zgarmagan taklif — o'sha qaytadi."""
+    from config.apps.erp.catalog.models import Group, Item
+    from config.apps.erp.crm.models import Doc
+
+    it = Item.objects.create(group=Group.objects.create(name="Remen"), name="SPB 1650", unit="dona")
+    d = deal(S1)
+    d.items = [{"item_id": it.pk, "name": "SPB 1650", "unit": "dona", "qty": "2", "price": "100000", "discount": "0"}]
+    d.save()
+    as_(client, team["s1"])
+    o1 = post(client, f"{C}/deals/{d.pk}/doc", {"kind": "order"}).json()
+    o2 = post(client, f"{C}/deals/{d.pk}/doc", {"kind": "order"}).json()
+    assert o1["id"] == o2["id"] and o1["number"] == f"BR-BU-{timezone.now():%y}-{o1['id']:05d}"
+    q1 = post(client, f"{C}/deals/{d.pk}/doc", {"kind": "quote"}).json()
+    assert post(client, f"{C}/deals/{d.pk}/doc", {"kind": "quote"}).json()["id"] == q1["id"]
+    d.refresh_from_db()
+    d.items = [{**d.items[0], "qty": "3"}]
+    d.save()
+    q3 = post(client, f"{C}/deals/{d.pk}/doc", {"kind": "quote"}).json()
+    o3 = post(client, f"{C}/deals/{d.pk}/doc", {"kind": "order"}).json()
+    assert q3["id"] != q1["id"] and o3["id"] == o1["id"] and o3["total"] == "300000"
+    assert Doc.objects.filter(deal=d).count() == 3
+    Doc.objects.filter(pk=o3["id"]).update(status="posted", didox_id="dx1")  # mijozga yuborilgan
+    assert post(client, f"{C}/deals/{d.pk}/doc", {"kind": "order"}).json()["id"] == o3["id"]
+    assert Doc.objects.filter(deal=d).count() == 3

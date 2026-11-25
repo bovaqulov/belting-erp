@@ -52,6 +52,7 @@ function saveGroup(db: Db, d: B) {
     attrs.dims = raw.dims as Dims;
   }
   if (raw.unit) attrs.unit = String(raw.unit);
+  if (raw.family) attrs.family = String(raw.family);
   if (raw.belt) attrs.belt = true;
   const parent = Number(d.parent_id) || null;
   if (parent) {
@@ -92,6 +93,8 @@ function row(db: Db, i: DbItem): ItemRow {
     grp: g?.name ?? null,
     parent_grp: pg?.name ?? null,
     material_id: i.attrs.material_id ?? null,
+    family: i.family ?? null,
+    designation: i.belt_mark,
     chars: db.chars.filter((c) => c.item_id === i.id).length,
     qty: st.reduce((a, s) => a + s.qty, 0),
     units: st.filter((s) => s.qty > 0).length,
@@ -102,11 +105,15 @@ function row(db: Db, i: DbItem): ItemRow {
 function items(db: Db, q: URLSearchParams): ItemRow[] {
   const gid = Number(q.get("group_id")) || null;
   const kind = q.get("kind") || null;
+  const fam = q.get("family") || null;
+  const brand = (q.get("brand") ?? "").toUpperCase();
   const s = (q.get("q") ?? "").trim().toLowerCase();
   return db.items
     .filter((i) => i.active)
     .filter((i) => !gid || i.group_id === gid || db.groups.find((g) => g.id === i.group_id)?.parent_id === gid)
     .filter((i) => !kind || i.kind === kind)
+    .filter((i) => !fam || i.family === fam)
+    .filter((i) => !brand || (i.brand ?? "").toUpperCase() === brand)
     .filter((i) => !s || [i.name, i.belt_mark, i.sku, i.attrs.search].some((x) => (x ?? "").toLowerCase().includes(s)))
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, 200)
@@ -130,6 +137,13 @@ function item(db: Db, id: number): Item {
     products: db.items.filter((x) => x.active && x.attrs.material_id === id).map((x) => ({ id: x.id, name: x.name })),
     stock: db.stock.filter((s) => s.item_id === id && s.qty > 0).map((s) => omit(s, "item_id")),
     price: it.price,
+    family: it.family ?? null,
+    spec: it.spec ?? {},
+    spec_view: [],
+    computed: [],
+    designation: it.belt_mark,
+    analogs: [],
+    legacy: [],
   };
 }
 
@@ -152,11 +166,14 @@ function saveItem(db: Db, d: B): Item {
   const dims = ((d.dims === undefined ? ga.dims : d.dims) || null) as Dims | null;
   if (dims && !(dims in UNIT_OF)) throw new Invalid("O'lcham turi noto'g'ri");
   const unit = dims ? UNIT_OF[dims] : kind === "service" ? "xizmat" : str(d.unit) || "dona";
-  const profile = str(d.profile).toUpperCase().replace(/\s/g, "");
-  const length = numOrNull(d.length);
+  // yangi forma: oila + spec (demo — tishli/klinli/poliklinli belgisi; to'liq standart hisob — haqiqiy backend)
+  const sp = (d.spec ?? {}) as B;
+  const famKey = str(d.family) || ga.family || null;
+  const profile = (str(d.profile) || str(sp.profile) || str(sp.section)).toUpperCase().replace(/\s/g, "");
+  const length = numOrNull(d.length ?? sp.length);
   const fam = profile ? family(profile) : null;
-  const lstd = str(d.lstd).toLowerCase();
-  const ribs = numOrNull(d.ribs);
+  const lstd = (str(d.lstd) || str(sp.lref)).toLowerCase();
+  const ribs = numOrNull(d.ribs ?? sp.ribs);
   const brand = str(d.brand).toUpperCase() || null;
   const series = str(d.series) || null;
   const name = str(d.name).replace(/\s+/g, " ") || autoName({ profile, length, lstd, ribs, brand: brand ?? "", series: series ?? "", dims });
@@ -188,6 +205,8 @@ function saveItem(db: Db, d: B): Item {
     sku: str(d.sku) || null,
     min_qty: numOrNull(d.min_qty),
     ikpu: str(d.ikpu) || null,
+    family: famKey,
+    spec: d.spec ? (sp as Record<string, string | number | boolean>) : profile ? { profile, ...(length ? { length } : {}) } : {},
   };
   let itemId = id;
   if (id) {
@@ -295,6 +314,30 @@ export function handle(db: Db, method: "GET" | "POST", path: string, body: B | u
       if (!get && r[2] === "price") return ok(savePrice(db, Number(r[1]), b));
     }
     if (r[0] === "archive") return ok([]);
+    if (r[0] === "brands") return ok([...new Set(db.items.filter((i) => i.active && i.brand).map((i) => i.brand as string))].sort());
+    if (r[0] === "duplicates") return ok([]);
+    // narx siyosati (AppSheet) — faqat haqiqiy backendda; demo: odatiy sozlamalar, sinxronsiz
+    if (r[0] === "pricing" && r[1] === "unmatched") return ok([]);
+    if (r[0] === "pricing" && r[1] === "sync") return fail(501, "AppSheet sinxroni demo rejimda mavjud emas");
+    if (r[0] === "pricing")
+      return ok({
+        vat_pct: 12,
+        default_width: 10,
+        max_disc_lead: 50,
+        max_disc_head: 0,
+        max_disc_seller: 0,
+        synced: null,
+        sync_note: null,
+        stale: true,
+        configured: false,
+        sources: 0,
+        sources_linked: 0,
+        items_linked: 0,
+        can_edit: false,
+      });
+    if (r[0] === "items" && r[2] === "quote") return ok(null);
+    // jonli belgi — faqat haqiqiy backendda (specs.py); demo — bo'sh ko'rinish
+    if (r[0] === "preview") return ok({ errors: {} });
   } catch (e) {
     if (e instanceof Invalid) return fail(statusOf(e), e.message);
     throw e;

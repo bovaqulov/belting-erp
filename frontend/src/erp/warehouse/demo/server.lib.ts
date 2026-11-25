@@ -1617,7 +1617,7 @@ function route(db: Db, method: string, path: string, body: B, now: number): Res 
     if (p === "/kpi/summary") return ok(kpiSummary(db, whOk(db, q.get("store_id")), Number(q.get("days") ?? 30) || 30, now));
     if (p === "/kpi/dock") return ok(dockKpi(db, whOk(db, q.get("store_id")), Number(q.get("days") ?? 30) || 30, now));
     if (p === "/putaway") return ok(putaway(db, q));
-    if (p === "/cat/groups") return ok([...new Set(db.items.map((x) => x.grp).filter((g): g is string => !!g))].sort());
+    if (p === "/wh/groups") return ok([...new Set(db.items.map((x) => x.grp).filter((g): g is string => !!g))].sort());
     if (p === "/wh/tree") return ok(whTree(db, whOk(db, q.get("store_id"))));
     if (p === "/wh/structure") return ok(structure(db, whOk(db, q.get("store_id"))));
     if (p === "/wh/unplaced") {

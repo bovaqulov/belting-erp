@@ -113,7 +113,7 @@ export function BoardView({
             type="button"
             aria-current={i === active ? "true" : undefined}
             onClick={() => onPick(i)}
-            className={`flex h-9 flex-none cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap ${i === active ? "border-transparent bg-btn font-semibold text-btn-fg" : "border-sep bg-sec text-sub"}`}
+            className={`flex h-9 flex-none coarse:h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap ${i === active ? "border-transparent bg-btn font-semibold text-btn-fg" : "border-sep bg-sec text-sub"}`}
           >
             <i className="size-2 flex-none rounded-full" style={{ background: s.color || "#8e8e93" }} aria-hidden="true" />
             {s.name}

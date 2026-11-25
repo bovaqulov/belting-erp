@@ -16,10 +16,11 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
+from django.utils.text import slugify
 
 from config.apps.core.http import ApiError
 
-from .models import Department, Invite, PendingHead, Role, User
+from .models import PERMS, AccessRole, Department, Invite, PendingHead, Role, User
 
 EDIT_ROLES = (Role.EMPLOYEE, Role.ADMIN, Role.PENDING, Role.BLOCKED)
 ACTIVE = (Role.OWNER, Role.ADMIN, Role.EMPLOYEE)
@@ -100,8 +101,85 @@ def update_user(actor: User, target: User, b: dict[str, Any]) -> None:
                 raise ApiError(400, "Rahbar noto'g'ri tanlangan.")
             target.manager = m
         fields.append("manager")
+    if "roles" in b:
+        target.access_roles.set(_roles(b["roles"]))
     if fields:
         target.save(update_fields=list(dict.fromkeys(fields)))
+
+
+# ------------------------------------------------------------------ rollar
+def _roles(raw: Any) -> list[AccessRole]:
+    if not isinstance(raw, list):
+        raise ApiError(400, "Rollar ro'yxat ko'rinishida bo'lsin.")
+    keys = [str(k) for k in raw]
+    found = {r.key: r for r in AccessRole.objects.filter(key__in=keys)}
+    bad = [k for k in keys if k not in found]
+    if bad:
+        raise ApiError(400, f"Bunday rol yo'q: {', '.join(bad)}")
+    return list(found.values())
+
+
+def _perms(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        raise ApiError(400, "Ruxsatlar ro'yxat ko'rinishida bo'lsin.")
+    keys = list(dict.fromkeys(str(p) for p in raw))
+    bad = [k for k in keys if k not in PERMS]
+    if bad:
+        raise ApiError(400, f"Bunday ruxsat yo'q: {', '.join(bad)}")
+    if "crm.head" in keys and "crm" not in keys:
+        keys.insert(0, "crm")  # rahbar CRM'ga kira olsin
+    return [p for p in PERMS if p in keys]  # katalog tartibida
+
+
+def role_json(r: AccessRole, members: list[int] | None = None) -> dict[str, Any]:
+    return {
+        "id": r.pk,
+        "key": r.key,
+        "name": r.name,
+        "note": r.note,
+        "perms": list(r.perms or []),
+        "system": r.system,
+        "members": members
+        if members is not None
+        else list(User.objects.filter(access_roles=r).values_list("tg_id", flat=True)),
+    }
+
+
+def roles_payload() -> dict[str, Any]:
+    roles = list(AccessRole.objects.prefetch_related("members"))
+    return {
+        "roles": [role_json(r, [u.tg_id for u in r.members.all()]) for r in roles],
+        "perms": [{"key": k, "name": n, "group": g} for k, (n, g) in PERMS.items()],
+    }
+
+
+@transaction.atomic
+def save_role(b: dict[str, Any], r: AccessRole | None = None) -> dict[str, Any]:
+    name = str(b.get("name", r.name if r else "")).strip()
+    if not name:
+        raise ApiError(400, "Rol nomini yozing.")
+    if AccessRole.objects.filter(name__iexact=name).exclude(pk=r.pk if r else None).exists():
+        raise ApiError(409, f"«{name}» nomli rol bor.")
+    if r is None:
+        base = slugify(name) or "rol"
+        key, n = base[:36], 2
+        while AccessRole.objects.filter(key=key).exists():
+            key, n = f"{base[:33]}-{n}", n + 1
+        last = AccessRole.objects.order_by("-position").first()
+        r = AccessRole(key=key, position=(last.position + 1) if last else 0)
+    r.name = name[:80]
+    if "note" in b:
+        r.note = str(b["note"] or "").strip()[:240]
+    if "perms" in b:
+        r.perms = _perms(b["perms"])
+    r.save()
+    return role_json(r)
+
+
+def delete_role(r: AccessRole) -> None:
+    if r.system:
+        raise ApiError(409, "Tizim rolini o'chirib bo'lmaydi — ruxsatlarini o'zgartiring.")
+    r.delete()
 
 
 # ------------------------------------------------------------------ taklif
@@ -119,6 +197,7 @@ def invite_json(i: Invite) -> dict[str, Any]:
         "code": i.code,
         "dept": i.dept,
         "role": i.role,
+        "roles": list(i.access_roles or []),
         "name": i.name or None,
         "created_by": i.created_by.tg_id if i.created_by else 0,
         "uses": i.uses,
@@ -147,7 +226,9 @@ def create_invite(actor: User, b: dict[str, Any]) -> dict[str, Any]:
         raise ApiError(400, "Soni va muddat raqam bo'lsin.") from e
     if not 1 <= uses <= 50 or not 1 <= days <= 30:
         raise ApiError(400, "Necha kishi — 1 dan 50 gacha, muddat — 1 dan 30 kungacha.")
+    roles = [r.key for r in _roles(b.get("roles") or [])]
     i = Invite.objects.create(
+        access_roles=roles,
         code=secrets.token_urlsafe(9),
         dept=dept,
         role=role,
@@ -198,10 +279,17 @@ def accept_invite(code: str, tg: dict[str, Any]) -> str:
         u.username = u.username or tg.get("username") or ""
         u.save(update_fields=["role", "username"])
     u.departments.add(dept)
+    roles = list(AccessRole.objects.filter(key__in=i.access_roles or []))
+    if roles:
+        u.access_roles.add(*roles)
     Invite.objects.filter(pk=i.pk).update(uses=F("uses") + 1)
     apply_pending_heads(u)
     url = f"{settings.JARVIS_PUBLIC_URL}/app/" if settings.JARVIS_PUBLIC_URL else "sayt"
-    return f"✅ Xush kelibsiz, {u.name}! Siz «{dept.name}» bo'limiga {ROLE_NAMES.get(u.role, 'xodim')} sifatida qo'shildingiz.\nKirish: {url}"
+    rl = f" Rol: {', '.join(r.name for r in roles)}." if roles else ""
+    return (
+        f"✅ Xush kelibsiz, {u.name}! Siz «{dept.name}» bo'limiga {ROLE_NAMES.get(u.role, 'xodim')} sifatida "
+        f"qo'shildingiz.{rl}\nKirish: {url}"
+    )
 
 
 # ------------------------------------------------------------------ botga kirmagan boshliqlar

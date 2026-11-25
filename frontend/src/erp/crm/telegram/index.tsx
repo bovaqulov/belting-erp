@@ -108,7 +108,7 @@ export function TgPanel({
   useEffect(() => {
     if (!cur) return;
     const k = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !document.querySelector(".mdl")) setCur(null);
+      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector(".mdl, .dd")) setCur(null);
     };
     document.addEventListener("keydown", k);
     return () => document.removeEventListener("keydown", k);

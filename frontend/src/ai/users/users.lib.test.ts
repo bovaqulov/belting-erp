@@ -114,7 +114,7 @@ describe("pickValue", () => {
 
 describe("buildSavePayload", () => {
   const scopes = headScopes(depts);
-  const phone: PhoneState = { loaded: true, yeastarCount: 2, mzDisabled: false, yext: "101", mzu: "", bxu: "7" };
+  const phone: PhoneState = { loaded: true, yeastarCount: 2, mzDisabled: false, yext: "101", mzu: "" };
   const base = {
     departments: ["sotuv"],
     role: "pending",
@@ -131,7 +131,6 @@ describe("buildSavePayload", () => {
       heads: [{ dept: "sotuv", perms: { tasks: true } }],
       manager_id: 42,
       yeastar_ext: "101",
-      bx_user: "7",
       mz_user: null,
       prefs: { note: "qisqa" },
     });
@@ -143,19 +142,17 @@ describe("buildSavePayload", () => {
     expect("yeastar_ext" in a).toBe(false);
     const b = buildSavePayload({ ...base, phone: { ...phone, mzDisabled: true } });
     expect("mz_user" in b).toBe(false);
-    // yeastar ro'yxati bo'sh — faqat yeastar_ext yuborilmaydi; tanlangan Bitrix bog'lanishi yo'qolmaydi
+    // yeastar ro'yxati bo'sh — faqat yeastar_ext yuborilmaydi
     const c = buildSavePayload({ ...base, phone: { ...phone, yeastarCount: 0, yext: "" } });
     expect("yeastar_ext" in c).toBe(false);
-    expect(c.bx_user).toBe("7");
   });
   it("ro'yxat xato bilan bo'sh kelsa — mavjud bog'lanish o'chirilmaydi; o'zgarmagan maydon yuborilmaydi", () => {
-    const orig = { yext: "101", mzu: "", bxu: "7" };
-    const a = buildSavePayload({ ...base, phone: { ...phone, bitrixCount: 0, mzCount: 0, bxu: "", orig } });
-    expect("bx_user" in a).toBe(false);          // Bitrix API xatosi: bx_user=null yuborilmaydi
+    const orig = { yext: "101", mzu: "" };
+    const a = buildSavePayload({ ...base, phone: { ...phone, mzCount: 0, orig } });
     expect("mz_user" in a).toBe(false);
     expect("yeastar_ext" in a).toBe(false);      // o'zgarmagan
-    const b = buildSavePayload({ ...base, phone: { ...phone, bitrixCount: 3, bxu: "", orig } });
-    expect(b.bx_user).toBeNull();                // ataylab tozalandi
+    const b = buildSavePayload({ ...base, phone: { ...phone, yext: "", orig } });
+    expect(b.yeastar_ext).toBeNull();            // ataylab tozalandi
   });
   it("rol o'zgarmasa yuborilmaydi (ega bo'lmagan admin admin kartasini saqlay oladi)", () => {
     const a = buildSavePayload({ ...base, departments: ["sotuv"], role: "admin", origRole: "admin" });

@@ -6,7 +6,7 @@ export function LoginView({ message, link, err, busy, onStart }: { message?: str
     <div className="gm-login">
       <div className="gm-login-box">
         <h1>GeoMap</h1>
-        <p>Belting mijozlari xaritasi — Bitrix24 va 1C ma&apos;lumotlari asosida.</p>
+        <p>Belting mijozlari xaritasi — CRM mijozlari va xaridlari asosida.</p>
         {message && <p className="gm-err">{message}</p>}
         {!link ? (
           <Btn kind="primary" onClick={onStart} disabled={busy}>{busy ? "Ochilmoqda…" : "Telegram orqali kirish"}</Btn>

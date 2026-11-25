@@ -1,5 +1,10 @@
-"""Tizim API (/app/api/...) — keyingi bosqichda."""
+"""Tizim API: /app/api/system/status, /app/api/system/log?name=&lines= (faqat ega/admin)."""
 
-from django.urls import URLPattern
+from django.urls import path
 
-urlpatterns: list[URLPattern] = []
+from . import views as v
+
+urlpatterns = [
+    path("system/status", v.status),
+    path("system/log", v.log),
+]

@@ -107,7 +107,7 @@ export function GraphView({
           <div className={s.gsearch}>
             <Icon name="search" />
             <input
-              placeholder="Qidirish: SPB, Bitrix, Megadyne…"
+              placeholder="Qidirish: SPB, Megadyne, konveyer…"
               autoComplete="off"
               onChange={(e) => onSearch(e.target.value)}
             />

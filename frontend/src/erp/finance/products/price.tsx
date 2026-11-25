@@ -39,7 +39,8 @@ export function PriceForm({ it, onClose, onSaved }: { it: Item; onClose: () => v
       done="Saqlash"
       onClose={onClose}
       onDone={async () => {
-        await post(`/app/api/erp/cat/items/${it.id}/price`, { mode, price, step_mm: step, overrides: ov });
+        // qo'lda saqlangan narx — AppSheet narxidan ustun (oynada «AppSheet narxiga qaytish»)
+        await post(`/app/api/erp/cat/items/${it.id}/price`, { mode, price, step_mm: step, overrides: ov, source: "manual" });
         toast("Narx saqlandi");
         onSaved();
         return false;

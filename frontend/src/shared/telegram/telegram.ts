@@ -12,6 +12,11 @@ export interface TgButton {
 export interface TgWebApp {
   initData: string;
   colorScheme?: "light" | "dark";
+  platform?: string;
+  isFullscreen?: boolean;
+  isVersionAtLeast?(v: string): boolean;
+  requestFullscreen?(): void;
+  onEvent?(e: string, cb: () => void): void;
   ready(): void;
   expand(): void;
   close(): void;
@@ -115,11 +120,28 @@ export function disableZoom(allow = "input,textarea,select"): () => void {
   };
 }
 
-/** Sahifa ochilishida: ready + expand + vertikal surishni o'chirish. */
+let fsBound = false;
+
+/** Telefonda (iOS/Android, Bot API 8.0+) to'liq ekran: Telegram sarlavhasi yo'qoladi, yopish/«…» tugmalari sahifa ustida
+ *  suzadi. html.tg-fs — base.css shu holatda kontentni --tg-*safe-area* qadar pastga suradi. Kompyuterda yoqilmaydi
+ *  (u yerda butun oynani to'liq ekranga o'tkazardi). */
+export function fullscreen(t: TgWebApp): void {
+  if ((t.platform !== "ios" && t.platform !== "android") || !t.isVersionAtLeast?.("8.0")) return;
+  const mark = () => document.documentElement.classList.toggle("tg-fs", !!t.isFullscreen);
+  if (!fsBound) {
+    t.onEvent?.("fullscreenChanged", mark);
+    fsBound = true;
+  }
+  if (!t.isFullscreen) t.requestFullscreen?.();
+  mark();
+}
+
+/** Sahifa ochilishida: ready + expand (telefonda to'liq ekran) + vertikal surishni o'chirish. */
 export function initTelegram(): void {
   const t = tg();
   t?.ready();
   t?.expand();
+  if (t) fullscreen(t);
   t?.disableVerticalSwipes?.();
 }
 

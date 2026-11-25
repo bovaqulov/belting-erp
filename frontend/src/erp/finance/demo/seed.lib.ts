@@ -23,6 +23,9 @@ export type DbItem = {
   attrs: ItemAttrs & { search?: string };
   price: Price | null;
   active: boolean;
+  /** texnik oila va ko'rsatkichlar (haqiqiy backend — specs.py; demo faqat saqlaydi) */
+  family?: string | null;
+  spec?: Record<string, string | number | boolean>;
 };
 export type DbGroup = Omit<Group, "items"> & { active: boolean };
 export type DbStock = StockRow & { item_id: number };
@@ -41,18 +44,18 @@ export type Db = ContractsDb &
 
 /** Tavsiya etilgan kategoriyalar (egasi o'zgartiradi): nom, ruscha, odatiy qiymatlar */
 export const TEMPLATE: [string, string, GroupAttrs][] = [
-  ["Rukavlar", "Рукава", { kind: "material", dims: "w", unit: "mm", belt: true }],
-  ["Tishli remenlar", "Зубчатые ремни", { kind: "product", unit: "dona", belt: true }],
-  ["Klinli remenlar", "Клиновые ремни", { kind: "goods", unit: "dona", belt: true }],
-  ["Poliklinli remenlar", "Поликлиновые ремни", { kind: "goods", unit: "dona", belt: true }],
-  ["Konveyer lenta materiallari", "Материалы для конвейерных лент", { kind: "material", dims: "wl", unit: "m2" }],
-  ["Yassi remen materiallari", "Материалы для плоских ремней", { kind: "material", dims: "wl", unit: "m2" }],
-  ["Profillar", "Профили", { kind: "material", dims: "l", unit: "m" }],
-  ["Dumaloq remenlar", "Круглые ремни", { kind: "material", dims: "l", unit: "m" }],
-  ["Mexanik ulagichlar", "Механические соединения", { kind: "goods", unit: "dona" }],
-  ["Modulli lentalar", "Модульные ленты", { kind: "goods", unit: "dona" }],
-  ["Boshqa tovarlar", "Прочие товары", { kind: "goods", unit: "dona" }],
-  ["Xizmatlar", "Услуги", { kind: "service", unit: "xizmat" }],
+  ["Rukavlar", "Рукава", { family: "sleeve", kind: "material", dims: "w", unit: "mm", belt: true }],
+  ["Tishli remenlar", "Зубчатые ремни", { family: "timing", kind: "product", unit: "dona", belt: true }],
+  ["Klinli remenlar", "Клиновые ремни", { family: "vbelt", kind: "goods", unit: "dona", belt: true }],
+  ["Poliklinli remenlar", "Поликлиновые ремни", { family: "ribbed", kind: "goods", unit: "dona", belt: true }],
+  ["Konveyer lenta materiallari", "Материалы для конвейерных лент", { family: "light", kind: "material", dims: "wl", unit: "m2" }],
+  ["Yassi remen materiallari", "Материалы для плоских ремней", { family: "flat", kind: "material", dims: "wl", unit: "m2" }],
+  ["Profillar", "Профили", { family: "profile", kind: "material", dims: "l", unit: "m" }],
+  ["Dumaloq remenlar", "Круглые ремни", { family: "round", kind: "material", dims: "l", unit: "m" }],
+  ["Mexanik ulagichlar", "Механические соединения", { family: "fastener", kind: "goods", unit: "dona" }],
+  ["Modulli lentalar", "Модульные ленты", { family: "modular", kind: "goods", unit: "dona" }],
+  ["Boshqa tovarlar", "Прочие товары", { family: "other", kind: "goods", unit: "dona" }],
+  ["Xizmatlar", "Услуги", { family: "service", kind: "service", unit: "xizmat" }],
 ];
 
 type Spec = { price?: Price; g: number; kind?: Kind; name?: string; profile?: string; length?: number; lstd?: string; ribs?: number; brand?: string; series?: string; sku?: string; min?: number; widths?: number[]; material?: number };

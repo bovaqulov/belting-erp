@@ -1,5 +1,5 @@
 // Mijoz kartasi (faqat ko'rinish): holat, sifat, teg, manzil, hudud, mas'ul, savdo, qarz (rahbariyat), bitimlar, INN;
-// Bitrix / orginfo / marshrut / yaqinlari / yo'l / joyini to'g'rilash; tashrif qayd etish va tashriflar tarixi.
+// CRM / orginfo / marshrut / yaqinlari / yo'l / joyini to'g'rilash; tashrif qayd etish va tashriflar tarixi.
 import { Btn } from "@/geomap/kit";
 import { dateUz, money, num, QUALITY_COLOR, QUALITY_LABEL, STATUS_COLOR, STATUS_LABEL } from "@/geomap/lib/fields";
 import { openExternal } from "@/geomap/lib/tg";
@@ -45,7 +45,7 @@ export function RecordView({ r, err, note, busy, inRoute, full, regionName, dist
             {r.inn && (<><dt>INN</dt><dd>{r.inn}</dd></>)}
           </dl>
           <div className="gm-row wrap">
-            {r.bitrixUrl && <Btn onClick={() => openExternal(r.bitrixUrl!)}>Bitrix&apos;da ochish</Btn>}
+            {r.crmUrl && <Btn onClick={() => location.assign(r.crmUrl!)}>CRM&apos;da ochish</Btn>}
             {r.orgUrl && <Btn onClick={() => openExternal(r.orgUrl!)}>orginfo.uz</Btn>}
             <Btn kind={inRoute ? "primary" : "plain"} onClick={onRoute} disabled={r.lat === null}>{inRoute ? "✓ Marshrutda" : "+ Marshrutga"}</Btn>
             <Btn onClick={onNearby} disabled={r.lat === null}>Yaqinlari</Btn>

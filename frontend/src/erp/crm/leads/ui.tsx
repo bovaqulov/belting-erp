@@ -145,7 +145,7 @@ export function LeadsView({
                       </td>
                       <td data-l="Telefon">
                         {l.phone ? (
-                          <a href={`tel:+${l.phone}`} className="num">
+                          <a href={`tel:+${l.phone}`} className="num coarse:inline-flex coarse:min-h-11 coarse:items-center">
                             +{l.phone}
                           </a>
                         ) : (
@@ -323,7 +323,7 @@ function LeadBoard({
                         {l.phone ? (
                           <>
                             {" · "}
-                            <a href={`tel:+${l.phone}`} className="num text-link">
+                            <a href={`tel:+${l.phone}`} className="num text-link coarse:-my-3.5 coarse:inline-block coarse:py-3.5">
                               +{l.phone}
                             </a>
                           </>

@@ -63,19 +63,22 @@ export function ItemSearch({
   const n = shown ? shown.rs.filter((x) => picked?.has(itemKey(toItem(x)))).length : 0;
 
   return (
-    <div className={`relative [&_.dd]:absolute [&_.dd]:inset-x-0 [&_.dd]:z-5 [&_.dd]:shadow-2 [&_.inp]:w-full ${className}`}>
+    <div
+      className={`relative [&_.dd]:absolute [&_.dd]:inset-x-0 [&_.dd]:z-5 [&_.dd]:shadow-2 [&_.inp]:w-full ${className}`}
+      onKeyDown={(e) => {
+        // Escape — tavsiyalar yopiladi (fokus maydonda ham, ro'yxat tugmasida ham), oyna emas
+        if (e.key === "Escape" && (q || shown)) {
+          e.stopPropagation();
+          e.preventDefault();
+          close();
+        }
+      }}
+    >
       <input
         id={id}
         className="inp"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Escape" && q) {
-            e.stopPropagation();
-            e.preventDefault();
-            close();
-          }
-        }}
         placeholder="Tovar qo'shish: nom, artikul, remen belgisi (masalan SPB 1650)"
         aria-label={id ? undefined : "Tovar qidirish"}
         autoComplete="off"

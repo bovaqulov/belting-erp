@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TelegramCRM shlyuzi — launchd (macOS). Yo'llarni moslang, keyin:
+     cp backend/deploy/uz.belting.tgcrm-gateway.plist ~/Library/LaunchAgents/
+     launchctl load -w ~/Library/LaunchAgents/uz.belting.tgcrm-gateway.plist
+     Jurnal: backend/data/logs/tg_gateway.log. BITTA nusxa (Redis qulfi). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>uz.belting.tgcrm-gateway</string>
+  <key>WorkingDirectory</key><string>/Users/belting/belting_erp/backend</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/uv</string><string>run</string><string>--frozen</string>
+    <string>python</string><string>manage.py</string><string>tg_gateway</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ExitTimeOut</key><integer>30</integer>
+  <key>StandardOutPath</key><string>/Users/belting/belting_erp/backend/data/logs/tg_gateway.log</string>
+  <key>StandardErrorPath</key><string>/Users/belting/belting_erp/backend/data/logs/tg_gateway.log</string>
+</dict>
+</plist>

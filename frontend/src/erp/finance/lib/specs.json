@@ -1,0 +1,1401 @@
+{
+ "families": [
+  {
+   "key": "timing",
+   "title": "Tishli remen",
+   "std": "ISO 5296 · ISO 13050 · ISO 17396",
+   "group": "Tishli remenlar",
+   "kind": "goods",
+   "dims": null,
+   "fields": [
+    {
+     "key": "profile",
+     "label": "Profil",
+     "type": "code",
+     "ph": "8M, RPP8, S8M, XL, T10, AT10",
+     "hint": "Belgilashdagi profil (qadam shundan)",
+     "req": true
+    },
+    {
+     "key": "length",
+     "label": "Uzunlik",
+     "type": "num",
+     "ph": "1040",
+     "hint": "Metrik — mm; dyuymli (XL, L, H) — belgidagi son (270XL = 27,0″); ochiq rulonda bo'sh",
+     "min": 10,
+     "max": 100000
+    },
+    {
+     "key": "width",
+     "label": "Eni",
+     "type": "num",
+     "unit": "mm",
+     "ph": "30",
+     "hint": "Bo'sh — eni variant (kenglik) sifatida",
+     "min": 1,
+     "max": 2000
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "rubber",
+       "Rezina (CR / HNBR)"
+      ],
+      [
+       "pu",
+       "Poliuretan (PU)"
+      ]
+     ]
+    },
+    {
+     "key": "cord",
+     "label": "Kord",
+     "type": "choice",
+     "options": [
+      [
+       "glass",
+       "Shisha tola"
+      ],
+      [
+       "aramid",
+       "Aramid"
+      ],
+      [
+       "steel",
+       "Po'lat"
+      ],
+      [
+       "polyester",
+       "Poliester"
+      ]
+     ]
+    },
+    {
+     "key": "build",
+     "label": "Tuzilishi",
+     "type": "choice",
+     "options": [
+      [
+       "endless",
+       "Yopiq (endless)"
+      ],
+      [
+       "open",
+       "Ochiq (rulon)"
+      ],
+      [
+       "welded",
+       "Payvandlangan"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "key": "sleeve",
+   "title": "Rukav (tishli remen rukavi)",
+   "std": "ISO 5296 · ISO 13050 · ISO 17396",
+   "group": "Rukavlar",
+   "kind": "material",
+   "dims": "w",
+   "fields": [
+    {
+     "key": "profile",
+     "label": "Profil",
+     "type": "code",
+     "ph": "8M, RPP8, S8M, XL, T10, AT10",
+     "hint": "Belgilashdagi profil (qadam shundan)",
+     "req": true
+    },
+    {
+     "key": "length",
+     "label": "Uzunlik",
+     "type": "num",
+     "ph": "1040",
+     "hint": "Metrik — mm; dyuymli (XL, L, H) — belgidagi son (270XL = 27,0″); ochiq rulonda bo'sh",
+     "min": 10,
+     "max": 100000
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "rubber",
+       "Rezina (CR / HNBR)"
+      ],
+      [
+       "pu",
+       "Poliuretan (PU)"
+      ]
+     ]
+    },
+    {
+     "key": "cord",
+     "label": "Kord",
+     "type": "choice",
+     "options": [
+      [
+       "glass",
+       "Shisha tola"
+      ],
+      [
+       "aramid",
+       "Aramid"
+      ],
+      [
+       "steel",
+       "Po'lat"
+      ],
+      [
+       "polyester",
+       "Poliester"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "key": "vbelt",
+   "title": "Klinli remen",
+   "std": "ISO 4184 · DIN 2215 · DIN 7753",
+   "group": "Klinli remenlar",
+   "kind": "goods",
+   "dims": null,
+   "fields": [
+    {
+     "key": "section",
+     "label": "Kesim",
+     "type": "choice",
+     "options": [
+      [
+       "Y",
+       "Y — klassik (ISO 4184)"
+      ],
+      [
+       "Z",
+       "Z — klassik (ISO 4184)"
+      ],
+      [
+       "A",
+       "A — klassik (ISO 4184)"
+      ],
+      [
+       "B",
+       "B — klassik (ISO 4184)"
+      ],
+      [
+       "C",
+       "C — klassik (ISO 4184)"
+      ],
+      [
+       "D",
+       "D — klassik (ISO 4184)"
+      ],
+      [
+       "E",
+       "E — klassik (ISO 4184)"
+      ],
+      [
+       "SPZ",
+       "SPZ — tor (ISO 4184)"
+      ],
+      [
+       "SPA",
+       "SPA — tor (ISO 4184)"
+      ],
+      [
+       "SPB",
+       "SPB — tor (ISO 4184)"
+      ],
+      [
+       "SPC",
+       "SPC — tor (ISO 4184)"
+      ],
+      [
+       "XPZ",
+       "XPZ — tishli qirrali"
+      ],
+      [
+       "XPA",
+       "XPA — tishli qirrali"
+      ],
+      [
+       "XPB",
+       "XPB — tishli qirrali"
+      ],
+      [
+       "XPC",
+       "XPC — tishli qirrali"
+      ],
+      [
+       "ZX",
+       "ZX — tishli qirrali"
+      ],
+      [
+       "AX",
+       "AX — tishli qirrali"
+      ],
+      [
+       "BX",
+       "BX — tishli qirrali"
+      ],
+      [
+       "CX",
+       "CX — tishli qirrali"
+      ],
+      [
+       "3V",
+       "3V — RMA (dyuymli)"
+      ],
+      [
+       "5V",
+       "5V — RMA (dyuymli)"
+      ],
+      [
+       "8V",
+       "8V — RMA (dyuymli)"
+      ],
+      [
+       "3VX",
+       "3VX — RMA (dyuymli)"
+      ],
+      [
+       "5VX",
+       "5VX — RMA (dyuymli)"
+      ],
+      [
+       "AA",
+       "AA — olti qirrali"
+      ],
+      [
+       "BB",
+       "BB — olti qirrali"
+      ],
+      [
+       "CC",
+       "CC — olti qirrali"
+      ]
+     ],
+     "req": true
+    },
+    {
+     "key": "length",
+     "label": "Uzunlik",
+     "type": "num",
+     "unit": "mm",
+     "ph": "1650",
+     "hint": "AA/BB/CC (olti qirrali) — dyuymda",
+     "req": true,
+     "min": 50,
+     "max": 20000
+    },
+    {
+     "key": "lref",
+     "label": "Uzunlik tizimi",
+     "type": "choice",
+     "hint": "Belgidagi uzunlik qaysi o'lchov: Li, Ld/Lw/Lp yoki La/Le (ISO 4184 — Ld)",
+     "options": [
+      [
+       "Li",
+       "Li — ichki"
+      ],
+      [
+       "Ld",
+       "Ld — hisobiy (datum)"
+      ],
+      [
+       "Lw",
+       "Lw — hisobiy (DIN)"
+      ],
+      [
+       "Lp",
+       "Lp — hisobiy (pitch)"
+      ],
+      [
+       "La",
+       "La — tashqi"
+      ],
+      [
+       "Le",
+       "Le — tashqi"
+      ]
+     ]
+    },
+    {
+     "key": "build",
+     "label": "Tuzilishi",
+     "type": "choice",
+     "options": [
+      [
+       "wrapped",
+       "O'ralgan"
+      ],
+      [
+       "raw",
+       "Ochiq qirrali"
+      ],
+      [
+       "cogged",
+       "Tishli qirrali"
+      ],
+      [
+       "banded",
+       "Ko'p qatorli"
+      ]
+     ]
+    },
+    {
+     "key": "bands",
+     "label": "Qatorlar soni",
+     "type": "int",
+     "ph": "1",
+     "hint": "Ko'p qatorli (banded) remen uchun",
+     "min": 1,
+     "max": 20
+    }
+   ]
+  },
+  {
+   "key": "ribbed",
+   "title": "Poliklinli remen",
+   "std": "ISO 9982 · DIN 7867",
+   "group": "Poliklinli remenlar",
+   "kind": "goods",
+   "dims": null,
+   "fields": [
+    {
+     "key": "profile",
+     "label": "Profil",
+     "type": "choice",
+     "options": [
+      [
+       "PH",
+       "PH — qadam 1,6 mm"
+      ],
+      [
+       "PJ",
+       "PJ — qadam 2,34 mm"
+      ],
+      [
+       "PK",
+       "PK — qadam 3,56 mm"
+      ],
+      [
+       "PL",
+       "PL — qadam 4,7 mm"
+      ],
+      [
+       "PM",
+       "PM — qadam 9,4 mm"
+      ]
+     ],
+     "req": true
+    },
+    {
+     "key": "ribs",
+     "label": "Qovurg'alar soni",
+     "type": "int",
+     "ph": "8",
+     "min": 1,
+     "max": 200
+    },
+    {
+     "key": "length",
+     "label": "Samarali uzunlik",
+     "type": "num",
+     "unit": "mm",
+     "ph": "1795",
+     "req": true,
+     "min": 200,
+     "max": 20000
+    },
+    {
+     "key": "lref",
+     "label": "Uzunlik tizimi",
+     "type": "choice",
+     "options": [
+      [
+       "Le",
+       "Le — samarali"
+      ],
+      [
+       "La",
+       "La — tashqi"
+      ],
+      [
+       "Li",
+       "Li — ichki"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "key": "conveyor",
+   "title": "Konveyer lenta (rezina)",
+   "std": "ISO 14890 · DIN 22102 · ISO 10247",
+   "group": "Konveyer lentalar",
+   "kind": "material",
+   "dims": "wl",
+   "fields": [
+    {
+     "key": "carcass",
+     "label": "Karkas",
+     "type": "choice",
+     "options": [
+      [
+       "EP",
+       "EP — poliester/poliamid"
+      ],
+      [
+       "NN",
+       "NN — poliamid"
+      ],
+      [
+       "CC",
+       "CC — paxta"
+      ],
+      [
+       "EE",
+       "EE — poliester"
+      ],
+      [
+       "ST",
+       "ST — po'lat kord"
+      ]
+     ],
+     "req": true
+    },
+    {
+     "key": "strength",
+     "label": "Mustahkamlik",
+     "type": "num",
+     "unit": "N/mm",
+     "ph": "400",
+     "hint": "Butun lentaning uzilish mustahkamligi",
+     "req": true,
+     "min": 50,
+     "max": 10000
+    },
+    {
+     "key": "plies",
+     "label": "Qatlamlar",
+     "type": "int",
+     "ph": "3",
+     "min": 1,
+     "max": 10
+    },
+    {
+     "key": "top",
+     "label": "Ustki qoplama",
+     "type": "num",
+     "unit": "mm",
+     "ph": "4",
+     "min": 0,
+     "max": 50
+    },
+    {
+     "key": "bottom",
+     "label": "Pastki qoplama",
+     "type": "num",
+     "unit": "mm",
+     "ph": "2",
+     "min": 0,
+     "max": 50
+    },
+    {
+     "key": "grade",
+     "label": "Qoplama sinfi",
+     "type": "choice",
+     "options": [
+      [
+       "Y",
+       "Y — umumiy (DIN 22102)"
+      ],
+      [
+       "W",
+       "W — yeyilishga chidamli"
+      ],
+      [
+       "X",
+       "X — kesilish/zarbaga chidamli"
+      ],
+      [
+       "Z",
+       "Z — yengil sharoit"
+      ],
+      [
+       "H",
+       "H — og'ir (ISO 10247)"
+      ],
+      [
+       "D",
+       "D — abraziv (ISO 10247)"
+      ],
+      [
+       "L",
+       "L — oddiy (ISO 10247)"
+      ],
+      [
+       "T",
+       "T — issiqqa chidamli"
+      ],
+      [
+       "G",
+       "G — moyga chidamli"
+      ],
+      [
+       "K",
+       "K — yong'inga chidamli"
+      ],
+      [
+       "E",
+       "E — antistatik"
+      ]
+     ]
+    },
+    {
+     "key": "width",
+     "label": "Eni",
+     "type": "num",
+     "unit": "mm",
+     "ph": "800",
+     "hint": "Bo'sh — eni ombor birligida",
+     "min": 100,
+     "max": 5000
+    }
+   ]
+  },
+  {
+   "key": "light",
+   "title": "Yengil konveyer lenta (PVC/PU)",
+   "std": "ISO 21183-1 · FDA 21 CFR · EU 10/2011",
+   "group": "Konveyer lenta materiallari",
+   "kind": "material",
+   "dims": "wl",
+   "fields": [
+    {
+     "key": "series",
+     "label": "Seriya (kod)",
+     "type": "code",
+     "ph": "E 3/1 U0/U0",
+     "hint": "Ishlab chiqaruvchi kodi",
+     "req": true
+    },
+    {
+     "key": "cover",
+     "label": "Qoplama",
+     "type": "choice",
+     "options": [
+      [
+       "PVC",
+       "PVC"
+      ],
+      [
+       "PU",
+       "PU (poliuretan)"
+      ],
+      [
+       "TPO",
+       "TPO"
+      ],
+      [
+       "PE",
+       "PE"
+      ],
+      [
+       "SI",
+       "Silikon"
+      ],
+      [
+       "RUBBER",
+       "Rezina"
+      ],
+      [
+       "FELT",
+       "Kigiz"
+      ],
+      [
+       "NONE",
+       "Qoplamasiz (to'qima)"
+      ]
+     ]
+    },
+    {
+     "key": "thickness",
+     "label": "Qalinlik",
+     "type": "num",
+     "unit": "mm",
+     "ph": "2",
+     "min": 0.1,
+     "max": 30
+    },
+    {
+     "key": "plies",
+     "label": "Qatlamlar",
+     "type": "int",
+     "ph": "2",
+     "min": 0,
+     "max": 10
+    },
+    {
+     "key": "surface",
+     "label": "Ustki sirt",
+     "type": "text",
+     "ph": "silliq, matt, grip, piramida"
+    },
+    {
+     "key": "color",
+     "label": "Rangi",
+     "type": "text",
+     "ph": "oq, ko'k, yashil, qora"
+    },
+    {
+     "key": "food",
+     "label": "Oziq-ovqatga ruxsat (FDA / EU)",
+     "type": "bool"
+    },
+    {
+     "key": "antistatic",
+     "label": "Antistatik",
+     "type": "bool"
+    }
+   ]
+  },
+  {
+   "key": "flat",
+   "title": "Yassi uzatma remeni",
+   "std": "ISO 22 · ISO 21183-1",
+   "group": "Yassi remen materiallari",
+   "kind": "material",
+   "dims": "wl",
+   "fields": [
+    {
+     "key": "series",
+     "label": "Seriya (kod)",
+     "type": "code",
+     "ph": "GG 10, GS-05T",
+     "req": true
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "pa",
+       "Poliamid o'zak"
+      ],
+      [
+       "pes",
+       "Poliester"
+      ],
+      [
+       "rubber",
+       "Rezina"
+      ],
+      [
+       "pu",
+       "PU"
+      ],
+      [
+       "leather",
+       "Charm"
+      ]
+     ]
+    },
+    {
+     "key": "thickness",
+     "label": "Qalinlik",
+     "type": "num",
+     "unit": "mm",
+     "ph": "1.9",
+     "min": 0.1,
+     "max": 30
+    },
+    {
+     "key": "color",
+     "label": "Rangi",
+     "type": "text",
+     "ph": "oq, ko'k, yashil, qora"
+    }
+   ]
+  },
+  {
+   "key": "modular",
+   "title": "Modulli lenta",
+   "std": "ishlab chiqaruvchi seriyasi",
+   "group": "Modulli lentalar",
+   "kind": "goods",
+   "dims": null,
+   "fields": [
+    {
+     "key": "part",
+     "label": "Qism",
+     "type": "choice",
+     "options": [
+      [
+       "belt",
+       "Lenta"
+      ],
+      [
+       "sprocket",
+       "Yulduzcha"
+      ],
+      [
+       "module",
+       "Modul"
+      ],
+      [
+       "acc",
+       "Aksessuar"
+      ]
+     ],
+     "req": true
+    },
+    {
+     "key": "series",
+     "label": "Seriya (kod)",
+     "type": "code",
+     "ph": "EC127C, MD820",
+     "req": true
+    },
+    {
+     "key": "pitch",
+     "label": "Qadam",
+     "type": "choice",
+     "options": [
+      [
+       "8",
+       "8 mm"
+      ],
+      [
+       "12.7",
+       "12.7 mm"
+      ],
+      [
+       "19.05",
+       "19.05 mm"
+      ],
+      [
+       "25.4",
+       "25.4 mm"
+      ],
+      [
+       "27.2",
+       "27.2 mm"
+      ],
+      [
+       "38.1",
+       "38.1 mm"
+      ],
+      [
+       "50.8",
+       "50.8 mm"
+      ],
+      [
+       "57.15",
+       "57.15 mm"
+      ]
+     ]
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "PP",
+       "PP"
+      ],
+      [
+       "POM",
+       "POM (atsetal)"
+      ],
+      [
+       "PE",
+       "PE"
+      ],
+      [
+       "PA",
+       "PA (poliamid)"
+      ],
+      [
+       "PBT",
+       "PBT"
+      ]
+     ]
+    },
+    {
+     "key": "surface",
+     "label": "Sirt",
+     "type": "text",
+     "ph": "flush grid, flat top, raised rib"
+    },
+    {
+     "key": "color",
+     "label": "Rangi",
+     "type": "text",
+     "ph": "oq, ko'k, yashil, qora"
+    }
+   ]
+  },
+  {
+   "key": "round",
+   "title": "Dumaloq remen",
+   "std": "—",
+   "group": "Dumaloq remenlar",
+   "kind": "material",
+   "dims": "l",
+   "fields": [
+    {
+     "key": "diameter",
+     "label": "Diametr",
+     "type": "num",
+     "unit": "mm",
+     "ph": "5",
+     "req": true,
+     "min": 1,
+     "max": 30
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "PU",
+       "PU (poliuretan)"
+      ],
+      [
+       "PE",
+       "PE"
+      ],
+      [
+       "PES",
+       "Poliester"
+      ]
+     ]
+    },
+    {
+     "key": "hardness",
+     "label": "Qattiqlik",
+     "type": "num",
+     "unit": "Shore A",
+     "ph": "85",
+     "min": 40,
+     "max": 100
+    },
+    {
+     "key": "surface",
+     "label": "Sirt",
+     "type": "choice",
+     "options": [
+      [
+       "smooth",
+       "Silliq"
+      ],
+      [
+       "rough",
+       "G'adir-budur"
+      ]
+     ]
+    },
+    {
+     "key": "color",
+     "label": "Rangi",
+     "type": "text",
+     "ph": "oq, ko'k, yashil, qora"
+    }
+   ]
+  },
+  {
+   "key": "profile",
+   "title": "Profil va bort",
+   "std": "—",
+   "group": "Profillar",
+   "kind": "material",
+   "dims": "l",
+   "fields": [
+    {
+     "key": "pkind",
+     "label": "Turi",
+     "type": "choice",
+     "options": [
+      [
+       "cleat",
+       "Cleat (T-profil)"
+      ],
+      [
+       "sidewall",
+       "Bort (gofrabort)"
+      ],
+      [
+       "guide",
+       "Yo'naltiruvchi (V-profil)"
+      ],
+      [
+       "other",
+       "Boshqa"
+      ]
+     ],
+     "req": true
+    },
+    {
+     "key": "code",
+     "label": "Kod",
+     "type": "code",
+     "ph": "T20, SW30, K17",
+     "req": true
+    },
+    {
+     "key": "height",
+     "label": "Balandligi",
+     "type": "num",
+     "unit": "mm",
+     "ph": "40",
+     "min": 1,
+     "max": 500
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "PVC",
+       "PVC"
+      ],
+      [
+       "PU",
+       "PU"
+      ],
+      [
+       "RUBBER",
+       "Rezina"
+      ]
+     ]
+    },
+    {
+     "key": "color",
+     "label": "Rangi",
+     "type": "text",
+     "ph": "oq, ko'k, yashil, qora"
+    }
+   ]
+  },
+  {
+   "key": "fastener",
+   "title": "Mexanik ulagich",
+   "std": "—",
+   "group": "Mexanik ulagichlar",
+   "kind": "goods",
+   "dims": null,
+   "fields": [
+    {
+     "key": "system",
+     "label": "Tizim (kod)",
+     "type": "code",
+     "ph": "MR01, SR07, SE 90/10",
+     "req": true
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "steel",
+       "Po'lat"
+      ],
+      [
+       "ss",
+       "Zanglamas po'lat"
+      ],
+      [
+       "galv",
+       "Ruxlangan"
+      ],
+      [
+       "plastic",
+       "Plastik"
+      ]
+     ]
+    },
+    {
+     "key": "thick",
+     "label": "Lenta qalinligi",
+     "type": "text",
+     "unit": "mm",
+     "ph": "3–6"
+    }
+   ]
+  },
+  {
+   "key": "lagging",
+   "title": "Val qoplamasi",
+   "std": "—",
+   "group": "Val qoplamalari",
+   "kind": "material",
+   "dims": "l",
+   "fields": [
+    {
+     "key": "code",
+     "label": "Kod",
+     "type": "code",
+     "ph": "GRIP 1PVC.G",
+     "req": true
+    },
+    {
+     "key": "material",
+     "label": "Material",
+     "type": "choice",
+     "options": [
+      [
+       "rubber",
+       "Rezina"
+      ],
+      [
+       "pvc",
+       "PVC"
+      ],
+      [
+       "pu",
+       "PU"
+      ],
+      [
+       "ceramic",
+       "Keramika"
+      ]
+     ]
+    },
+    {
+     "key": "thickness",
+     "label": "Qalinlik",
+     "type": "num",
+     "unit": "mm",
+     "ph": "8",
+     "min": 0.5,
+     "max": 50
+    },
+    {
+     "key": "pattern",
+     "label": "Naqsh",
+     "type": "text",
+     "ph": "silliq, romb, grip"
+    }
+   ]
+  },
+  {
+   "key": "pulley",
+   "title": "Shkiv va vtulka",
+   "std": "ISO 4183 · ISO 5294 · ISO 9982",
+   "group": "Shkivlar va vtulkalar",
+   "kind": "goods",
+   "dims": null,
+   "fields": [
+    {
+     "key": "part",
+     "label": "Qism",
+     "type": "choice",
+     "options": [
+      [
+       "taper",
+       "Taper-vtulka"
+      ],
+      [
+       "v",
+       "Klinli shkiv (ISO 4183)"
+      ],
+      [
+       "timing",
+       "Tishli shkiv (ISO 5294)"
+      ],
+      [
+       "ribbed",
+       "Poliklinli shkiv (ISO 9982)"
+      ],
+      [
+       "other",
+       "Boshqa"
+      ]
+     ],
+     "req": true
+    },
+    {
+     "key": "code",
+     "label": "Belgi",
+     "type": "code",
+     "ph": "2012, SPB 200-3, 40-8M-30",
+     "req": true
+    },
+    {
+     "key": "bore",
+     "label": "Teshik",
+     "type": "num",
+     "unit": "mm",
+     "ph": "35",
+     "min": 1,
+     "max": 500
+    }
+   ]
+  },
+  {
+   "key": "other",
+   "title": "Boshqa tovar",
+   "std": "—",
+   "group": "Boshqa tovarlar",
+   "kind": "goods",
+   "dims": null,
+   "fields": []
+  },
+  {
+   "key": "service",
+   "title": "Xizmat",
+   "std": "—",
+   "group": "Xizmatlar",
+   "kind": "service",
+   "dims": null,
+   "fields": []
+  }
+ ],
+ "timing_profiles": [
+  [
+   "MXL",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "XXL",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "XL",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "L",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "H",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "XH",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "XXH",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "DXL",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "DL",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "DH",
+   "ISO 5296 (dyuymli)"
+  ],
+  [
+   "3M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "5M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "8M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "14M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "20M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "RPP3",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "RPP5",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "RPP8",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "RPP14",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "SLV5",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "SLV8",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "SLV14",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "DRPP5",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "DRPP8",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "DRPP14",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "HTD3M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "HTD5M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "HTD8M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "HTD14M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "D5M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "D8M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "D14M",
+   "ISO 13050 (HTD / RPP)"
+  ],
+  [
+   "S2M",
+   "STD (S…M)"
+  ],
+  [
+   "S3M",
+   "STD (S…M)"
+  ],
+  [
+   "S4.5M",
+   "STD (S…M)"
+  ],
+  [
+   "S5M",
+   "STD (S…M)"
+  ],
+  [
+   "S8M",
+   "STD (S…M)"
+  ],
+  [
+   "S14M",
+   "STD (S…M)"
+  ],
+  [
+   "DS5M",
+   "STD (S…M)"
+  ],
+  [
+   "DS8M",
+   "STD (S…M)"
+  ],
+  [
+   "2MGT",
+   "GT (Gates)"
+  ],
+  [
+   "3MGT",
+   "GT (Gates)"
+  ],
+  [
+   "5MGT",
+   "GT (Gates)"
+  ],
+  [
+   "8MGT",
+   "GT (Gates)"
+  ],
+  [
+   "14MGT",
+   "GT (Gates)"
+  ],
+  [
+   "8GTR",
+   "GT (Gates)"
+  ],
+  [
+   "14GTR",
+   "GT (Gates)"
+  ],
+  [
+   "T2.5",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "T5",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "T10",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "T20",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "DT5",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "DT10",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "TT5",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "AT3",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "AT5",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "AT10",
+   "ISO 17396 (T / AT)"
+  ],
+  [
+   "AT20",
+   "ISO 17396 (T / AT)"
+  ]
+ ]
+}

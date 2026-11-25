@@ -70,11 +70,13 @@ export const BOX = "mb-3.5 rounded-[10px] bg-sec";
 export const BOX_H = "m-0 flex justify-between px-3.5 pt-[11px] pb-1.5 text-xs tracking-[.02em] text-hint uppercase";
 /** Maydon qatori: chapda nom, o'ngda tahrirlanadigan qiymat (ramkasiz, hover/fokusda ramka) */
 export const FR = [
-  "grid min-h-[34px] grid-cols-[110px_minmax(0,1fr)] items-center gap-2 px-3.5 py-1.5 max-md:grid-cols-[104px_minmax(0,1fr)] max-md:px-3 max-md:py-1",
+  "grid min-h-[34px] coarse:min-h-11 grid-cols-[110px_minmax(0,1fr)] items-center gap-2 px-3.5 py-1.5 max-md:grid-cols-[104px_minmax(0,1fr)] max-md:px-3 max-md:py-1",
   "[&>span]:text-[13px] [&>span]:text-hint",
   "[&_:is(input:not(.ck),select,textarea)]:w-full [&_:is(input:not(.ck),select,textarea)]:rounded-md [&_:is(input:not(.ck),select,textarea)]:border [&_:is(input:not(.ck),select,textarea)]:border-transparent [&_:is(input:not(.ck),select,textarea)]:bg-transparent [&_:is(input:not(.ck),select,textarea)]:px-[7px] [&_:is(input:not(.ck),select,textarea)]:py-[5px] [&_:is(input:not(.ck),select,textarea)]:text-fg [&_:is(input:not(.ck),select,textarea)]:outline-none [&_:is(input:not(.ck),select,textarea)]:[font:inherit]",
   "[&_:is(input:not(.ck),select,textarea):hover]:border-sep [&_:is(input:not(.ck),select,textarea):focus]:border-link [&_:is(input:not(.ck),select,textarea):focus]:bg-page",
   "[&_textarea]:min-h-14 [&_textarea]:resize-y max-md:[&_:is(input:not(.ck),select)]:min-h-11",
+  // o'zgartirib bo'lmaydigan maydon (masalan, sotuvchiga «Mas'ul») — oddiy matn kabi, tanlov o'qi va ramkasiz
+  "[&_:is(select,input):disabled]:!cursor-default [&_:is(select,input):disabled]:!appearance-none [&_:is(select,input):disabled]:!border-transparent [&_:is(select,input):disabled]:!bg-transparent [&_:is(select,input):disabled]:!opacity-100",
 ].join(" ");
 export const FR_TOP = "!items-start [&>span]:pt-1.5";
 /** Bog'liq yozuv qatori (kontakt, kompaniya) */

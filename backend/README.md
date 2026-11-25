@@ -19,6 +19,7 @@ backend/
       erp/marketplace/    WB/Ozon/Uzum: FBS buyurtmalar, skaner bilan yig'ish, WB postavkalar, kartochka auditi          ✅ 1-bosqich
       erp/crm/            bitimlar, kanban, mijozlar, lidlar, reja, huquqlar + sotuvchilar Telegram'i (Business bot)     ✅
       erp/{catalog,warehouse,workshop,picking,purchasing,sales,finance,logistics}/  (label: erp_<modul>)            ⏳ skelet
+      tgcrm/              TelegramCRM (Telethon): Telegram klon + CRM, gateway (`manage.py tg_gateway`), `tgcrm_doctor` ✅ (docs/tgcrm/)
       conveyor/ geomap/ analytics/                                                                        ⏳ skelet
   data/                   db.sqlite3 (demo baza), celerybeat-schedule (gitignore)
   scripts/                dev.sh (API + worker + beat), tunnel.sh (tunnel + webhook), check.sh (ruff + ty + pytest-testmon)

@@ -294,6 +294,58 @@
   }
 }
 
+/* Telegram to'liq ekran (telegram.ts → html.tg-fs): tepada tizim paneli + Telegram'ning suzuvchi tugmalari. Kontent
+   shu zonadan pastda, zona ustida sahifa fonidagi qalqon (aylantirilgan kontent tugmalar ostida ko'rinmasin), tepaga
+   yopishgan elementlar ham zonadan pastda. Qatlamdan TASHQARIDA — utility'dagi top-0 ni yengishi uchun.
+   GeoMaps (.gm-app) zonani o'zi hisoblaydi (--gm-safe-top). */
+html.tg-fs:not(:has(.gm-app)) {
+  --safe-t: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  & body {
+    padding-top: var(--safe-t);
+  }
+  & body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: var(--safe-t);
+    background: inherit; /* sahifa foni (sarlavha ranglari sahifalarda har xil) */
+    z-index: 100;
+  }
+  & :is(.sticky, .fixed):is(.top-0, .inset-0):not([class*="top-["]) {
+    top: var(--safe-t);
+  }
+  /* «ekran balandligida» karkaslar — zonani ayirib (aks holda sahifa zona qadar uzun, qisqa kontentda ham aylanadi
+     va tepa qism siljiydi) */
+  & body :is(.min-h-screen, .min-h-dvh) {
+    min-height: calc(100dvh - var(--safe-t));
+  }
+}
+
+/* Pastki menyu (kit/layout BottomTabs, data-bnav): kontent oxiri va brauzerdagi asosiy tugma (#mainbtn) menyu ostida
+   qolmasin. Qatlamdan TASHQARIDA — main'dagi pb-[…] utility'sini yengishi uchun. */
+body:has([data-bnav]) {
+  /* panel: 54 + 2×4 (p-1) + 2 (chegara) + pastki oraliq (≥10px yoki xavfsiz zona) */
+  --bnav: calc(64px + max(10px, env(safe-area-inset-bottom), var(--tg-safe-area-inset-bottom, 0px)));
+  & main {
+    padding-bottom: calc(var(--bnav) + 24px);
+  }
+  & #mainbtn {
+    bottom: var(--bnav);
+    padding-bottom: 10px;
+  }
+  /* asosiy tugma ham bo'lsa — uning balandligi ham */
+  &.has-main main {
+    padding-bottom: calc(var(--bnav) + 90px);
+  }
+  /* xabar (kit/env toast) — menyu (va tugma) ustida */
+  & [data-toast] {
+    bottom: calc(var(--bnav) + 14px);
+  }
+  &.has-main [data-toast] {
+    bottom: calc(var(--bnav) + 80px);
+  }
+}
+
 /* iOS: 16px dan kichik maydon fokusda sahifani kattalashtiradi. Qatlamdan TASHQARIDA (ataylab): qatlamli !important
    teskari ustuvorlikda ishlaydi — base qatlamida bo'lsa utility'dagi "!text-[14px]" ni ham yengib qo'yardi.
    Shu holatda: oddiy utility'lardan ustun, "!" bilan yozilgan utility (masalan kompyuterdagi .inp 14px) — undan ustun. */

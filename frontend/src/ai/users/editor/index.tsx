@@ -1,6 +1,6 @@
 "use client";
 // Xodimni tahrirlash — eski openEditor (admin.html 517–604): bo'limlar, rol, rahbar, afzalliklar, telefoniya (Yeastar /
-// Moizvonki / Bitrix24 ro'yxati bir marta yuklanadi), boshliq huquqlari; saqlash — buildSavePayload (users.lib).
+// Moizvonki ro'yxati bir marta yuklanadi), boshliq huquqlari; saqlash — buildSavePayload (users.lib).
 import { useEffect, useState } from "react";
 
 import { api } from "@/shared/api/client";
@@ -24,7 +24,7 @@ import { EditorView, OwnerView } from "./ui";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-// Yeastar/Moizvonki/Bitrix ro'yxati (bir marta yuklanadi) — eski PHONE_OPTS
+// Yeastar/Moizvonki ro'yxati (bir marta yuklanadi) — eski PHONE_OPTS
 let PHONE_OPTS: PhoneOpts | null = null;
 
 export function EditorSheet({ ctx, id }: { ctx: UsersCtx; id: number }) {
@@ -45,8 +45,9 @@ function Editor({ ctx, u }: { ctx: UsersCtx; u: AdminUser }) {
   const [prefs, setPrefs] = useState<Record<string, string>>(() => initPrefs(u, prefOpts));
   const [phone, setPhone] = useState<PhoneLoad>(() => (PHONE_OPTS ? { st: "ok", o: PHONE_OPTS } : { st: "loading" }));
   const [sel, setSel] = useState<PhoneSel>(() =>
-    PHONE_OPTS ? phoneSel(u, PHONE_OPTS) : { yext: "", mzu: "", bxu: "" },
+    PHONE_OPTS ? phoneSel(u, PHONE_OPTS) : { yext: "", mzu: "" },
   );
+  const [roles, setRoles] = useState<string[]>(() => u.roles ?? []);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -80,13 +81,13 @@ function Editor({ ctx, u }: { ctx: UsersCtx; u: AdminUser }) {
       phone: {
         loaded: !!o,
         yeastarCount: o ? o.yeastar.length : 0,
-        bitrixCount: o ? (o.bitrix || []).length : 0,
         mzCount: o ? o.moizvonki.length : 0,
         mzDisabled: o?.moizvonki_enabled === false,
         ...sel,
         orig: o ? phoneSel(u, o) : undefined,
       },
       prefs,
+      roles: ctx.roles ? roles : undefined,
     });
     try {
       await api(`/app/api/users/${u.tg_id}`, { method: "POST", body });
@@ -115,6 +116,9 @@ function Editor({ ctx, u }: { ctx: UsersCtx; u: AdminUser }) {
       phone={phone}
       sel={sel}
       saving={saving}
+      rolesData={ctx.roles}
+      roles={roles}
+      onRoleKey={(key, on) => setRoles((cur) => (on ? [...cur, key] : cur.filter((k) => k !== key)))}
       onDep={(key, on) => setDeps((cur) => (on ? [...cur, key] : cur.filter((k) => k !== key)))}
       onRole={setRole}
       onMgr={setMgr}

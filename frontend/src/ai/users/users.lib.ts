@@ -1,5 +1,7 @@
 // Xodimlar bo'limi sof mantiqi (eski admin.html vUsers/buildTree/openEditor ichidagi hisoblar) — JSX'siz, Vitest uchun.
 
+import type { RolesResp } from "./roles/roles.lib";
+
 export type Perms = Record<string, boolean>;
 
 export interface HeadRow {
@@ -29,7 +31,6 @@ export interface PrefVal {
 export interface UserPhone {
   yeastar_ext?: string | number | null;
   mz_user?: string | number | null;
-  bx_user?: string | number | null;
 }
 
 export interface AdminUser {
@@ -44,6 +45,8 @@ export interface AdminUser {
   profile?: UserProfile | null;
   prefs?: Record<string, PrefVal | undefined> | null;
   phone?: UserPhone | null;
+  /** rollar (staff.AccessRole kalitlari) */
+  roles?: string[];
 }
 
 export interface UDept {
@@ -74,6 +77,8 @@ export interface Invite {
   revoked?: boolean | number | null;
   /** t.me/<bot>?start=inv_<kod> */
   link?: string;
+  /** qabul qilganda beriladigan rollar (kalitlar) */
+  roles?: string[];
   role?: string;
 }
 
@@ -99,7 +104,6 @@ export interface HeadsResp {
 export interface PhoneOpts {
   yeastar: { ext: string | number; name: string }[];
   moizvonki: { id: string | number; name: string }[];
-  bitrix?: { id: string | number; name: string; inner?: string | number | null }[];
   moizvonki_enabled?: boolean;
   errors: string[];
 }
@@ -262,15 +266,13 @@ export interface PhoneState {
   loaded: boolean;
   /** yeastar variantlari soni (bo'sh birinchi variantdan tashqari) */
   yeastarCount: number;
-  /** bitrix / moizvonki variantlari soni — 0 bo'lsa (API xatosi) o'sha bog'lanishga tegilmaydi */
-  bitrixCount?: number;
+  /** moizvonki variantlari soni — 0 bo'lsa (API xatosi) o'sha bog'lanishga tegilmaydi */
   mzCount?: number;
   mzDisabled: boolean;
   yext: string;
   mzu: string;
-  bxu: string;
   /** foydalanuvchining hozirgi (saqlangan) qiymatlari — o'zgarmagan maydon yuborilmaydi */
-  orig?: { yext: string; mzu: string; bxu: string };
+  orig?: { yext: string; mzu: string };
 }
 
 export interface SavePayload {
@@ -279,9 +281,9 @@ export interface SavePayload {
   heads: { dept: string; perms: Perms }[];
   manager_id: number | null;
   yeastar_ext?: string | null;
-  bx_user?: string | null;
   mz_user?: string | null;
   prefs: Record<string, string>;
+  roles?: string[];
 }
 
 /** Eski #save: rol "pending" + bo'lim tanlangan → "employee". Rol faqat o'zgarganda yuboriladi (admin kartasini
@@ -297,19 +299,20 @@ export function buildSavePayload(a: {
   manager: string;
   phone: PhoneState;
   prefs: Record<string, string>;
+  /** berilsa — rollar ham saqlanadi (rollar yuklanmagan bo'lsa berilmaydi: mavjudlari o'chib ketmasin) */
+  roles?: string[];
 }): SavePayload {
   const role = a.role === "pending" && a.departments.length ? "employee" : a.role;
   const heads = a.scopes
     .filter((sc) => a.scopeState[sc.key]?.on)
     .map((sc) => ({ dept: sc.key, perms: { ...a.scopeState[sc.key].perms } }));
   const p = a.phone;
-  const orig = p.orig ?? { yext: "", mzu: "", bxu: "" };
+  const orig = p.orig ?? { yext: "", mzu: "" };
   const phone: Partial<SavePayload> = {};
   if (p.loaded) {
     // orig berilmagan (eski chaqiruv) — oldingidek: yuklangan ro'yxatdagi maydon har doim yuboriladi
-    const changed = (k: "yext" | "mzu" | "bxu") => !p.orig || p[k] !== orig[k];
+    const changed = (k: "yext" | "mzu") => !p.orig || p[k] !== orig[k];
     if (p.yeastarCount > 0 && changed("yext")) phone.yeastar_ext = p.yext || null;
-    if ((p.bitrixCount ?? 1) > 0 && changed("bxu")) phone.bx_user = p.bxu || null;
     if (!p.mzDisabled && (p.mzCount ?? 1) > 0 && changed("mzu")) phone.mz_user = p.mzu || null;
   }
   const out: SavePayload = {
@@ -320,6 +323,7 @@ export function buildSavePayload(a: {
     ...phone,
     prefs: Object.fromEntries(Object.entries(a.prefs).map(([k, v]) => [k, v.trim()])),
   };
+  if (a.roles) out.roles = a.roles;
   if (a.origRole !== undefined && role === a.origRole) delete (out as Partial<SavePayload>).role;
   return out;
 }
@@ -352,4 +356,6 @@ export interface UsersCtx {
   headScopes: HeadScope[];
   pendingHeads: PendingHead[];
   prefOpts: PrefOpts | null;
+  /** rollar va ruxsatlar katalogi (/app/api/roles); yuklanmasa — null */
+  roles: RolesResp | null;
 }

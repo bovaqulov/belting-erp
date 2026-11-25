@@ -2,9 +2,28 @@
 // Telefon: sarlavha (Amallar ichidagi bo'limda — "Amallar"ga qaytish) va 5 ta tab.
 import type { ReactNode } from "react";
 
-import { AppLayout, AppTabs, AppTop, DemoStrip, type NavGroup } from "@/erp/kit/layout";
-import { Empty, ErrHint, Skeleton } from "@/erp/kit/ui";
-import { HOME, MORE, NAV, SEC, tabOf, TABS, viewTitle, type View } from "@/erp/warehouse/lib";
+import { AppLayout, AppTop, BottomTabs, DemoStrip, type NavGroup } from "@/erp/kit/layout";
+import { Empty, ErrHint, Icon, List, Row, Skeleton } from "@/erp/kit/ui";
+import { MORE, NAV, SEC, tabOf, TABS, viewTitle, type View, type Warehouse } from "@/erp/warehouse/lib";
+
+const KIND: Record<string, { t: string; icon: string; color: string }> = {
+  store: { t: "Ombor", icon: "package", color: "blue" },
+  production: { t: "Sex", icon: "factory", color: "orange" },
+  shop: { t: "Do'kon", icon: "store", color: "purple" },
+};
+
+/** Kirish: qaysi omborda ishlash (tanlov shu qurilmada eslab qolinadi; keyin sarlavhadan almashtiriladi) */
+export const StorePick = ({ stores, onPick }: { stores: Warehouse[]; onPick: (id: number) => void }) => (
+  <div className="mx-auto min-h-screen max-w-[560px] pt-2">
+    <AppTop up="/app/erp" upLabel="ERP" title="Ombor" sub="Qaysi omborda ishlaysiz?" logo />
+    <List cls="mt-3">
+      {stores.map((w) => {
+        const k = KIND[w.kind] ?? KIND.store;
+        return <Row key={w.id} icon={k.icon} color={k.color} t={w.name} s={[k.t, w.code].filter(Boolean).join(" · ")} chev onClick={() => onPick(w.id)} data={{ store: w.id }} />;
+      })}
+    </List>
+  </div>
+);
 
 /** Ishga tushish: yuklanmoqda (skelet) yoki xato + "Qayta urinish" */
 export const BootView = ({ err, net, onRetry }: { err: string; net: boolean; onRetry: () => void }) => (
@@ -32,6 +51,8 @@ const WIDE_CLS =
 
 export function WhLayout({
   view,
+  store,
+  onSwitch,
   wide,
   demo,
   demoText,
@@ -40,6 +61,10 @@ export function WhLayout({
   children,
 }: {
   view: View;
+  /** joriy ombor nomi */
+  store?: string;
+  /** boshqa omborga o'tish (bitta ombor bo'lsa — yo'q) */
+  onSwitch?: () => void;
   wide: boolean;
   demo: boolean;
   demoText: string;
@@ -47,19 +72,22 @@ export function WhLayout({
   onDemoReset: () => void;
   children: ReactNode;
 }) {
-  const nav: NavGroup[] = NAV.map((g) => ({
-    title: g.title,
-    items: g.items.map((s) => ({ key: s, label: SEC[s].t, icon: SEC[s].icon, on: view === s, onClick: () => onGo(s) })),
-  }));
+  const nav: NavGroup[] = [
+    ...(store && onSwitch ? [{ items: [{ key: "store", label: store, icon: "store", on: false, onClick: onSwitch, extra: <span className="ml-auto opacity-60"><Icon n="chevrons-up-down" /></span> }] }] : []),
+    ...NAV.map((g) => ({
+      title: g.title,
+      items: g.items.map((s) => ({ key: s, label: SEC[s].t, icon: SEC[s].icon, on: view === s, onClick: () => onGo(s) })),
+    })),
+  ];
   const inMore = (MORE as View[]).includes(view);
   const top = (
     <>
-      <AppTop up="/app/erp" upLabel={inMore ? "Amallar" : "ERP"} title="Ombor" sub={view === HOME ? undefined : viewTitle(view)} onUp={inMore ? () => onGo("more") : undefined} />
-      <AppTabs<View>
+      <AppTop up={null} upLabel="Amallar" title="Ombor" logo onUp={inMore ? () => onGo("more") : undefined} pick={store ? { label: store, onClick: onSwitch } : undefined} />
+      <BottomTabs<View>
         label="Ombor bo'limlari"
         cur={tabOf(view)}
         onPick={onGo}
-        items={TABS.map((t) => [t, t === "more" ? "Amallar" : t === "place" ? "Joylash" : SEC[t].t])}
+        items={TABS.map((t) => [t, t === "more" ? "Amallar" : t === "place" ? "Joylash" : SEC[t].t, t === "more" ? "layout-grid" : SEC[t].icon])}
       />
     </>
   );

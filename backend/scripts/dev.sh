@@ -14,5 +14,9 @@ fi
 trap 'kill 0' EXIT INT TERM
 uv run celery -A config worker -l info --concurrency 2 &
 uv run celery -A config beat -l info --schedule data/celerybeat-schedule &
+# TelegramCRM shlyuzi (Telethon) — faqat api_id bo'lsa; BITTA nusxa (Redis qulfi), prod bilan bir akkauntni ishlatmang
+if grep -q '^TGCRM_API_ID=[0-9]' .env.local; then
+  uv run python manage.py tg_gateway &
+fi
 uv run uvicorn config.asgi:application --host 127.0.0.1 --port "${PORT:-8000}" --reload --reload-dir config &
 wait

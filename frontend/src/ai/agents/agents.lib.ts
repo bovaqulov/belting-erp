@@ -25,7 +25,7 @@ export const TOOLS: readonly ToolInfo[] = [
   { key: "currency", name: "Valyuta", desc: "CBU valyuta kurslari" },
   { key: "ask_departments", name: "Bo'limlardan so'rash", desc: "Boshqa bo'lim agentlaridan ma'lumot so'rash" },
   { key: "calls", name: "Qo'ng'iroqlar", desc: "IP-telefoniya: Yeastar va Moizvonki statistikasi" },
-  { key: "crm", name: "CRM", desc: "Bitrix24: bitimlar, lidlar, mijozlar, vazifalar" },
+  { key: "crm", name: "CRM", desc: "CRM: bitimlar, lidlar, mijozlar, vazifalar" },
   { key: "site", name: "Sayt", desc: "remen.uz: mahsulot rasmi, narxi, havolasi" },
   { key: "belts", name: "Remenlar", desc: "Remen aniqlash, AppSheet narxlari, Excel taklif" },
   { key: "lenta", name: "Lenta chizmasi", desc: "Konveyer lenta chizmasi (LentaCUD)" },

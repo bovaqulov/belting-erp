@@ -21,7 +21,7 @@ npm test --silent
 LOG=$(mktemp -t frontend-build)
 npm run build >"$LOG" 2>&1 || { cat "$LOG"; echo "build yiqildi"; exit 1; }
 # backend base.UI_PAGES bilan bir xil ro'yxat — yangi sahifa qo'shilsa shu yerga ham
-PAGES=(index.html jarvis/index.html dev/index.html report/index.html lenta/index.html geo/index.html geo/share/index.html erp/index.html erp/sex/index.html erp/crm/index.html erp/logistics/index.html erp/moliya/index.html erp/marketplace/index.html erp/ombor/index.html analytics/index.html staff/index.html templates/index.html)
+PAGES=(index.html jarvis/index.html dev/index.html report/index.html lenta/index.html geo/index.html geo/share/index.html erp/index.html erp/sex/index.html erp/crm/index.html erp/logistics/index.html erp/moliya/index.html erp/marketplace/index.html erp/ombor/index.html analytics/index.html staff/index.html templates/index.html tgcrm/index.html)
 for p in "${PAGES[@]}"; do
   [ -f "out/$p" ] || { tail -n 40 "$LOG"; echo "build natijasi to'liq emas: out/$p yo'q"; exit 1; }
 done

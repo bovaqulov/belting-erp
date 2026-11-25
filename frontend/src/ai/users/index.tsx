@@ -11,6 +11,8 @@ import { ApproveSheet } from "@/ai/users/approve";
 import { EditorSheet } from "@/ai/users/editor";
 import { HeadFormSheet } from "@/ai/users/head-form";
 import { InviteSheet } from "@/ai/users/invite";
+import { RolesSheet } from "@/ai/users/roles";
+import type { RolesResp } from "@/ai/users/roles/roles.lib";
 
 import { activeInvites, headScopes, type HeadsResp, type Invite, type UsersCtx, type UsersResp } from "./users.lib";
 import { UsersStatus, UsersView } from "./ui";
@@ -30,8 +32,12 @@ export default function Users() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([api<UsersResp>("/app/api/users"), api<HeadsResp>("/app/api/heads")])
-      .then(([U, H]) => {
+    Promise.all([
+      api<UsersResp>("/app/api/users"),
+      api<HeadsResp>("/app/api/heads"),
+      api<RolesResp>("/app/api/roles").catch(() => null), // rollar yuklanmasa ham xodimlar ochilsin
+    ])
+      .then(([U, H, R]) => {
         if (!alive) return;
         const { users, perm_names: PERMS, depts } = U;
         // backend muddatni Toshkent vaqtida zonasiz saqlaydi — UTC bilan solishtirsak 5 soat "faol" ko'rinardi
@@ -47,6 +53,7 @@ export default function Users() {
             headScopes: headScopes(depts),
             pendingHeads: U.pending_heads,
             prefOpts: U.pref_opts || null,
+            roles: R,
           },
         });
       })
@@ -97,6 +104,7 @@ export default function Users() {
       onAgent={(ag) => openSheet(<AgentSheet agent={ag} />)}
       onHeadForm={() => openSheet(<HeadFormSheet ctx={ctx} />)}
       onInvite={() => openSheet(<InviteSheet ctx={ctx} />)}
+      onRoles={() => openSheet(<RolesSheet ctx={ctx} />)}
       onCopyInvite={(link) =>
         void navigator.clipboard.writeText(link).then(
           () => toast("Havola nusxalandi"),

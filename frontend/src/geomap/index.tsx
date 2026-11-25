@@ -1,5 +1,5 @@
 "use client";
-// GeoMap — mijozlar xaritasi (Bitrix24 + 1C): holat, yuklash (sessiya / Telegram), filtr, uslub, qatlamlar, hududlar,
+// GeoMap — mijozlar xaritasi (CRM mijozlari va xaridlari): holat, yuklash (sessiya / Telegram), filtr, uslub, qatlamlar, hududlar,
 // marshrut, ulashish, xarita asboblari (chizish, lasso, radius, izoxron, OSM, joyini to'g'rilash), ommaviy amallar. Ko'rinish — ./ui.
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
@@ -440,7 +440,7 @@ export default function GeoApp() {
     } else {
       const o = owners.find((x) => x.id === bulkUi.value);
       if (!o) return;
-      if (!(await confirmDo(`Bitrix24'da ${n} ta kompaniyaning mas'uli "${o.name}" ga o'zgaradi. Davom etasizmi?`))) return;
+      if (!(await confirmDo(`CRM'da ${n} ta mijozning mas'uli "${o.name}" ga o'zgaradi. Davom etasizmi?`))) return;
       value = o.id;
     }
     setBulkBusy(true);
@@ -540,7 +540,7 @@ export default function GeoApp() {
       note={note}
       pending={pending}
       panes={{
-        filter: <FilterPanel filter={filter} onChange={setFilter} enumOptions={enumOptions} bxUser={me?.bxUser ?? null} total={records.length} shown={filtered.length} />,
+        filter: <FilterPanel filter={filter} onChange={setFilter} enumOptions={enumOptions} ownerId={me?.ownerId ?? null} total={records.length} shown={filtered.length} />,
         style: seen.includes("style") ? <StylePanel style={style} layers={layers} onStyle={setStyle} onLayers={setLayers} legend={legend} legendBreaks={scale.breaks} full={full} /> : null,
         stats: seen.includes("stats") ? <WidgetsPanel s={summary} regionName={regionName} full={full} onPickRegion={pickRegion}
                 onPickOwner={(name) => { setFilter({ ...filter, search: name }); say(`Qidiruv: ${name}`); }} /> : null,

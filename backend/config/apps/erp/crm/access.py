@@ -5,9 +5,11 @@ Boshqaning yozuvi — 404 (mavjudligi ham ko'rinmaydi)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from django.db.models import Q, QuerySet
 
+from config.apps.erp.catalog import services as catalog
 from config.apps.staff import services as staff
 from config.apps.staff.services import User
 
@@ -16,8 +18,9 @@ SALES_DEPTS = ("sotuv_b2b", "sotuv")
 
 
 def is_sales_head(u: User) -> bool:
-    """Sotuv bo'limi rahbari: owner/admin, Rahbariyat (sees_all) yoki Sotuv — B2B bo'limida xodimlari bor rahbar."""
-    return u.is_panel or u.in_lead_dept() or (bool(set(u.dept_keys()) & set(SALES_DEPTS)) and staff.has_reports(u))
+    """Sotuv bo'limi rahbari: owner/admin, Rahbariyat (sees_all), «crm.head» ruxsatli rol (Sotuv rahbari) yoki
+    Sotuv — B2B bo'limida xodimlari bor rahbar."""
+    return u.can("crm.head") or (bool(set(u.dept_keys()) & set(SALES_DEPTS)) and staff.has_reports(u))
 
 
 @dataclass(frozen=True)
@@ -25,10 +28,12 @@ class Me:
     tg_id: int
     name: str
     is_head: bool
+    disc_max: Decimal = Decimal(100)  # narx siyosati: shu foydalanuvchi bera oladigan eng katta chegirma, %
 
     @classmethod
     def of(cls, u: User) -> Me:
-        return cls(u.tg_id, u.name, is_sales_head(u))
+        head = is_sales_head(u)
+        return cls(u.tg_id, u.name, head, catalog.max_discount(u.is_panel or u.in_lead_dept(), head))
 
     def deals(self, qs: QuerySet) -> QuerySet:
         """Bitimlar: rahbar — hammasi; sotuvchi — o'zi mas'ul bo'lganlari."""

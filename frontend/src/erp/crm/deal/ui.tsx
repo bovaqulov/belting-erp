@@ -140,7 +140,7 @@ export function DealBodyView({
       <div className="flex-none border-b border-sep bg-sec px-[22px] pt-3 pb-2.5 max-md:px-3 max-md:pt-2">
         <div className="flex min-w-0 items-center gap-2">
           <input
-            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-1 !text-lg font-bold text-fg outline-none [font-family:inherit] hover:border-sep focus:border-link focus:bg-page"
+            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-1 coarse:min-h-11 !text-lg font-bold text-fg outline-none [font-family:inherit] hover:border-sep focus:border-link focus:bg-page"
             defaultValue={dtitle(d.title)}
             aria-label="Bitim nomi"
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
@@ -169,7 +169,7 @@ export function DealBodyView({
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1.5 text-[13px]">
           {d.counterparty_id ? (
-            <button type="button" className="inline-flex max-w-full cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-medium text-link hover:underline [&_svg.i]:size-[15px]" onClick={() => onOpenCustomer(d.counterparty_id!)}>
+            <button type="button" className="inline-flex max-w-full cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-medium text-link coarse:min-h-11 hover:underline [&_svg.i]:size-[15px]" onClick={() => onOpenCustomer(d.counterparty_id!)}>
               <Icon n="building" />
               <span className="truncate">{d.customer || "Mijoz"}</span>
             </button>
@@ -233,7 +233,7 @@ export function DealBodyView({
               <span>Mijoz</span>
               <div>
                 {d.counterparty_id ? (
-                  <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left text-link hover:underline" onClick={() => onOpenCustomer(d.counterparty_id!)}>
+                  <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left text-link hover:underline coarse:min-h-11" onClick={() => onOpenCustomer(d.counterparty_id!)}>
                     {d.customer || "—"}
                   </button>
                 ) : (

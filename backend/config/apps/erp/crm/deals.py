@@ -507,6 +507,9 @@ def new_deal(me: Me, b: dict[str, Any], now: datetime, *, customer: Customer | N
     if first is None:
         raise ApiError(500, "CRM bosqichlari sozlanmagan (migratsiya).")
     owner = (int_or_none(b.get("owner_tg")) or me.tg_id) if me.is_head else me.tg_id
+    fields = card_fields(b)
+    if fields.get("discount", Decimal(0)) > me.disc_max:
+        raise ApiError(403, disc_denied(me))
     d = Deal.objects.create(
         title=s(b.get("title")).strip()[:255] or auto_title(b.get("items"), customer),
         customer=customer,
@@ -518,14 +521,14 @@ def new_deal(me: Me, b: dict[str, Any], now: datetime, *, customer: Customer | N
         updated=now,
         source=s(b.get("source"))[:32],
         need=s(b.get("need")),
-        **card_fields(b),
+        **fields,
     )
     d.title = deal_title(d.pk, d.title)
     if not d.location and customer is not None and customer.address:  # joylashuv — mijoz manzilidan
         d.location = customer.address
     d.save(update_fields=["title", "location"])
     if isinstance(b.get("items"), list) and b["items"]:  # tovarlar bilan — summa ulardan hisoblanadi
-        save_items(d, b, now)
+        save_items(d, b, now, me)
     StageHistory.objects.create(deal=d, ts=now, actor=me.tg_id, from_stage="", to_stage=first.code, src="web")
     return d
 
@@ -610,6 +613,8 @@ def patch_deal(me: Me, d: Deal, b: dict[str, Any], now: datetime) -> None:
     if "need" in b:
         d.need = s(b["need"])
     fields = card_fields(b)
+    if "discount" in fields and fields["discount"] != d.discount and fields["discount"] > me.disc_max:
+        raise ApiError(403, disc_denied(me))
     signed_now = fields.get("sign_status") == SignStatus.SIGNED and d.sign_status != SignStatus.SIGNED
     if fields.get("sign_status") == SignStatus.SENT and d.sign_status != SignStatus.SENT:
         d.sign_sent_at = now  # imzo kuzatuvi: 1 kun ichida imzolanmasa — eslatma (SLA)
@@ -625,11 +630,19 @@ def patch_deal(me: Me, d: Deal, b: dict[str, Any], now: datetime) -> None:
         sales.advance(me, d, "payment", now, "shartnoma imzolandi")
 
 
+def disc_denied(me: Me) -> str:
+    return (
+        f"Narx siyosati: sizga ruxsat etilgan chegirma — {money(me.disc_max)}% gacha. Kattaroq chegirmani rahbariyat beradi."
+        if me.disc_max
+        else "Narx siyosati: chegirmani rahbariyat belgilaydi — rahbariyatga murojaat qiling."
+    )
+
+
 def item_amount(x: dict[str, Any]) -> Decimal:
     return num(x.get("qty")) * num(x.get("price")) * (1 - num(x.get("discount")) / 100)
 
 
-def save_items(d: Deal, b: dict[str, Any], now: datetime) -> dict[str, Any]:
+def save_items(d: Deal, b: dict[str, Any], now: datetime, me: Me | None = None) -> dict[str, Any]:
     raw_items = b.get("items")
     raw: list[Any] = raw_items if isinstance(raw_items, list) else []
     items = [
@@ -645,6 +658,11 @@ def save_items(d: Deal, b: dict[str, Any], now: datetime) -> dict[str, Any]:
         for x in raw
         if isinstance(x, dict)
     ]
+    if me is not None:  # avval saqlangan chegirma o'zgarmasa — tekshirilmaydi (siyosat o'zgargan bo'lishi mumkin)
+        had = {(x.get("item_id"), x.get("char_id"), str(money(num(x.get("discount"))))) for x in d.items or []}
+        for x in items:
+            if num(x["discount"]) > me.disc_max and (x["item_id"], x["char_id"], str(x["discount"])) not in had:
+                raise ApiError(403, disc_denied(me))
     d.items = items
     d.amount = priced(d, goods_total(items)) if items else Decimal(0)
     d.updated = now
@@ -654,37 +672,72 @@ def save_items(d: Deal, b: dict[str, Any], now: datetime) -> dict[str, Any]:
 
 @transaction.atomic
 def make_doc(me: Me, d: Deal, kind: str, now: datetime) -> dict[str, Any]:
+    """Taklif yoki buyurtma qoralamasi. Takror bosish yangi hujjat ochmaydi: tarkibi bir xil faol buyurtma bo'lsa —
+    o'sha qaytadi; yuborilmagan buyurtma qoralamasi — yangilanadi; bugungi taklif tovarlar va summa o'zgarmagan bo'lsa — o'sha qaytadi. Raqam — hujjat ID'sidan
+    (bir vaqtda ikki so'rovda ham takrorlanmaydi)."""
     if kind not in ("quote", "order"):
         raise ApiError(400, "Hujjat turi noto'g'ri")
     items = [x for x in d.items or [] if x.get("item_id")]
     if not items:
         raise ApiError(400, "Katalogdagi tovar yo'q — avval tovar qo'shing")
-    seq = (Doc.objects.aggregate(m=Max("id"))["m"] or 0) + 1
-    doc = Doc.objects.create(
-        deal=d,
-        number=f"BR-{'TT' if kind == 'quote' else 'BU'}-{now:%y}-{seq:05d}",
-        kind=kind,
-        date=timezone.localdate(now),
-        status="posted" if kind == "quote" else "draft",
-        total=priced(d, goods_total(items)),
-        lines=[{**x, "amount": money(item_amount(x).quantize(Decimal(1)))} for x in items],
-        meta={
-            "customer": d.customer.name if d.customer else "",
-            "inn": d.customer.inn if d.customer else "",
-            "location": d.location,
-            "sub": money(goods_total(items).quantize(Decimal(1))),
-            "discount": money(d.discount),
-            "markup": money(d.markup),
-            "logistics": money(d.logistics),
-        },
-    )
-    Activity.objects.create(
-        deal=d,
-        kind="doc",
-        ts=now,
-        actor=me.tg_id,
-        text=f"{'Tijorat taklifi' if kind == 'quote' else 'Buyurtma qoralamasi'} {doc.number}",
-    )
+    lines = [{**x, "amount": money(item_amount(x).quantize(Decimal(1)))} for x in items]
+    meta = {
+        "customer": d.customer.name if d.customer else "",
+        "inn": d.customer.inn if d.customer else "",
+        "location": d.location,
+        "sub": money(goods_total(items).quantize(Decimal(1))),
+        "discount": money(d.discount),
+        "markup": money(d.markup),
+        "logistics": money(d.logistics),
+    }
+    total = priced(d, goods_total(items))
+    today = timezone.localdate(now)
+    label = "Tijorat taklifi" if kind == "quote" else "Buyurtma qoralamasi"
+    with transaction.atomic():
+        same = Doc.objects.select_for_update().filter(deal=d, kind=kind).order_by("-id")
+        if kind == "order":
+            # tarkibi bir xil faol buyurtma (yuborilgan / imzolangan, rad etilmagan) — yangisi ochilmaydi
+            twin = next(
+                (
+                    x
+                    for x in same.exclude(status="cancelled").exclude(didox_status=4)
+                    if x.total == total and x.lines == lines and x.meta == meta
+                ),
+                None,
+            )
+            if twin is not None:
+                return doc_json(twin)
+            doc = same.filter(status="draft", didox_id="").first()
+            if doc is not None:  # yuborilmagan qoralama — yangilanadi (yangi raqam yo'q)
+                doc.date, doc.total, doc.lines, doc.meta = today, total, lines, meta
+                doc.save(update_fields=["date", "total", "lines", "meta"])
+                Activity.objects.create(
+                    deal=d, kind="doc", ts=now, actor=me.tg_id, text=f"{label} {doc.number} yangilandi"
+                )
+                return doc_json(doc)
+        else:
+            last = same.first()
+            if (
+                last is not None
+                and last.date == today
+                and last.total == total
+                and last.lines == lines
+                and last.meta == meta
+            ):
+                return doc_json(last)  # o'zgarmagan taklif — o'sha hujjat
+        doc = Doc.objects.create(
+            deal=d,
+            number=f"tmp-{now.timestamp()}-{me.tg_id}"[:32],
+            kind=kind,
+            date=today,
+            status="posted" if kind == "quote" else "draft",
+            total=total,
+            lines=lines,
+            meta=meta,
+        )
+        doc.number = f"BR-{'TT' if kind == 'quote' else 'BU'}-{now:%y}-{doc.pk:05d}"
+        doc.save(update_fields=["number"])
+        Activity.objects.create(deal=d, kind="doc", ts=now, actor=me.tg_id, text=f"{label} {doc.number}")
     d.updated = now
     d.save(update_fields=["updated"])
     from . import sales

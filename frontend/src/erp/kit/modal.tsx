@@ -38,6 +38,9 @@ export function Modal({
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // oyna ichida ochiq ro'yxat (qidiruv tavsiyalari, `.dd`) — Escape avval uni yopadi (maydonning o'z ishlovchisi),
+        // oyna va kiritilgan ma'lumot saqlanib qoladi
+        if (box.current?.querySelector(".dd")) return;
         e.stopPropagation();
         closeRef.current();
       }

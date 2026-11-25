@@ -6,3 +6,5 @@ graphify-out/
 # ish vaqtida yoziladigan fayllar
 backend/data/*
 !backend/data/.gitkeep
+
+.claude/settings.local.json

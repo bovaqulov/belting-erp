@@ -17,12 +17,33 @@ PANEL_ROLES = ("owner", "admin")
 MODULE_DEPTS: dict[str, tuple[str, ...]] = {
     # CRM — faqat Sales (ishlab chiqarish va logistika — alohida tizim)
     "crm": ("sotuv_b2b", "sotuv"),
+    # TelegramCRM — alohida tizim (Telethon); hozircha sotuv bo'limlari
+    "tgcrm": ("sotuv_b2b", "sotuv"),
     "marketplace": ("sotuv_marketplace",),
     "warehouse": ("ombor", "ishlab_chiqarish", "logistika"),
     "manufacturing": ("ishlab_chiqarish",),
     "logistics": ("logistika", "ombor"),
     "accounting": ("buxgalteriya",),
+    # savdo hujjatlari (buyurtma, hisob, yuk xati, schyot-faktura, to'lov) — sotuvchilar va buxgalteriya
+    "sales": ("sotuv_b2b", "sotuv", "buxgalteriya"),
+    # pul (kassa, bank, to'lovlar) — buxgalteriya; ega/admin va Rahbariyat — hammasi
+    "money": ("buxgalteriya",),
     "hr": (),  # xodimlar, taklif, rollar — faqat ega/admin va Rahbariyat
+}
+# Ruxsatlar katalogi (rollar shulardan yig'iladi): har ERP moduli + modul ichidagi qo'shimcha huquqlar.
+# kalit → (nom, guruh). Yangi ruxsat — shu yerga qo'shiladi (rollar oynasi o'zi ko'rsatadi).
+PERMS: dict[str, tuple[str, str]] = {
+    "crm": ("CRM: o'z bitimlari, lidlari va mijozlari", "Sotuv"),
+    "crm.head": ("CRM rahbari: hammasini ko'radi, lid taqsimlaydi, mas'ul va reja belgilaydi", "Sotuv"),
+    "tgcrm": ("Telegram CRM", "Sotuv"),
+    "sales": ("Savdo hujjatlari: buyurtma, yuk xati, hisob-faktura, to'lov", "Sotuv"),
+    "marketplace": ("Marketplace: WB, Ozon, Uzum", "Sotuv"),
+    "warehouse": ("Ombor", "Ombor va ishlab chiqarish"),
+    "manufacturing": ("Sex (ishlab chiqarish)", "Ombor va ishlab chiqarish"),
+    "logistics": ("Logistika: jo'natmalar", "Ombor va ishlab chiqarish"),
+    "accounting": ("Buxgalteriya va katalog", "Moliya"),
+    "money": ("Pul: kassa, bank", "Moliya"),
+    "hr": ("HR: xodimlar ro'yxati", "Boshqaruv"),
 }
 # agentlar huquqini IT bo'limi yoki Rahbariyat (sees_all bo'lim) belgilaydi
 AGENT_ADMIN_DEPTS = ("it",)
@@ -55,6 +76,24 @@ class Department(models.Model):
         return f"{self.name} ({self.key})"
 
 
+class AccessRole(models.Model):
+    """Rol — ruxsatlar to'plami (PERMS kalitlari). Xodimga bir nechta rol beriladi; huquq = bo'limdan ∪ rollardan.
+    Tizim rollari (boshlang'ich) o'chirilmaydi, ruxsatlari o'zgartiriladi."""
+
+    key = models.SlugField(max_length=40, unique=True)
+    name = models.CharField(max_length=80)
+    note = models.CharField(max_length=240, blank=True)
+    perms = models.JSONField(default=list, blank=True)
+    system = models.BooleanField(default=False)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class UserManager(BaseUserManager["User"]):
     def create_user(self, tg_id: int, name: str = "", role: str = Role.EMPLOYEE, **extra: Any) -> User:
         user = self.model(tg_id=tg_id, name=name, role=role, **extra)
@@ -77,6 +116,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.PENDING)
     departments = models.ManyToManyField(Department, blank=True, related_name="members")
     manager = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="reports")
+    access_roles = models.ManyToManyField(AccessRole, blank=True, related_name="members")
     # bo'lim boshlig'i: [{"dept_group": "sotuv_b2b", "perms": {...}}] — Xodimlar daraxti va «Rahbari» ro'yxati shundan
     heads = models.JSONField(default=list, blank=True)
     lang = models.CharField(max_length=8, default="uz")
@@ -107,14 +147,39 @@ class User(AbstractBaseUser, PermissionsMixin):
     def in_lead_dept(self) -> bool:
         return self.departments.filter(sees_all=True).exists()
 
+    def perms(self) -> set[str]:
+        """Rollardan kelgan ruxsatlar (bitta so'rov, obyektda keshlanadi). Faol bo'lmagan xodim — yo'q."""
+        if self.role not in (Role.OWNER, Role.ADMIN, Role.EMPLOYEE):
+            return set()
+        cached = self.__dict__.get("_perms")
+        if cached is None:
+            cached = {str(p) for ps in self.access_roles.values_list("perms", flat=True) for p in ps or []}
+            self.__dict__["_perms"] = cached
+        return cached
+
+    def can(self, perm: str) -> bool:
+        """Ruxsat: ega/admin va Rahbariyat — hammasi; qolganlar — rollari bo'yicha."""
+        if self.role not in (Role.OWNER, Role.ADMIN, Role.EMPLOYEE):
+            return False
+        return self.is_panel or self.in_lead_dept() or perm in self.perms()
+
+    def perm_list(self) -> list[str]:
+        """Frontend uchun ruxsatlar ro'yxati (katalog tartibida)."""
+        if self.role not in (Role.OWNER, Role.ADMIN, Role.EMPLOYEE):
+            return []
+        every = self.is_panel or self.in_lead_dept()
+        own = self.perms()
+        return [p for p in PERMS if every or p in own]
+
     def modules(self) -> list[str]:
-        """Ruxsat etilgan ERP modullari (MODULE_DEPTS). Faol bo'lmagan rol — hech biri."""
+        """Ruxsat etilgan ERP modullari: bo'limdan (MODULE_DEPTS) ∪ rollardan. Faol bo'lmagan xodim — hech biri."""
         if self.role not in (Role.OWNER, Role.ADMIN, Role.EMPLOYEE):
             return []
         if self.is_panel or self.in_lead_dept():
             return list(MODULE_DEPTS)
         mine = set(self.dept_keys())
-        return [m for m, deps in MODULE_DEPTS.items() if mine.intersection(deps)]
+        own = self.perms()
+        return [m for m, deps in MODULE_DEPTS.items() if mine.intersection(deps) or m in own]
 
     def can_module(self, module: str) -> bool:
         return module in self.modules()
@@ -140,10 +205,12 @@ class User(AbstractBaseUser, PermissionsMixin):
             "can_admin": self.is_panel,
             "can_view": self.can_view(),
             "can_manage_agents": self.can_manage_agents(),
-            "can_lenta": False,  # lenta/geo — o'z applari ko'chganda
-            "can_geo": False,
+            "can_lenta": False,  # conveyor appi to'ldiradi (registry.register_panel_field)
+            "can_geo": False,  # geomap appi to'ldiradi
             "report_depts": [],
             "modules": self.modules(),
+            "perms": self.perm_list(),
+            "roles": [r.name for r in self.access_roles.all()],
         }
 
 
@@ -153,6 +220,7 @@ class Invite(models.Model):
     code = models.CharField(max_length=32, unique=True)
     dept = models.CharField(max_length=64)  # Department.key
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.EMPLOYEE)
+    access_roles = models.JSONField(default=list, blank=True)  # AccessRole kalitlari — qabul qilganda beriladi
     name = models.CharField(max_length=200, blank=True)  # izoh: kim uchun
     created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="+")
     uses = models.PositiveIntegerField(default=0)

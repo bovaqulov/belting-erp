@@ -23,8 +23,9 @@ log = logging.getLogger(__name__)
 class ApiError(Exception):
     """Foydalanuvchiga ko'rsatiladigan xato: nima bo'ldi + qanday tuzatish."""
 
-    def __init__(self, status: int, detail: str):
-        super().__init__(detail)
+    def __init__(self, status: int, detail: str | dict[str, Any]):
+        """detail — matn yoki obyekt (masalan {message, issues}: frontend `message` ni ko'rsatadi, qolganini o'qiydi)."""
+        super().__init__(detail if isinstance(detail, str) else str(detail.get("message") or detail))
         self.status = status
         self.detail = detail
 

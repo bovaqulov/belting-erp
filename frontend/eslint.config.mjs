@@ -6,7 +6,7 @@ import nextTs from "eslint-config-next/typescript";
 // Bog'liqlik yo'nalishi: shared ← domenlar ← app. Domen boshqa domenni import qilmaydi; ERP modullari bir-birini
 // import qilmaydi (umumiy — erp/kit). Qism tashqariga faqat papkasi (index) orqali: "@/…/qism/ui" — taqiq.
 // Flat config'da bir faylga oxirgi mos `no-restricted-imports` qo'llanadi, shuning uchun har blok to'liq ro'yxat oladi.
-const DOMAINS = ["home", "ai", "erp", "conveyor", "geomap", "analytics"];
+const DOMAINS = ["home", "ai", "erp", "conveyor", "geomap", "analytics", "tgcrm"];
 const ERP_MODULES = ["kit", "home", "crm", "workshop", "warehouse", "picking", "purchasing", "sales", "finance", "logistics", "marketplace"];
 
 const base = [
@@ -33,7 +33,7 @@ const boundaries = [
       { regex: "^@/ai/(?!shell(/|$))", message: "home → ai faqat @/ai/shell (ma'lum qarz)." },
     ]),
   },
-  ...["ai", "conveyor", "geomap", "analytics"].map((d) => ({
+  ...["ai", "conveyor", "geomap", "analytics", "tgcrm"].map((d) => ({
     files: [`src/${d}/**/*.{ts,tsx}`],
     rules: rule([...base, ...banDomains([d], "Domen boshqa domenni import qilmaydi (umumiy narsa — shared).")]),
   })),

@@ -1,15 +1,16 @@
-// Tovar oynasi: tur va kategoriya, o'lchov, remen belgisi (.code), brend, xom ashyosi; kengliklar (variant), shu rukavdan
-// tayyor mahsulotlar, ombordagi qoldiq (joy, birlik). Amallar: tahrirlash, stiker PDF, kenglik qo'shish, rukavdan mahsulot.
+// Tovar oynasi: standart belgi (.code), tur va kategoriya, o'lchov, brend; texnik ko'rsatkichlar (oila standarti, hisoblar),
+// kodlar (artikul, shtrixkod, 1C, MXIK, TIF TN), analoglar (bir xil belgi — boshqa brend, qoldig'i bilan); narx (birligi
+// bilan), kengliklar, shu rukavdan tayyor mahsulotlar, ombordagi qoldiq. Amallar: tahrirlash, stiker, kenglik, rukavdan mahsulot.
 import { useState } from "react";
 
 import { toast } from "@/erp/kit/env";
 import { num } from "@/erp/kit/fmt";
 import { Icon, List, Loaded, Row, Sf, Sh, Sheet, useLoad } from "@/erp/kit/ui";
-import { LINK_BTN } from "@/erp/kit/layout";
 import { api, post } from "@/erp/finance/api";
 import { useAcc } from "@/erp/finance/context";
-import { dimsLabel, groupName, groupOptions, KCOL, KIND, priceFor, priceLabel, splitWidths, un, type Item } from "@/erp/finance/lib";
+import { dimsLabel, famTitle, groupName, groupOptions, KCOL, KIND, splitWidths, un, type Item } from "@/erp/finance/lib";
 
+import { PriceBlock } from "./price-block";
 import { PriceForm } from "./price";
 
 export function ItemView({
@@ -56,31 +57,62 @@ export function ItemView({
             return (
               <>
                 <List>
-                  <Row icon="layers" color={KCOL[it.kind]} t={KIND[it.kind]} s={groupName(groups, it.group_id)} />
+                  {it.designation ?? it.belt_mark ? <Row t="Belgi" val={<span className="code lg">{it.designation ?? it.belt_mark}</span>} /> : null}
+                  <Row icon="layers" color={KCOL[it.kind]} t={[KIND[it.kind], famTitle(it.family)].filter(Boolean).join(" · ")} s={groupName(groups, it.group_id)} />
                   <Row t="O'lchov" val={a.dims ? dimsLabel(a.dims) : un(it.unit)} />
-                  {it.belt_mark ? <Row t="Remen belgisi" val={<span className="code lg">{it.belt_mark}</span>} /> : null}
                   {it.brand ? <Row t="Brend" val={[it.brand, a.series].filter(Boolean).join(" ")} /> : null}
-                  {it.sku ? <Row t="Artikul" val={<span className="code">{it.sku}</span>} /> : null}
+                  {it.name_ru && it.name_ru !== it.name ? <Row t="To'liq nom" s={it.name_ru} /> : null}
                   {it.min_qty ? <Row t="Minimal qoldiq" val={`${num(it.min_qty, 3)} ${un(it.unit)}`} /> : null}
                   {it.material ? <Row t="Xom ashyosi" s={it.material.name} chev onClick={() => onOpen(it.material!.id)} /> : null}
                 </List>
-                <Sh t="Narx" r={<button type="button" className={LINK_BTN} onClick={() => setPr(it)}>Belgilash</button>} />
+                {it.spec_view?.length || it.computed?.length ? (
+                  <>
+                    <Sh t="Texnik ko'rsatkichlar" r={it.std ? <span className="text-xs">{it.std}</span> : null} />
+                    <List>
+                      {(it.spec_view ?? []).map((x) => (
+                        <Row key={x.label} t={x.label} val={x.value} />
+                      ))}
+                      {(it.computed ?? []).map((x) => (
+                        <Row key={x.label} t={x.label} val={<span className="num">{x.value}</span>} />
+                      ))}
+                    </List>
+                  </>
+                ) : it.family && it.family !== "other" && it.family !== "service" ? (
+                  <Sf>Texnik ko&apos;rsatkichlar kiritilmagan — «Tahrirlash»da to&apos;ldiring (belgi va analoglar shundan).</Sf>
+                ) : null}
+                <Sh t="Kodlar" />
                 <List>
-                  <Row icon="coins" color={it.price?.price != null || Object.keys(it.price?.overrides ?? {}).length ? "green" : "gray"} t={priceLabel(it.price, (x) => num(x, 0))} tap onClick={() => setPr(it)} chev />
-                  {it.chars.map((c) => {
-                    const v = priceFor(it.price, c.width_mm);
-                    const manual = c.width_mm !== null && it.price?.overrides[String(c.width_mm)] !== undefined;
-                    return (
-                      <Row
-                        key={c.id}
-                        t={<span className="code">{c.name}</span>}
-                        val={v === null ? "—" : <span className="num">{num(v, 0)}</span>}
-                        valSmall={v === null ? "" : manual ? "so'm · qo'lda" : "so'm"}
-                      />
-                    );
-                  })}
+                  <Row t="Artikul" val={it.sku ? <span className="code">{it.sku}</span> : "—"} />
+                  <Row t="Shtrixkod" val={it.barcode ? <span className="code">{it.barcode}</span> : "—"} />
+                  {it.legacy?.length ? <Row t="1C kodi" val={<span className="code">{it.legacy.join(", ")}</span>} valSmall={it.base ?? ""} /> : null}
+                  <Row t="MXIK (IKPU)" val={it.ikpu ? <span className="code">{it.ikpu}</span> : "—"} />
+                  <Row
+                    t="TIF TN (HS)"
+                    val={it.hs_code ? <span className="code">{it.hs_code}</span> : it.hs_hint ? <span className="text-hint">taklif: {it.hs_hint}</span> : "—"}
+                  />
                 </List>
-                {it.chars.length ? null : <Sf>Kengligi (varianti) yo&apos;q tovar — bitta narx.</Sf>}
+                {it.analogs?.length ? (
+                  <>
+                    <Sh t="Analoglar" r={`${it.analogs.length} ta`} />
+                    <List>
+                      {it.analogs.map((x) => (
+                        <Row
+                          key={x.id}
+                          icon="swap"
+                          color={x.same_brand ? "red" : "teal"}
+                          t={x.name}
+                          s={x.same_brand ? "bir xil brend — takror bo'lishi mumkin" : (x.brand ?? "brendsiz")}
+                          val={x.qty ? <span className="num">{num(x.qty, 3)}</span> : ""}
+                          valSmall={x.qty ? un(x.unit) : ""}
+                          chev
+                          onClick={() => onOpen(x.id)}
+                        />
+                      ))}
+                    </List>
+                    <Sf>Bir xil standart belgi — o&apos;zaro almashadi (masalan HTD 8M ≈ RPP8). Mijozga qoldig&apos;i borini taklif qiling.</Sf>
+                  </>
+                ) : null}
+                <PriceBlock it={it} onManual={() => setPr(it)} onChanged={() => { onChanged(); void st.reload(); }} />
                 {it.products.length ? (
                   <>
                     <Sh t="Shu rukavdan tayyor mahsulot" />

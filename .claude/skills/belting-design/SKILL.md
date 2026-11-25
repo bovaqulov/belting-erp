@@ -135,3 +135,8 @@ Keyingi (ustuvorlik bo'yicha): savdo (erp_savdo.html — mijoz/buyurtma kartochk
 yig'ish (erp_yigish.html — omborchi telefoni) → ombor qolgan tablar (sanash, qabul, skaner natijasi) →
 bosh sahifa (erp_home.html — rolga qarab "bugun nima qilish kerak") → CRM, moliya, marketplace (kompyuter jadvallari) →
 frontend/ (Next.js admin, lenta, geo).
+
+2026-11-20 — Ombor xaritasi (`src/erp/warehouse/cells/ui.tsx`) soddalashtirildi: darajalar ustma-ust emas, bir vaqtda bitta
+(binolar → xonalar → stellajlar → to'r), yuqoriga — yo'l `‹ Binolar › AO1 › A`; katta plitkalar o'rniga Telegram ro'yxati
+qatorlari (kod belgisi, nom, «N xona · N joy · N% band», birlik, ›), yashil «+» o'rniga ro'yxat oxirida «+ … qo'shish», ⋯ —
+ochilgan obyekt sarlavhasida. Ro'yxat kompyuterda ≤760px.

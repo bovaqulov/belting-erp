@@ -4,6 +4,8 @@ import s from "@/shared/ui/panel/styles";
 import { Avatar, fmtTime, Icon, noEmoji, PERM_ICONS, ROLE_NAMES, SectionHeader, Sq } from "@/shared/ui/panel/ui";
 import { activityLine, EDIT_ROLES, hasProfile, topWords, type AdminUser, type HeadScope, type PrefOpts, type ScopeState, type UDept } from "@/ai/users/users.lib";
 
+import { permSummary, rolesPerms, type RolesResp } from "@/ai/users/roles/roles.lib";
+
 import type { PhoneLoad, PhoneSel } from "./editor.lib";
 
 function ProfileSection({ u }: { u: AdminUser }) {
@@ -124,7 +126,7 @@ export function UserHead({ u }: { u: AdminUser }) {
         @{u.username || "-"} · {ROLE_NAMES[u.role]}
       </div>
       <div style={{ color: "var(--hint)", fontSize: 13 }}>
-        ID {u.tg_id} · oxirgi faollik {fmtTime(u.last_seen)}
+        ID {u.tg_id}{u.last_seen ? ` · oxirgi faollik ${fmtTime(u.last_seen)}` : ""}
       </div>
     </div>
   );
@@ -155,6 +157,9 @@ export function EditorView({
   phone,
   sel,
   saving,
+  rolesData,
+  roles,
+  onRoleKey,
   onDep,
   onRole,
   onMgr,
@@ -179,6 +184,9 @@ export function EditorView({
   phone: PhoneLoad;
   sel: PhoneSel;
   saving: boolean;
+  rolesData: RolesResp | null;
+  roles: string[];
+  onRoleKey: (key: string, on: boolean) => void;
   onDep: (key: string, on: boolean) => void;
   onRole: (v: string) => void;
   onMgr: (v: string) => void;
@@ -216,10 +224,33 @@ export function EditorView({
           </label>
         ))}
       </div>
-      <SectionHeader>Rol va rahbar</SectionHeader>
+      {rolesData ? (
+        <>
+          <SectionHeader>Rollar</SectionHeader>
+          <div className={s.list}>
+            {rolesData.roles.map((r) => (
+              <label key={r.key} className={`${s.item} ${s.tap}`}>
+                <div className={s.main}>
+                  <div className={s.t}>{r.name}</div>
+                  <div className={s.s} style={{ whiteSpace: "normal" }}>
+                    {permSummary(r.perms, rolesData.perms, 6)}
+                  </div>
+                </div>
+                <input type="checkbox" className={s.chk} checked={roles.includes(r.key)} onChange={(e) => onRoleKey(r.key, e.target.checked)} />
+              </label>
+            ))}
+          </div>
+          <div className={s.sf}>
+            {roles.length
+              ? `Rollardan: ${permSummary(rolesPerms(roles, rolesData.roles), rolesData.perms, 20)}. Bo'limdan kelgan huquq ham saqlanadi.`
+              : "Rol berilmagan — huquq faqat bo'limdan. Rollar va ularning ruxsatlari — Xodimlar → qalqon tugmasi."}
+          </div>
+        </>
+      ) : null}
+      <SectionHeader>Hisob holati va rahbar</SectionHeader>
       <div className={`${s.list} ${s.plain}`}>
         <div className={s.field}>
-          <label>Rol</label>
+          <label>Holat</label>
           <select value={role} onChange={(e) => onRole(e.target.value)}>
             {EDIT_ROLES.map((r) => (
               <option key={r} value={r}>
@@ -287,24 +318,6 @@ export function EditorView({
                   </option>
                 ))}
               </>
-            )}
-          </select>
-          {chev}
-        </div>
-        <div className={s.field}>
-          <label>Bitrix24</label>
-          <select value={sel.bxu} onChange={(e) => onSel({ bxu: e.target.value })}>
-            {o ? (
-              <>
-                <option value="">— avtomatik (Yeastar raqami bo&apos;yicha) —</option>
-                {(o.bitrix || []).map((x) => (
-                  <option key={String(x.id)} value={String(x.id)}>
-                    {x.inner ? `${x.name} (${x.inner})` : x.name}
-                  </option>
-                ))}
-              </>
-            ) : (
-              loadingOpt
             )}
           </select>
           {chev}

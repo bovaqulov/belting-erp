@@ -1,12 +1,14 @@
 "use client";
 // Bitimdagi tovarlar: katalogdan qidirish (search.tsx), qo'shish/tahrirlash/olib tashlash — saqlash butun ro'yxat
 // bilan (POST .../items); bir bosishda tijorat taklifi (PDF) yoki buyurtma qoralamasi.
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { toast } from "@/erp/kit/env";
+import { post as realPost, toast } from "@/erp/kit/env";
 import { dnum } from "@/erp/kit/fmt";
 import { post } from "@/erp/crm/api";
 import { itemAmount, type DealDetail, type DealItem } from "@/erp/crm/lib";
+import { canModule, useErpModules } from "@/shared/auth/erp-access";
 
 import { ItemsView, type ItemField, type PriceField } from "./ui";
 
@@ -60,6 +62,9 @@ export function Items({
       toast((e as Error).message, "bad");
     }
   };
+  const router = useRouter();
+  const mods = useErpModules();
+  const canSales = mods !== null && canModule(mods, "sales");
   const mk = async (kind: "quote" | "order") => {
     setBusy(true);
     try {
@@ -70,6 +75,19 @@ export function Items({
     } catch (e) {
       toast((e as Error).message, "bad");
     } finally {
+      setBusy(false);
+    }
+  };
+
+  // Savdo moduli: bitim tovarlari va mijozi bilan buyurtma (narx QQS bilan) → hujjat formasida ochiladi
+  const toSales = async () => {
+    setBusy(true);
+    try {
+      const doc = await realPost<{ id: number; number: string }>("/app/api/erp/sales/from-deal", { deal_id: d.id });
+      toast(`Buyurtma ${doc.number} yaratildi`);
+      router.push(`/erp/savdo/?doc=${doc.id}`); // basePath /app — Next o'zi qo'shadi
+    } catch (e) {
+      toast((e as Error).message, "bad");
       setBusy(false);
     }
   };
@@ -86,6 +104,7 @@ export function Items({
       onEdit={edit}
       onRemove={(i) => void save(rows.filter((_, j) => j !== i))}
       onDoc={(k) => void mk(k)}
+      onSales={canSales ? () => void toSales() : undefined}
     />
   );
 }

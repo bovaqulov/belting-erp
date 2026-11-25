@@ -250,6 +250,9 @@ export function Sheet({
 }
 
 // ------------------------------------------------------------ asosiy tugma (Telegram MainButton / pastki tugma)
+const noSub = () => () => {};
+const hasBnav = () => !!document.querySelector("[data-bnav]");
+const noBnav = () => false;
 export function MainButton({ text, onClick, color, disabled }: { text: string; onClick: () => Promise<void> | void; color?: string; disabled?: boolean }) {
   const fn = useRef(onClick);
   const [busy, setBusy] = useState(false);
@@ -267,10 +270,13 @@ export function MainButton({ text, onClick, color, disabled }: { text: string; o
       setBusy(false);
     }
   }, []);
-  const t = etg();
+  // sahifada pastki menyu (kit/layout BottomTabs) bo'lsa — Telegram tugmasi emas (u oynadan tashqarida, menyu ostida
+  // chiqib, menyuni yuqoriga suradi), sahifadagi tugma menyu ustida: menyu doim eng pastda qoladi
+  const bnav = useSyncExternalStore(noSub, hasBnav, noBnav);
+  const t = bnav ? null : etg();
   useEffect(() => {
     document.body.classList.add("has-main");
-    const mb = etg()?.MainButton;
+    const mb = bnav ? undefined : etg()?.MainButton;
     if (mb) {
       const tp = etg()?.themeParams ?? {};
       mb.setParams({ text, color: color ?? tp.button_color, text_color: tp.button_text_color, is_active: !disabled, is_visible: true });
@@ -281,12 +287,12 @@ export function MainButton({ text, onClick, color, disabled }: { text: string; o
       mb?.offClick(run);
       mb?.hide();
     };
-  }, [text, color, disabled, run]);
+  }, [text, color, disabled, run, bnav]);
   if (t) return null;
   return createPortal(
     <div
       id="mainbtn"
-      className="fixed inset-x-0 bottom-0 z-30 bg-page/88 px-4 pt-2.5 pb-[calc(10px+var(--safe-b))] backdrop-blur-[14px] tg:hidden desk:pointer-events-none desk:left-[232px] desk:flex desk:justify-end desk:bg-transparent desk:px-9 desk:py-[18px] desk:backdrop-blur-none"
+      className={`fixed inset-x-0 bottom-0 z-30 bg-page/88 px-4 pt-2.5 pb-[calc(10px+var(--safe-b))] backdrop-blur-[14px] ${bnav ? "" : "tg:hidden"} desk:pointer-events-none desk:left-[232px] desk:flex desk:justify-end desk:bg-transparent desk:px-9 desk:py-[18px] desk:backdrop-blur-none`}
     >
       <button
         className="btn mx-auto max-w-[688px] desk:pointer-events-auto desk:m-0 desk:w-auto desk:max-w-none desk:px-[30px] desk:py-3.5 desk:shadow-2"

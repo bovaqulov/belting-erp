@@ -166,10 +166,29 @@ function Dev() {
   );
 }
 
+/** TG CRM — yozishma: kiruvchi va chiquvchi xabar pufakchalari, yonida mijoz kartasi (teg bilan). */
+function TgCrm() {
+  return (
+    <svg viewBox={VB} aria-hidden="true">
+      <path d="M18 20 h62 a8 8 0 0 1 8 8 v14 a8 8 0 0 1 -8 8 H30 l-10 8 v-8 a8 8 0 0 1 -2 -5 V28 a8 8 0 0 1 8 -8 Z" fill="currentColor" opacity=".3" />
+      <rect className={s.paper} x="28" y="29" width="44" height="5" rx="2.5" />
+      <rect className={s.paper} x="28" y="38" width="30" height="5" rx="2.5" />
+      <path d="M40 62 h58 a8 8 0 0 1 8 8 v8 l8 8 h-14 H48 a8 8 0 0 1 -8 -8 v-8 a8 8 0 0 1 8 -8 Z" fill="currentColor" opacity=".75" />
+      <rect className={s.paper} x="50" y="71" width="40" height="5" rx="2.5" />
+      <rect className={s.paper} x="110" y="18" width="34" height="46" rx="5" />
+      <rect x="110" y="18" width="34" height="46" rx="5" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <circle cx="127" cy="32" r="6" fill="currentColor" opacity=".6" />
+      <rect x="117" y="43" width="20" height="4" rx="2" fill="currentColor" opacity=".45" />
+      <rect x="119" y="51" width="16" height="7" rx="3.5" fill="currentColor" opacity=".8" />
+    </svg>
+  );
+}
+
 export const ART: Record<string, () => React.JSX.Element> = {
   erp: Erp,
   lenta: Lenta,
   geo: Geo,
+  tgcrm: TgCrm,
   analytics: Analytics,
   staff: Staff,
   templates: Templates,

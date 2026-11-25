@@ -115,6 +115,12 @@ export function NewDealView({
             placeholder="Ro'yxatdan tanlang: nom, STIR yoki telefon"
             autoComplete="off"
             onChange={(e) => onCq(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && cq) {
+                e.preventDefault();
+                onCq(""); // tavsiyalar yopiladi, oyna emas
+              }
+            }}
           />
         )}
         {cp || nc ? null : (

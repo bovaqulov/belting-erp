@@ -6,14 +6,10 @@ import { Icon } from "@/shared/ui/panel/ui";
 import g from "@/shared/ui/tiles/styles";
 
 import { ART } from "./art";
+import type { Card } from "./sections";
 
-export interface Card {
-  key: string;
-  href: string;
-  title: string;
-  sub: string;
-  color: string;
-}
+export type { Card };
+
 
 export type Mode = { kind: "loading" } | { kind: "app"; cards: Card[] } | { kind: "err"; msg: string } | { kind: "login" };
 

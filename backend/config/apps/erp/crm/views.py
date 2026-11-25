@@ -295,7 +295,7 @@ def deal_stage(request: HttpRequest, u: User, pk: int) -> HttpResponse:
 @api(("POST",), check=_crm, deny=CRM_DENY)
 def deal_items(request: HttpRequest, u: User, pk: int) -> HttpResponse:
     me = Me.of(u)
-    return ok(D.save_items(D.get_deal(me, pk), json_body(request), timezone.now()))
+    return ok(D.save_items(D.get_deal(me, pk), json_body(request), timezone.now(), me))
 
 
 @api(("POST",), check=_crm, deny=CRM_DENY)

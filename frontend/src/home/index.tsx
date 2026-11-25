@@ -6,25 +6,21 @@ import { useCallback, useEffect, useState } from "react";
 import { LoginView } from "@/ai/shell";
 import type { Me } from "@/ai/shell/AdminContext";
 import { api } from "@/shared/api/client";
-import { erpAccess } from "@/shared/auth/erp-access";
+import { erpAccess, erpModules } from "@/shared/auth/erp-access";
 import { disableZoom, initData, initTelegram } from "@/shared/telegram/telegram";
 
-import { LauncherView, type Card, type Mode } from "./ui";
+import { SECTIONS } from "./sections";
+import { LauncherView, type Mode } from "./ui";
 
 const PANEL_ROLES = ["owner", "admin"];
-const CARDS: Card[] = [
-  { key: "erp", href: "/app/erp", title: "ERP", sub: "Ombor, savdo, sex, CRM, marketplace, moliya", color: "#3e88f7" },
-  { key: "lenta", href: "/app/lenta", title: "LentaCUD", sub: "Konveyer lenta chizmasi, PDF va loyihalar", color: "#2fa37a" },
-  { key: "geo", href: "/app/geo", title: "GeoMaps", sub: "Mijozlar xaritasi, hududlar, marshrutlar", color: "#12a4a0" },
-  { key: "analytics", href: "/app/analytics", title: "Analitika", sub: "Savdo, ombor va marketplace ko'rsatkichlari", color: "#e5484d" },
-  { key: "jarvis", href: "/app/jarvis", title: "Jarvis", sub: "AI agentlar, xotira, bilimlar, graph", color: "#9a5bea" },
-  { key: "dev", href: "/app/dev", title: "Development", sub: "Audit, tizim holati va loglar", color: "#e8961f" },
-];
 
 async function allowed(m: Me): Promise<Set<string>> {
   const panel = PANEL_ROLES.includes(m.user.role);
   const out = new Set<string>();
   if (panel || (await erpAccess())) out.add("erp");
+  // TelegramCRM — alohida tizim; ruxsat backend staff.MODULE_DEPTS["tgcrm"] (demo/backend'siz — ko'rsatilmaydi)
+  const mods = await erpModules();
+  if (panel || (Array.isArray(mods) && mods.includes("tgcrm"))) out.add("tgcrm");
   if (panel || m.can_lenta) out.add("lenta"); // rahbariyat — doim (backend can_lenta hali qaytarmaydi)
   if (panel || m.can_geo) out.add("geo"); // rahbariyat — doim (backend can_geo hali qaytarmaydi)
   if (panel) out.add("analytics");
@@ -41,7 +37,7 @@ export default function Launcher() {
       const m = await api<Me>("/app/api/me");
       setMe(m);
       const ok = await allowed(m);
-      const cards = CARDS.filter((c) => ok.has(c.key));
+      const cards = SECTIONS.filter((c) => ok.has(c.key));
       if (cards.length === 1) return window.location.replace(cards[0].href);
       if (!cards.length) {
         const rd = m.report_depts?.[0];
